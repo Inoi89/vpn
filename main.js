@@ -79,7 +79,8 @@ function parseConf(text) {
     }
     if (inInterface) {
       if (line.startsWith('Address')) {
-        address = line.split('=')[1].trim();
+        const val = line.split('=')[1].split(',')[0].trim();
+        address = val.split('/')[0];
       } else if (line.startsWith('DNS')) {
         dns.push(...line.split('=')[1].split(',').map((s) => s.trim()));
       } else if (line.startsWith('PrivateKey')) {
