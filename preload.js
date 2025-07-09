@@ -2,8 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('vpn', {
   importConfig: () => ipcRenderer.invoke('import-config'),
-  fetchConfig: (token) => ipcRenderer.invoke('fetch-config', token),
-  connect: () => ipcRenderer.invoke('connect'),
-  disconnect: () => ipcRenderer.invoke('disconnect'),
-  onWgError: (cb) => ipcRenderer.on('wg-error', (_e, msg) => cb(msg)),
+  startVpn: () => ipcRenderer.invoke('start-vpn'),
+  stopVpn: () => ipcRenderer.invoke('stop-vpn'),
+  onLog: (cb) => ipcRenderer.on('log', (_e, msg) => cb(msg)),
 });

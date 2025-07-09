@@ -1,11 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
 const { spawn } = require('child_process');
 
-const API_KEY = 'YOUR_API_KEY_HERE';
-const CONF_PATH = path.join(app.getPath('temp'), 'simvpn.conf');
+const CONF_DIR = path.join(app.getAppPath(), 'temp');
+const CONF_PATH = path.join(CONF_DIR, 'imported.conf');
 const WG_PATH = path.join(app.getAppPath(), 'wg.exe');
 
 let win;
@@ -34,44 +33,50 @@ ipcMain.handle('import-config', async () => {
     properties: ['openFile'],
   });
   if (canceled || !filePaths[0]) return false;
+  if (!fs.existsSync(CONF_DIR)) {
+    fs.mkdirSync(CONF_DIR, { recursive: true });
+  }
   fs.copyFileSync(filePaths[0], CONF_PATH);
   return true;
 });
 
-ipcMain.handle('fetch-config', async (_event, token) => {
-  try {
-    const { data } = await axios.post(
-      'https://vpn.my-gateway.com/api/getConf',
-      { userToken: token },
-      { headers: { 'X-Api-Key': API_KEY } }
-    );
-    fs.writeFileSync(CONF_PATH, data.wgConf);
-    return true;
-  } catch (e) {
-    console.error(e);
-    return false;
-  }
-});
-
-function runWg(args, onClose) {
-  if (!fs.existsSync(WG_PATH)) {
-    win.webContents.send('wg-error', 'wg.exe not found');
-    return;
-  }
-  const proc = spawn(WG_PATH, args);
-  proc.stdout.on('data', (d) => console.log(d.toString()));
-  proc.stderr.on('data', (d) => console.log(d.toString()));
-  proc.on('close', (code) => onClose(code));
+function run(cmd, args) {
+  return new Promise((resolve) => {
+    const proc = spawn(cmd, args);
+    proc.stdout.on('data', (d) => {
+      const msg = d.toString();
+      console.log(msg);
+      win.webContents.send('log', msg);
+    });
+    proc.stderr.on('data', (d) => {
+      const msg = d.toString();
+      console.log(msg);
+      win.webContents.send('log', msg);
+    });
+    proc.on('close', (code) => resolve(code === 0));
+  });
 }
 
-ipcMain.handle('connect', () => {
-  return new Promise((resolve) => {
-    runWg(['quick', 'up', CONF_PATH], (code) => resolve(code === 0));
-  });
+ipcMain.handle('start-vpn', async () => {
+  if (!fs.existsSync(WG_PATH)) {
+    win.webContents.send('log', 'wg.exe not found');
+    return false;
+  }
+  if (!fs.existsSync(CONF_PATH)) {
+    win.webContents.send('log', 'Config not imported');
+    return false;
+  }
+
+  let ok = await run(WG_PATH, ['setconf', 'SimVPN', CONF_PATH]);
+  if (!ok) {
+    ok = await run(WG_PATH, ['addconf', 'SimVPN', CONF_PATH]);
+  }
+  if (ok) {
+    ok = await run('netsh', ['interface', 'set', 'interface', 'SimVPN', 'admin=enabled']);
+  }
+  return ok;
 });
 
-ipcMain.handle('disconnect', () => {
-  return new Promise((resolve) => {
-    runWg(['quick', 'down', CONF_PATH], (code) => resolve(code === 0));
-  });
+ipcMain.handle('stop-vpn', async () => {
+  return run('netsh', ['interface', 'set', 'interface', 'SimVPN', 'admin=disabled']);
 });
