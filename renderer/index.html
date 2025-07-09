@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>SimVPN</title>
+<style>
+ body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+ #status.connected { color: green; }
+ #status.disconnected { color: red; }
+ #status.error { color: red; }
+</style>
+</head>
+<body>
+  <h1>SimVPN</h1>
+  <button id="import">📄 Импорт</button>
+  <br /><br />
+  <button id="start">🟢 GO VPN</button>
+  <button id="stop">🔴 STOP VPN</button>
+  <p id="status" class="disconnected">Disconnected</p>
+  <script src="renderer.js"></script>
+</body>
+</html>

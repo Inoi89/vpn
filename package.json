@@ -1,0 +1,14 @@
+{
+  "name": "simvpn",
+  "version": "1.0.0",
+  "description": "Minimal GUI VPN client using Electron and WireGuard",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.6.0"
+  }
+}
