@@ -1,9 +1,11 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VpnClient.Core.Interfaces;
 using Microsoft.Extensions.Logging;
+using VpnClient.Core.Models;
 
 namespace VpnClient.UI.ViewModels;
 
@@ -12,8 +14,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IVpnService _vpnService;
     private readonly ILogger<MainWindowViewModel> _logger;
 
-    [ObservableProperty]
-    private string _logText = string.Empty;
+    public ObservableCollection<LogEntry> LogEntries { get; }
 
     private const string AmneziaConfig = """
 [Interface]
@@ -38,11 +39,12 @@ Endpoint = 5.61.37.29:31296
 PersistentKeepalive = 25
 """;
 
-    public MainWindowViewModel(IVpnService vpnService, ILogger<MainWindowViewModel> logger)
+    public MainWindowViewModel(IVpnService vpnService, ILogger<MainWindowViewModel> logger,
+        ObservableCollection<LogEntry> logEntries)
     {
         _vpnService = vpnService;
         _logger = logger;
-        _vpnService.LogReceived += msg => AppendLog(msg);
+        LogEntries = logEntries;
     }
 
     public string ConnectionStatus => _vpnService.State switch
@@ -58,30 +60,30 @@ PersistentKeepalive = 25
     {
         if (_vpnService.State == VpnState.Disconnected)
         {
-            AppendLog("Connecting...");
+            _logger.LogInformation("Connecting...");
             try
             {
                 await _vpnService.ConnectAsync(AmneziaConfig);
-                AppendLog("Connected");
+                _logger.LogInformation("Connected");
             }
             catch (Exception ex)
             {
-                AppendLog($"Error: {ex.Message}");
+                _logger.LogError(ex, "Error: {Message}", ex.Message);
             }
             OnPropertyChanged(nameof(ButtonText));
             OnPropertyChanged(nameof(ConnectionStatus));
         }
         else if (_vpnService.State == VpnState.Connected)
         {
-            AppendLog("Disconnecting...");
+            _logger.LogInformation("Disconnecting...");
             try
             {
                 await _vpnService.DisconnectAsync();
-                AppendLog("Disconnected");
+                _logger.LogInformation("Disconnected");
             }
             catch (Exception ex)
             {
-                AppendLog($"Error: {ex.Message}");
+                _logger.LogError(ex, "Error: {Message}", ex.Message);
             }
             OnPropertyChanged(nameof(ButtonText));
             OnPropertyChanged(nameof(ConnectionStatus));
@@ -89,10 +91,4 @@ PersistentKeepalive = 25
     }
 
     public string ButtonText => _vpnService.State == VpnState.Connected ? "Отключиться" : "Подключиться к VPN";
-
-    private void AppendLog(string message)
-    {
-        _logText += $"{DateTime.Now:T}: {message}\n";
-        OnPropertyChanged(nameof(LogText));
-    }
 }
