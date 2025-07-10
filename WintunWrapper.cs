@@ -25,6 +25,13 @@ namespace WintunWrapper
             {
                 handle = WintunCreateAdapter("SimVPN", "VPN", IntPtr.Zero);
             }
+
+            // Обязательно закрываем handle, чтобы не утек дескриптор
+            if (handle != IntPtr.Zero)
+            {
+                WintunCloseAdapter(handle);
+            }
+
             return null;
         }
 
