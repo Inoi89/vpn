@@ -2,11 +2,15 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const wintun = require('./wintun');
 
 const CONF_DIR = path.join(app.getAppPath(), 'temp');
 const CONF_PATH = path.join(CONF_DIR, 'imported.conf');
 const CLEANED_PATH = path.join(CONF_DIR, 'cleaned.conf');
-const WG_PATH = path.join(app.getAppPath(), 'wg.exe');
+const WG_GO_PATH = path.join(app.getAppPath(), 'wireguard-go.exe');
+
+let wgProc = null;
+let adapterHandle = null;
 
 let win;
 
@@ -41,22 +45,6 @@ ipcMain.handle('import-config', async () => {
   return true;
 });
 
-function run(cmd, args) {
-  return new Promise((resolve) => {
-    const proc = spawn(cmd, args);
-    proc.stdout.on('data', (d) => {
-      const msg = d.toString();
-      console.log(msg);
-      win.webContents.send('log', msg);
-    });
-    proc.stderr.on('data', (d) => {
-      const msg = d.toString();
-      console.log(msg);
-      win.webContents.send('log', msg);
-    });
-    proc.on('close', (code) => resolve(code === 0));
-  });
-}
 
 function parseConf(text) {
   const lines = text.split(/\r?\n/);
@@ -94,8 +82,8 @@ function parseConf(text) {
 }
 
 ipcMain.handle('start-vpn', async () => {
-  if (!fs.existsSync(WG_PATH)) {
-    win.webContents.send('log', 'wg.exe not found');
+  if (!fs.existsSync(WG_GO_PATH)) {
+    win.webContents.send('log', 'wireguard-go.exe not found');
     return false;
   }
   if (!fs.existsSync(CONF_PATH)) {
@@ -104,51 +92,38 @@ ipcMain.handle('start-vpn', async () => {
   }
 
   const confText = fs.readFileSync(CONF_PATH, 'utf8');
-  const { cleanedConf, address, dns } = parseConf(confText);
+  const { cleanedConf } = parseConf(confText);
   fs.writeFileSync(CLEANED_PATH, cleanedConf);
 
-  let ok = await run(WG_PATH, ['setconf', 'SimVPN', CLEANED_PATH]);
-  if (!ok) {
-    ok = await run(WG_PATH, ['addconf', 'SimVPN', CLEANED_PATH]);
-  }
-  if (ok && address) {
-    ok = await run('netsh', [
-      'interface',
-      'ip',
-      'set',
-      'address',
-      'name=SimVPN',
-      'static',
-      address,
-      '255.255.255.255',
-    ]);
-  }
-  if (ok && dns[0]) {
-    ok = await run('netsh', [
-      'interface',
-      'ip',
-      'set',
-      'dns',
-      'name=SimVPN',
-      'static',
-      dns[0],
-    ]);
-  }
-  if (ok && dns[1]) {
-    ok = await run('netsh', [
-      'interface',
-      'ip',
-      'add',
-      'dns',
-      'name=SimVPN',
-      dns[1],
-      'index=2',
-    ]);
-  }
-  return ok;
+  adapterHandle = wintun.createAdapter('SimVPN');
+
+  wgProc = spawn(WG_GO_PATH, ['SimVPN']);
+  wgProc.stdout.on('data', (d) => {
+    const msg = d.toString();
+    console.log(msg);
+    win.webContents.send('log', msg);
+  });
+  wgProc.stderr.on('data', (d) => {
+    const msg = d.toString();
+    console.log(msg);
+    win.webContents.send('log', msg);
+  });
+
+  wgProc.stdin.write(cleanedConf);
+  wgProc.stdin.end();
+
+  return true;
 });
 
 ipcMain.handle('stop-vpn', async () => {
-  if (!fs.existsSync(WG_PATH)) return false;
-  return run(WG_PATH, ['delete', 'SimVPN']);
+  if (wgProc) {
+    wgProc.kill();
+    wgProc = null;
+  }
+  if (adapterHandle) {
+    wintun.closeAdapter(adapterHandle);
+    wintun.deleteDriver();
+    adapterHandle = null;
+  }
+  return true;
 });
