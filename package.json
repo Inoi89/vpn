@@ -10,5 +10,9 @@
   "devDependencies": {
     "electron": "^29.0.0",
     "electron-builder": "^24.6.0"
+  },
+  "dependencies": {
+    "ffi-napi": "^4.0.3",
+    "ref-napi": "^3.0.0"
   }
 }
