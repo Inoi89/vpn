@@ -1,9 +1,0 @@
-appId: com.example.simvpn
-productName: SimVPN
-directories:
-  output: dist
-files:
-  - "**/*"
-win:
-  target: nsis
-  artifactName: SimVPN-Setup.exe
