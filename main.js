@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
-const wintun = require('./wintun');
+const wintun = require('./wintun-edge');
 
 const CONF_DIR = path.join(app.getAppPath(), 'temp');
 const CONF_PATH = path.join(CONF_DIR, 'imported.conf');
@@ -10,7 +10,6 @@ const CLEANED_PATH = path.join(CONF_DIR, 'cleaned.conf');
 const WG_GO_PATH = path.join(app.getAppPath(), 'wireguard-go.exe');
 
 let wgProc = null;
-let adapterHandle = null;
 
 let win;
 
@@ -95,7 +94,7 @@ ipcMain.handle('start-vpn', async () => {
   const { cleanedConf } = parseConf(confText);
   fs.writeFileSync(CLEANED_PATH, cleanedConf);
 
-  adapterHandle = wintun.createAdapter('SimVPN');
+  await wintun.createAdapter();
 
   wgProc = spawn(WG_GO_PATH, ['SimVPN']);
   wgProc.stdout.on('data', (d) => {
@@ -120,10 +119,6 @@ ipcMain.handle('stop-vpn', async () => {
     wgProc.kill();
     wgProc = null;
   }
-  if (adapterHandle) {
-    wintun.closeAdapter(adapterHandle);
-    wintun.deleteDriver();
-    adapterHandle = null;
-  }
+  await wintun.deleteAdapter();
   return true;
 });
