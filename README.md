@@ -16,3 +16,7 @@ dotnet build VpnClient.sln
 ```
 
 The UI project `VpnClient.UI` is the startup project.
+## Runtime requirements
+
+- `wintun.dll` must be accessible by the application (place it next to the built executable or add it to `PATH`).
+- `wireguard-go.exe` is used to establish the VPN tunnel and should also reside alongside the executable.

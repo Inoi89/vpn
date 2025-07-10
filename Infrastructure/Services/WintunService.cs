@@ -17,8 +17,13 @@ public class WintunService : IWintunService
 
     public Task DeleteAdapterAsync(string name)
     {
-        // NOTE: This removes the driver if no adapters remain
-        WintunDeleteDriver();
+
+       var handle = WintunOpenAdapter(name);
+        if (handle != IntPtr.Zero)
+        {
+            WintunDeleteAdapter(handle);
+            WintunCloseAdapter(handle);
+        }
         return Task.CompletedTask;
     }
 
@@ -32,5 +37,5 @@ public class WintunService : IWintunService
     private static extern void WintunCloseAdapter(IntPtr handle);
 
     [DllImport("wintun.dll")]
-    private static extern void WintunDeleteDriver();
+    private static extern void WintunDeleteAdapter(IntPtr handle);
 }

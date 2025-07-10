@@ -43,6 +43,10 @@ public class VpnService : IVpnService
         {
             await _process.StandardInput.WriteAsync(config);
             _process.StandardInput.Close();
+            _process.OutputDataReceived += (_, e) => { if (e.Data != null) _logger.LogInformation(e.Data); };
+            _process.ErrorDataReceived += (_, e) => { if (e.Data != null) _logger.LogError(e.Data); };
+            _process.BeginOutputReadLine();
+            _process.BeginErrorReadLine();
         }
 
         _state = VpnState.Connected;
