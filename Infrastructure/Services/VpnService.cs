@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using VpnClient.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -48,7 +49,6 @@ public class VpnService : IVpnService
         LogInfo("Starting WireGuard...");
         var psi = new ProcessStartInfo("wireguard-go.exe", "VpnClient")
         {
-            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -66,8 +66,9 @@ public class VpnService : IVpnService
                 if (e.Data != null)
                 {
                     LogInfo(e.Data);
-                    if (e.Data.Contains("interface state is up", StringComparison.OrdinalIgnoreCase)
-                        || e.Data.Contains("device", StringComparison.OrdinalIgnoreCase) && e.Data.Contains("ready", StringComparison.OrdinalIgnoreCase))
+                    if (e.Data.Contains("uapi", StringComparison.OrdinalIgnoreCase)
+                        || e.Data.Contains("interface state is up", StringComparison.OrdinalIgnoreCase)
+                        || (e.Data.Contains("device", StringComparison.OrdinalIgnoreCase) && e.Data.Contains("ready", StringComparison.OrdinalIgnoreCase)))
                     {
                         readyTcs.TrySetResult(true);
                     }
@@ -85,12 +86,21 @@ public class VpnService : IVpnService
             _process.BeginOutputReadLine();
             _process.BeginErrorReadLine();
 
-            await _process.StandardInput.WriteAsync(config);
-            _process.StandardInput.Close();
-
             var completed = await Task.WhenAny(readyTcs.Task, _process.WaitForExitAsync());
-            if (completed == readyTcs.Task)
-                started = readyTcs.Task.Result;
+            if (completed == readyTcs.Task && readyTcs.Task.Result)
+            {
+                // apply configuration via wg.exe
+                var tmp = Path.GetTempFileName();
+                await File.WriteAllTextAsync(tmp, config);
+                try
+                {
+                    started = await RunWgSetConfAsync(tmp);
+                }
+                finally
+                {
+                    try { File.Delete(tmp); } catch { }
+                }
+            }
             else
             {
                 await _process.WaitForExitAsync();
@@ -249,5 +259,28 @@ public class VpnService : IVpnService
             LogInfo(output.Trim());
         if (!string.IsNullOrWhiteSpace(error))
             LogError(error.Trim());
+    }
+
+    private async Task<bool> RunWgSetConfAsync(string configPath)
+    {
+        var psi = new ProcessStartInfo("wg.exe", $"setconf VpnClient \"{configPath}\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var proc = Process.Start(psi);
+        if (proc == null)
+            return false;
+        string output = await proc.StandardOutput.ReadToEndAsync();
+        string error = await proc.StandardError.ReadToEndAsync();
+        await proc.WaitForExitAsync();
+        if (!string.IsNullOrWhiteSpace(output))
+            LogInfo(output.Trim());
+        if (!string.IsNullOrWhiteSpace(error))
+            LogError(error.Trim());
+        return proc.ExitCode == 0;
     }
 }
