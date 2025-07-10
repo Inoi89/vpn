@@ -1,12 +1,18 @@
-# SimVPN
+# VpnClient
 
-Minimal GUI VPN client built with Electron and WireGuard.
+A simple WireGuard-based VPN client built with .NET 8 and Avalonia UI.
 
-### Usage
+## Projects
+- **Core** – interfaces and models shared across the application.
+- **Infrastructure** – implementations of services (e.g., `VpnService`, `WintunService`).
+- **UI** – Avalonia desktop application using MVVM.
 
-1. Build `WintunWrapper.dll` from `WintunWrapper.cs` using `.NET` and place it alongside `wireguard-go.exe` and `wintun.dll`.
-2. Run `npm start` during development or build with `npm run dist`.
-3. Use the **📄 Импорт** button to select a `.conf` file. The file is copied to `temp/imported.conf`.
-4. Press **🟢 GO VPN** to launch `wireguard-go.exe` with the cleaned
-   configuration. The adapter is managed through `WintunWrapper.dll`.
-5. Press **🔴 STOP VPN** to remove the interface.
+## Build
+1. Install [.NET 8 SDK](https://dotnet.microsoft.com/).
+2. Restore packages and build:
+
+```bash
+dotnet build VpnClient.sln
+```
+
+The UI project `VpnClient.UI` is the startup project.

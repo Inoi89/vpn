@@ -1,6 +1,13 @@
-node_modules
-dist
+# Build artifacts
+bin/
+obj/
+
+# Rider / VSCode / etc.
+*.user
+*.suo
+*.vs/
+
+# Native dependencies
 wg.exe
 wintun.dll
 WintunWrapper.dll
-temp
