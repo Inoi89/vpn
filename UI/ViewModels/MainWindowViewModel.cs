@@ -13,35 +13,14 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly IVpnService _vpnService;
     private readonly ILogger<MainWindowViewModel> _logger;
+    private readonly IConfigService _configService;
 
     public ObservableCollection<LogEntry> LogEntries { get; }
 
-    private const string AmneziaConfig = """
-[Interface]
-Address = 10.8.1.11/32
-DNS = 1.1.1.1, 1.0.0.1
-PrivateKey = LHaPBG/W+dIOypKSs8IBMQbJZOJFOF1OzWltNxoY9+c=
-Jc = 8
-Jmin = 50
-Jmax = 1000
-S1 = 73
-S2 = 24
-H1 = 79450512
-H2 = 1691023906
-H3 = 310914319
-H4 = 403689475
-
-[Peer]
-PublicKey = NtaQ9Uui6q2Tnr2px3398/b7vzrF2xhWuNax1AO2gg4=
-PresharedKey = WUH31aV7brbl40vy/b984sQo9tWe/fzLq7zOJzE1D9A=
-AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = 5.61.37.29:31296
-PersistentKeepalive = 25
-""";
-
-    public MainWindowViewModel(IVpnService vpnService, ILogger<MainWindowViewModel> logger,
-        ObservableCollection<LogEntry> logEntries)
+    public MainWindowViewModel(IConfigService configService, IVpnService vpnService,
+        ILogger<MainWindowViewModel> logger, ObservableCollection<LogEntry> logEntries)
     {
+        _configService = configService;
         _vpnService = vpnService;
         _logger = logger;
         LogEntries = logEntries;
@@ -63,7 +42,8 @@ PersistentKeepalive = 25
             _logger.LogInformation("Connecting...");
             try
             {
-                await _vpnService.ConnectAsync(AmneziaConfig);
+                var config = await _configService.LoadConfigAsync();
+                await _vpnService.ConnectAsync(config);
                 _logger.LogInformation("Connected");
             }
             catch (Exception ex)
