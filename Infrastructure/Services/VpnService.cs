@@ -11,7 +11,21 @@ public class VpnService : IVpnService
     private Process? _process;
     private VpnState _state = VpnState.Disconnected;
 
+    public event Action<string>? LogReceived;
+
     public VpnState State => _state;
+
+    private void LogInfo(string message)
+    {
+        _logger.LogInformation(message);
+        LogReceived?.Invoke(message);
+    }
+
+    private void LogError(string message)
+    {
+        _logger.LogError(message);
+        LogReceived?.Invoke(message);
+    }
 
     public VpnService(IWintunService wintun, ILogger<VpnService> logger)
     {
@@ -25,13 +39,13 @@ public class VpnService : IVpnService
             return;
 
         _state = VpnState.Connecting;
-        _logger.LogInformation("Creating adapter...");
+        LogInfo("Creating adapter...");
         await _wintun.CreateAdapterAsync("VpnClient");
 
         // Parse config for address, DNS and allowed IPs
         ParseConfig(config, out var address, out var dnsServers, out var allowedIps);
 
-        _logger.LogInformation("Starting WireGuard...");
+        LogInfo("Starting WireGuard...");
         var psi = new ProcessStartInfo("wireguard-go.exe", "VpnClient")
         {
             RedirectStandardInput = true,
@@ -42,14 +56,53 @@ public class VpnService : IVpnService
         };
 
         _process = Process.Start(psi);
+        bool started = false;
         if (_process != null)
         {
-            await _process.StandardInput.WriteAsync(config);
-            _process.StandardInput.Close();
-            _process.OutputDataReceived += (_, e) => { if (e.Data != null) _logger.LogInformation(e.Data); };
-            _process.ErrorDataReceived += (_, e) => { if (e.Data != null) _logger.LogError(e.Data); };
+            var readyTcs = new TaskCompletionSource<bool>();
+            _process.EnableRaisingEvents = true;
+            _process.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                {
+                    LogInfo(e.Data);
+                    if (e.Data.Contains("interface state is up", StringComparison.OrdinalIgnoreCase)
+                        || e.Data.Contains("device", StringComparison.OrdinalIgnoreCase) && e.Data.Contains("ready", StringComparison.OrdinalIgnoreCase))
+                    {
+                        readyTcs.TrySetResult(true);
+                    }
+                }
+            };
+            _process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                {
+                    LogError(e.Data);
+                }
+            };
+            _process.Exited += (_, __) => readyTcs.TrySetResult(false);
+
             _process.BeginOutputReadLine();
             _process.BeginErrorReadLine();
+
+            await _process.StandardInput.WriteAsync(config);
+            _process.StandardInput.Close();
+
+            var completed = await Task.WhenAny(readyTcs.Task, _process.WaitForExitAsync());
+            if (completed == readyTcs.Task)
+                started = readyTcs.Task.Result;
+            else
+            {
+                await _process.WaitForExitAsync();
+                started = false;
+            }
+        }
+
+        if (!started)
+        {
+            _state = VpnState.Disconnected;
+            LogError("wireguard-go failed to start");
+            return;
         }
 
         // Apply IP address and DNS servers to the created adapter
@@ -63,7 +116,7 @@ public class VpnService : IVpnService
             await AddRouteAsync(net);
 
         _state = VpnState.Connected;
-        _logger.LogInformation("Connected");
+        LogInfo("Connected");
     }
 
     public async Task DisconnectAsync()
@@ -79,11 +132,11 @@ public class VpnService : IVpnService
             _process = null;
         }
 
-        _logger.LogInformation("Removing adapter...");
+        LogInfo("Removing adapter...");
         await _wintun.DeleteAdapterAsync("VpnClient");
 
         _state = VpnState.Disconnected;
-        _logger.LogInformation("Disconnected");
+        LogInfo("Disconnected");
     }
 
     private static void ParseConfig(string config, out string? address, out List<string> dns, out List<string> allowedIps)
@@ -193,8 +246,8 @@ public class VpnService : IVpnService
         string error = await proc.StandardError.ReadToEndAsync();
         await proc.WaitForExitAsync();
         if (!string.IsNullOrWhiteSpace(output))
-            _logger.LogInformation(output.Trim());
+            LogInfo(output.Trim());
         if (!string.IsNullOrWhiteSpace(error))
-            _logger.LogError(error.Trim());
+            LogError(error.Trim());
     }
 }

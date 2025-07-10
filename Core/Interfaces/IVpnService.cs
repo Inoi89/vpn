@@ -1,3 +1,5 @@
+using System;
+
 namespace VpnClient.Core.Interfaces;
 
 public enum VpnState
@@ -11,6 +13,7 @@ public enum VpnState
 public interface IVpnService
 {
     VpnState State { get; }
+    event Action<string>? LogReceived;
     Task ConnectAsync(string config);
     Task DisconnectAsync();
 }

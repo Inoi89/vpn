@@ -42,6 +42,7 @@ PersistentKeepalive = 25
     {
         _vpnService = vpnService;
         _logger = logger;
+        _vpnService.LogReceived += msg => AppendLog(msg);
     }
 
     public string ConnectionStatus => _vpnService.State switch
