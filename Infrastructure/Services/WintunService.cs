@@ -17,7 +17,8 @@ public class WintunService : IWintunService
 
     public Task DeleteAdapterAsync(string name)
     {
-        var handle = WintunOpenAdapter(name);
+
+       var handle = WintunOpenAdapter(name);
         if (handle != IntPtr.Zero)
         {
             WintunDeleteAdapter(handle);
