@@ -9,7 +9,6 @@ public class VpnService : IVpnService
 {
     private readonly IWintunService _wintun;
     private readonly ILogger<VpnService> _logger;
-    private Process? _process;
     private VpnState _state = VpnState.Disconnected;
 
     public event Action<string>? LogReceived;
@@ -46,72 +45,22 @@ public class VpnService : IVpnService
         // Parse config for address, DNS and allowed IPs
         ParseConfig(config, out var address, out var dnsServers, out var allowedIps);
 
-        LogInfo("Starting WireGuard...");
-        var psi = new ProcessStartInfo("wireguard-go.exe", "VpnClient")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        _process = Process.Start(psi);
+        var tmp = Path.GetTempFileName();
+        await File.WriteAllTextAsync(tmp, StripConfig(config));
         bool started = false;
-        if (_process != null)
+        try
         {
-            var readyTcs = new TaskCompletionSource<bool>();
-            _process.EnableRaisingEvents = true;
-            _process.OutputDataReceived += (_, e) =>
-            {
-                if (e.Data != null)
-                {
-                    LogInfo(e.Data);
-                    if (e.Data.Contains("uapi", StringComparison.OrdinalIgnoreCase)
-                        || e.Data.Contains("interface state is up", StringComparison.OrdinalIgnoreCase)
-                        || (e.Data.Contains("device", StringComparison.OrdinalIgnoreCase) && e.Data.Contains("ready", StringComparison.OrdinalIgnoreCase)))
-                    {
-                        readyTcs.TrySetResult(true);
-                    }
-                }
-            };
-            _process.ErrorDataReceived += (_, e) =>
-            {
-                if (e.Data != null)
-                {
-                    LogError(e.Data);
-                }
-            };
-            _process.Exited += (_, __) => readyTcs.TrySetResult(false);
-
-            _process.BeginOutputReadLine();
-            _process.BeginErrorReadLine();
-
-            var completed = await Task.WhenAny(readyTcs.Task, _process.WaitForExitAsync());
-            if (completed == readyTcs.Task && readyTcs.Task.Result)
-            {
-                // apply configuration via wg.exe
-                var tmp = Path.GetTempFileName();
-                await File.WriteAllTextAsync(tmp, config);
-                try
-                {
-                    started = await RunWgSetConfAsync(tmp);
-                }
-                finally
-                {
-                    try { File.Delete(tmp); } catch { }
-                }
-            }
-            else
-            {
-                await _process.WaitForExitAsync();
-                started = false;
-            }
+            started = await RunWgSetConfAsync(tmp);
+        }
+        finally
+        {
+            try { File.Delete(tmp); } catch { }
         }
 
         if (!started)
         {
             _state = VpnState.Disconnected;
-            LogError("wireguard-go failed to start");
+            LogError("wg.exe setconf failed");
             return;
         }
 
@@ -135,12 +84,6 @@ public class VpnService : IVpnService
             return;
 
         _state = VpnState.Disconnecting;
-        if (_process != null && !_process.HasExited)
-        {
-            _process.Kill();
-            _process.Dispose();
-            _process = null;
-        }
 
         LogInfo("Removing adapter...");
         await _wintun.DeleteAdapterAsync("VpnClient");
@@ -176,6 +119,24 @@ public class VpnService : IVpnService
                     allowedIps.Add(n.Trim());
             }
         }
+    }
+
+    private static string StripConfig(string config)
+    {
+        var lines = config.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var sb = new System.Text.StringBuilder();
+        foreach (var line in lines)
+        {
+            var trimmed = line.TrimStart();
+            if (trimmed.StartsWith("Address", StringComparison.OrdinalIgnoreCase)
+                || trimmed.StartsWith("DNS", StringComparison.OrdinalIgnoreCase)
+                || trimmed.StartsWith("AllowedIPs", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            sb.AppendLine(line);
+        }
+        return sb.ToString();
     }
 
     private async Task ConfigureAddressAsync(string address)
