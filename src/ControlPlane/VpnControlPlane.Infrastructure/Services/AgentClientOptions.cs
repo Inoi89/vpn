@@ -10,6 +10,10 @@ public sealed class AgentClientOptions
 
     public string SetAccessStatePath { get; set; } = "/v1/agent/accesses/state";
 
+    public string DeleteAccessPath { get; set; } = "/v1/agent/accesses/delete";
+
+    public string GetAccessConfigPath { get; set; } = "/v1/agent/accesses/config";
+
     public string? ClientCertificatePath { get; set; }
 
     public string? ClientCertificatePassword { get; set; }

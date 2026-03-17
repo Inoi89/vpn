@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { IssueNodeAccessRequest, IssuedNodeAccess, SetNodeAccessStateRequest, UserSummary } from '../types/dashboard'
+import type { AccessConfig, IssueNodeAccessRequest, IssuedNodeAccess, SetNodeAccessStateRequest, UserSummary } from '../types/dashboard'
 import { formatDateTime, formatRelativeTime } from '../utils/format'
 
 type UserManagementProps = {
@@ -12,12 +12,15 @@ type UserManagementProps = {
   isSaving: boolean
   onIssueAccess: (nodeId: string, payload: IssueNodeAccessRequest) => Promise<unknown>
   onSetAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) => Promise<unknown>
+  onDeleteAccess: (nodeId: string, userId: string) => Promise<unknown>
+  onDownloadAccessConfig: (nodeId: string, userId: string) => Promise<AccessConfig>
 }
 
 const defaultForm: IssueNodeAccessRequest = {
   displayName: '',
-  email: '',
 }
+
+type BusyAction = 'toggle' | 'delete' | 'download' | null
 
 export function UserManagement({
   users,
@@ -28,10 +31,13 @@ export function UserManagement({
   isSaving,
   onIssueAccess,
   onSetAccessState,
+  onDeleteAccess,
+  onDownloadAccessConfig,
 }: UserManagementProps) {
   const [form, setForm] = useState(defaultForm)
   const [query, setQuery] = useState('')
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
+  const [busyAction, setBusyAction] = useState<BusyAction>(null)
   const formRef = useRef<HTMLFormElement | null>(null)
   const normalizedQuery = query.trim().toLowerCase()
 
@@ -63,7 +69,7 @@ export function UserManagement({
       return true
     }
 
-    const haystack = [user.displayName, user.email ?? '', user.externalId].join(' ').toLowerCase()
+    const haystack = [user.displayName, user.externalId].join(' ').toLowerCase()
     return haystack.includes(normalizedQuery)
   })
 
@@ -83,12 +89,63 @@ export function UserManagement({
     }
 
     setBusyUserId(user.id)
+    setBusyAction('toggle')
 
     try {
       const isEnabledOnNode = user.enabledNodeIds.includes(selectedNodeId)
       await onSetAccessState(selectedNodeId, user.id, { isEnabled: !isEnabledOnNode })
     } finally {
       setBusyUserId(null)
+      setBusyAction(null)
+    }
+  }
+
+  async function handleDeleteUser(user: UserSummary) {
+    if (!selectedNodeId) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Удалить доступ "${user.displayName}" с ноды "${selectedNodeName ?? selectedNodeId}"? Это удалит peer и конфиг с сервера.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setBusyUserId(user.id)
+    setBusyAction('delete')
+
+    try {
+      await onDeleteAccess(selectedNodeId, user.id)
+    } finally {
+      setBusyUserId(null)
+      setBusyAction(null)
+    }
+  }
+
+  async function handleDownloadConfig(user: UserSummary) {
+    if (!selectedNodeId) {
+      return
+    }
+
+    setBusyUserId(user.id)
+    setBusyAction('download')
+
+    try {
+      const config = await onDownloadAccessConfig(selectedNodeId, user.id)
+      const blob = new Blob([config.clientConfig], { type: 'text/plain;charset=utf-8' })
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = config.clientConfigFileName
+      anchor.click()
+      URL.revokeObjectURL(objectUrl)
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Не удалось сформировать конфиг для скачивания.')
+    } finally {
+      setBusyUserId(null)
+      setBusyAction(null)
     }
   }
 
@@ -119,6 +176,14 @@ export function UserManagement({
   const hasSelectedNode = Boolean(selectedNodeId)
   const visibleIssuedAccess = hasSelectedNode && issuedAccess?.nodeId === selectedNodeId ? issuedAccess : undefined
 
+  function renderIdentifier(user: UserSummary) {
+    if (!user.externalId || user.externalId.startsWith('issued-')) {
+      return null
+    }
+
+    return <div className="text-muted small">{user.externalId}</div>
+  }
+
   return (
     <div className="row">
       <div className="col-12">
@@ -129,8 +194,8 @@ export function UserManagement({
                 <h5>{selectedNodeName ? `Ключи ноды ${selectedNodeName}` : 'Каталог доступа'}</h5>
                 <small>
                   {selectedNodeName
-                    ? 'Реальные peer-доступы выбранной ноды с включением, отключением и выдачей новых конфигов.'
-                    : 'Общий каталог ключей. Для выдачи и переключения состояния открой конкретную ноду.'}
+                    ? 'Реальные peer-доступы выбранной ноды с включением, отключением, удалением, скачиванием и выдачей новых конфигов.'
+                    : 'Общий каталог ключей. Для выдачи и управления открой конкретную ноду.'}
                 </small>
               </div>
               <button type="button" className="btn btn-primary btn-sm" disabled={!hasSelectedNode} onClick={focusForm}>
@@ -143,7 +208,7 @@ export function UserManagement({
               <input
                 type="search"
                 className="form-control"
-                placeholder="имя, почта или внешний идентификатор"
+                placeholder="имя или внешний идентификатор"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -156,11 +221,11 @@ export function UserManagement({
                 <table className="table table-hover table-align-center mb-0">
                   <thead>
                     <tr>
-                      <th>Пользователь</th>
+                      <th>Доступ</th>
                       <th>Статус</th>
                       <th>Ключей</th>
                       <th>Последняя активность</th>
-                      <th>Действие</th>
+                      <th>Действия</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -173,7 +238,7 @@ export function UserManagement({
                         <tr key={user.id}>
                           <td>
                             <strong>{user.displayName}</strong>
-                            <div className="text-muted small">{user.email ?? user.externalId}</div>
+                            {renderIdentifier(user)}
                           </td>
                           <td>
                             <div className="d-flex flex-column gap-1">
@@ -192,14 +257,36 @@ export function UserManagement({
                           </td>
                           <td>
                             {selectedNodeId ? (
-                              <button
-                                type="button"
-                                className={`btn btn-sm ${isEnabledOnNode ? 'btn-light-danger' : 'btn-light-success'}`}
-                                disabled={isSaving}
-                                onClick={() => void handleToggleUser(user)}
-                              >
-                                {isBusy ? 'Сохранение...' : isEnabledOnNode ? 'Отключить' : 'Включить'}
-                              </button>
+                              <div className="d-flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-primary"
+                                  disabled={isSaving}
+                                  onClick={() => void handleDownloadConfig(user)}
+                                >
+                                  {isBusy && busyAction === 'download' ? 'Подготовка...' : 'Скачать .conf'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn btn-sm ${isEnabledOnNode ? 'btn-light-danger' : 'btn-light-success'}`}
+                                  disabled={isSaving}
+                                  onClick={() => void handleToggleUser(user)}
+                                >
+                                  {isBusy && busyAction === 'toggle'
+                                    ? 'Сохранение...'
+                                    : isEnabledOnNode
+                                      ? 'Отключить'
+                                      : 'Включить'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger"
+                                  disabled={isSaving}
+                                  onClick={() => void handleDeleteUser(user)}
+                                >
+                                  {isBusy && busyAction === 'delete' ? 'Удаление...' : 'Удалить'}
+                                </button>
+                              </div>
                             ) : (
                               <span className="text-muted small">Выберите ноду</span>
                             )}
@@ -231,16 +318,6 @@ export function UserManagement({
                       required
                       value={form.displayName}
                       onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Почта</label>
-                    <input
-                      className="form-control"
-                      type="email"
-                      value={form.email ?? ''}
-                      onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                     />
                   </div>
 

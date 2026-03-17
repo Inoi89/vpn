@@ -77,3 +77,18 @@ public sealed record SetAccessStateResponse(
     bool IsEnabled,
     string? ClientConfigFileName,
     string? ClientConfig);
+
+public sealed record DeleteAccessRequest(string PublicKey);
+
+public sealed record DeleteAccessResponse(
+    string PublicKey,
+    bool Deleted);
+
+public sealed record GetAccessConfigRequest(
+    AgentPeerMaterial Peer,
+    string EndpointHost);
+
+public sealed record GetAccessConfigResponse(
+    string PublicKey,
+    string ClientConfigFileName,
+    string ClientConfig);

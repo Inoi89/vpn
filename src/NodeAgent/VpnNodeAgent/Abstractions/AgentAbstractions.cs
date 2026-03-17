@@ -43,4 +43,8 @@ public interface IAgentAccessService
     Task<IssueAccessResponse> IssueAsync(IssueAccessRequest request, CancellationToken cancellationToken);
 
     Task<SetAccessStateResponse> SetStateAsync(SetAccessStateRequest request, CancellationToken cancellationToken);
+
+    Task<DeleteAccessResponse> DeleteAsync(DeleteAccessRequest request, CancellationToken cancellationToken);
+
+    Task<GetAccessConfigResponse> GetConfigAsync(GetAccessConfigRequest request, CancellationToken cancellationToken);
 }

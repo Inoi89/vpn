@@ -15,6 +15,10 @@ public interface INodeAgentClient
     Task<IssueAccessResponse> IssueAccessAsync(Node node, IssueAccessRequest request, CancellationToken cancellationToken);
 
     Task<SetAccessStateResponse> SetAccessStateAsync(Node node, SetAccessStateRequest request, CancellationToken cancellationToken);
+
+    Task<DeleteAccessResponse> DeleteAccessAsync(Node node, DeleteAccessRequest request, CancellationToken cancellationToken);
+
+    Task<GetAccessConfigResponse> GetAccessConfigAsync(Node node, GetAccessConfigRequest request, CancellationToken cancellationToken);
 }
 
 public interface ISessionRealtimeNotifier

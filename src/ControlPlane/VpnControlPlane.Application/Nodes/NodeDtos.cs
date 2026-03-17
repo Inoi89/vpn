@@ -49,6 +49,19 @@ public sealed record IssuedNodeAccessDto(
     string ClientConfigFileName,
     string ClientConfig);
 
+public sealed record DeletedNodeAccessDto(
+    Guid NodeId,
+    Guid UserId,
+    string PublicKey,
+    bool UserDeleted);
+
+public sealed record AccessConfigDto(
+    Guid NodeId,
+    Guid UserId,
+    string PublicKey,
+    string ClientConfigFileName,
+    string ClientConfig);
+
 public sealed record TrafficPointDto(
     DateTimeOffset CapturedAtUtc,
     string UserDisplayName,

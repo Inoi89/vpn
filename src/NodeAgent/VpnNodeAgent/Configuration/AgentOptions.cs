@@ -14,6 +14,8 @@ public sealed class AgentOptions
 
     public string WgExecutablePath { get; set; } = "wg";
 
+    public string WgQuickExecutablePath { get; set; } = "wg-quick";
+
     public string DockerExecutablePath { get; set; } = "docker";
 
     public string? DockerContainerName { get; set; }

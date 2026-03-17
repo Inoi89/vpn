@@ -58,4 +58,24 @@ internal sealed class NodeAgentClient(HttpClient httpClient, IOptions<AgentClien
         var payload = await response.Content.ReadFromJsonAsync<SetAccessStateResponse>(cancellationToken: cancellationToken);
         return payload ?? throw new InvalidOperationException($"Node agent '{node.AgentIdentifier}' returned an empty set-access-state payload.");
     }
+
+    public async Task<DeleteAccessResponse> DeleteAccessAsync(Node node, DeleteAccessRequest request, CancellationToken cancellationToken)
+    {
+        var endpoint = $"{node.AgentBaseAddress}{options.Value.DeleteAccessPath}";
+        var response = await httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<DeleteAccessResponse>(cancellationToken: cancellationToken);
+        return payload ?? throw new InvalidOperationException($"Node agent '{node.AgentIdentifier}' returned an empty delete-access payload.");
+    }
+
+    public async Task<GetAccessConfigResponse> GetAccessConfigAsync(Node node, GetAccessConfigRequest request, CancellationToken cancellationToken)
+    {
+        var endpoint = $"{node.AgentBaseAddress}{options.Value.GetAccessConfigPath}";
+        var response = await httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<GetAccessConfigResponse>(cancellationToken: cancellationToken);
+        return payload ?? throw new InvalidOperationException($"Node agent '{node.AgentIdentifier}' returned an empty get-access-config payload.");
+    }
 }

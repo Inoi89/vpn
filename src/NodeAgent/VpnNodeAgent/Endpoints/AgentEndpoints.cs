@@ -28,6 +28,18 @@ public static class AgentEndpoints
             return Results.Ok(result);
         });
 
+        group.MapPost("/accesses/delete", async (DeleteAccessRequest request, IAgentAccessService accessService, CancellationToken cancellationToken) =>
+        {
+            var result = await accessService.DeleteAsync(request, cancellationToken);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/accesses/config", async (GetAccessConfigRequest request, IAgentAccessService accessService, CancellationToken cancellationToken) =>
+        {
+            var result = await accessService.GetConfigAsync(request, cancellationToken);
+            return Results.Ok(result);
+        });
+
         return endpoints;
     }
 }

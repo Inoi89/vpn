@@ -1,8 +1,10 @@
-import { useEffect, useEffectEvent } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { apiClient } from '../api/client'
 import type {
+  AccessConfig,
+  DeletedNodeAccess,
   DashboardSnapshot,
   IssueNodeAccessRequest,
   IssuedNodeAccess,
@@ -14,6 +16,7 @@ const dashboardKey = ['dashboard']
 
 export function useDashboardData() {
   const queryClient = useQueryClient()
+  const [issuedAccess, setIssuedAccess] = useState<IssuedNodeAccess | undefined>(undefined)
 
   const dashboardQuery = useQuery({
     queryKey: dashboardKey,
@@ -24,7 +27,8 @@ export function useDashboardData() {
   const issueNodeAccessMutation = useMutation({
     mutationFn: ({ nodeId, payload }: { nodeId: string; payload: IssueNodeAccessRequest }) =>
       apiClient.issueNodeAccess(nodeId, payload),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      setIssuedAccess(result)
       void queryClient.invalidateQueries({ queryKey: dashboardKey })
     },
   })
@@ -40,6 +44,17 @@ export function useDashboardData() {
       payload: SetNodeAccessStateRequest
     }) => apiClient.setNodeAccessState(nodeId, userId, payload),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardKey })
+    },
+  })
+
+  const deleteNodeAccessMutation = useMutation({
+    mutationFn: ({ nodeId, userId }: { nodeId: string; userId: string }) => apiClient.deleteNodeAccess(nodeId, userId),
+    onSuccess: (result: DeletedNodeAccess) => {
+      if (issuedAccess?.userId === result.userId && issuedAccess.nodeId === result.nodeId) {
+        setIssuedAccess(undefined)
+      }
+
       void queryClient.invalidateQueries({ queryKey: dashboardKey })
     },
   })
@@ -111,7 +126,9 @@ export function useDashboardData() {
       issueNodeAccessMutation.mutateAsync({ nodeId, payload }),
     setNodeAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) =>
       setNodeAccessStateMutation.mutateAsync({ nodeId, userId, payload }),
-    isSavingUser: issueNodeAccessMutation.isPending || setNodeAccessStateMutation.isPending,
-    issuedAccess: issueNodeAccessMutation.data as IssuedNodeAccess | undefined,
+    deleteNodeAccess: (nodeId: string, userId: string) => deleteNodeAccessMutation.mutateAsync({ nodeId, userId }),
+    getNodeAccessConfig: (nodeId: string, userId: string) => apiClient.getNodeAccessConfig(nodeId, userId) as Promise<AccessConfig>,
+    isSavingUser: issueNodeAccessMutation.isPending || setNodeAccessStateMutation.isPending || deleteNodeAccessMutation.isPending,
+    issuedAccess,
   }
 }

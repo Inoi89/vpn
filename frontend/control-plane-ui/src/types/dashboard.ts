@@ -62,7 +62,6 @@ export type NodeRealtimeEnvelope = {
 
 export type IssueNodeAccessRequest = {
   displayName: string
-  email?: string
 }
 
 export type IssuedNodeAccess = {
@@ -79,4 +78,19 @@ export type IssuedNodeAccess = {
 
 export type SetNodeAccessStateRequest = {
   isEnabled: boolean
+}
+
+export type DeletedNodeAccess = {
+  nodeId: string
+  userId: string
+  publicKey: string
+  userDeleted: boolean
+}
+
+export type AccessConfig = {
+  nodeId: string
+  userId: string
+  publicKey: string
+  clientConfigFileName: string
+  clientConfig: string
 }

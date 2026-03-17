@@ -22,17 +22,22 @@ public sealed class IssueNodeAccessCommandHandler(
         var node = await nodeRepository.GetByIdAsync(command.NodeId, includeRelated: false, cancellationToken)
             ?? throw new InvalidOperationException($"Node '{command.NodeId}' was not found.");
 
-        var externalId = $"issued-{Guid.NewGuid():N}";
         var issueResult = await nodeAgentClient.IssueAccessAsync(
             node,
             new IssueAccessRequest(
-                externalId,
+                $"issued-{Guid.NewGuid():N}",
                 command.DisplayName,
                 command.Email,
                 GetEndpointHost(node.AgentBaseAddress)),
             cancellationToken);
 
-        var user = VpnUser.Create(Guid.NewGuid(), externalId, command.DisplayName, command.Email, isEnabled: true, clock.UtcNow);
+        var user = VpnUser.Create(
+            Guid.NewGuid(),
+            issueResult.Peer.UserExternalId,
+            command.DisplayName,
+            command.Email,
+            isEnabled: true,
+            clock.UtcNow);
         await userRepository.AddAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

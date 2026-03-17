@@ -78,6 +78,32 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
 
         return Ok(result);
     }
+
+    [HttpDelete("{nodeId:guid}/accesses/{userId:guid}")]
+    public async Task<ActionResult<VpnControlPlane.Application.DeletedNodeAccessDto>> DeleteNodeAccess(
+        Guid nodeId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var result = await commandDispatcher.Send(
+            new DeleteNodeAccessCommand(nodeId, userId),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpGet("{nodeId:guid}/accesses/{userId:guid}/config")]
+    public async Task<ActionResult<VpnControlPlane.Application.AccessConfigDto>> GetNodeAccessConfig(
+        Guid nodeId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var result = await commandDispatcher.Send(
+            new GetNodeAccessConfigCommand(nodeId, userId),
+            cancellationToken);
+
+        return Ok(result);
+    }
 }
 
 public sealed record IssueNodeAccessRequest(

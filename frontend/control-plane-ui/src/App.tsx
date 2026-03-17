@@ -8,7 +8,7 @@ import { useDashboardData } from './hooks/useDashboardData'
 import { formatDateTime, formatNodeStatus, formatRelativeTime } from './utils/format'
 
 function App() {
-  const { dashboard, isLoading, isError, error, refresh, issueNodeAccess, setNodeAccessState, isSavingUser, issuedAccess } =
+  const { dashboard, isLoading, isError, error, refresh, issueNodeAccess, setNodeAccessState, deleteNodeAccess, getNodeAccessConfig, isSavingUser, issuedAccess } =
     useDashboardData()
   const [selectedNodeId, setSelectedNodeId] = useState<string | null | undefined>(undefined)
 
@@ -148,6 +148,8 @@ function App() {
                     issuedAccess={issuedAccess}
                     onIssueAccess={issueNodeAccess}
                     onSetAccessState={setNodeAccessState}
+                    onDeleteAccess={deleteNodeAccess}
+                    onDownloadAccessConfig={getNodeAccessConfig}
                   />
                 </div>
                 <div className="col-md-12">
@@ -175,6 +177,8 @@ function App() {
                     issuedAccess={issuedAccess}
                     onIssueAccess={issueNodeAccess}
                     onSetAccessState={setNodeAccessState}
+                    onDeleteAccess={deleteNodeAccess}
+                    onDownloadAccessConfig={getNodeAccessConfig}
                   />
                 </div>
               </>

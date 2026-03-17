@@ -17,6 +17,7 @@ public sealed class Session : AuditableEntity
         string peerPublicKey,
         string? endpoint,
         DateTimeOffset? latestHandshakeAtUtc,
+        bool isActive,
         DateTimeOffset observedAtUtc,
         long rxBytes,
         long txBytes,
@@ -33,7 +34,7 @@ public sealed class Session : AuditableEntity
         LastObservedAtUtc = observedAtUtc;
         LastRxBytes = rxBytes;
         LastTxBytes = txBytes;
-        State = SessionState.Active;
+        State = isActive ? SessionState.Active : SessionState.Disconnected;
         MarkCreated(now);
     }
 
@@ -73,6 +74,7 @@ public sealed class Session : AuditableEntity
         string peerPublicKey,
         string? endpoint,
         DateTimeOffset? latestHandshakeAtUtc,
+        bool isActive,
         DateTimeOffset observedAtUtc,
         long rxBytes,
         long txBytes,
@@ -86,6 +88,7 @@ public sealed class Session : AuditableEntity
             peerPublicKey.Trim(),
             string.IsNullOrWhiteSpace(endpoint) ? null : endpoint.Trim(),
             latestHandshakeAtUtc,
+            isActive,
             observedAtUtc,
             rxBytes,
             txBytes,

@@ -23,20 +23,21 @@ public sealed class AgentAccessService(
 
     public async Task<IssueAccessResponse> IssueAsync(IssueAccessRequest request, CancellationToken cancellationToken)
     {
-        ValidateRequired(request.UserExternalId, nameof(request.UserExternalId));
         ValidateRequired(request.DisplayName, nameof(request.DisplayName));
         ValidateRequired(request.EndpointHost, nameof(request.EndpointHost));
 
         var context = await LoadContextAsync(cancellationToken);
         var privateKey = (await ExecuteWgCommandAsync(["genkey"], cancellationToken)).Trim();
         var publicKey = (await ExecuteShellAsync($"printf '%s' '{EscapeShell(privateKey)}' | {EscapeShell(options.Value.WgExecutablePath)} pubkey", cancellationToken)).Trim();
-        var presharedKey = (await ExecuteWgCommandAsync(["genpsk"], cancellationToken)).Trim();
+        var presharedKey = !string.IsNullOrWhiteSpace(context.GlobalPresharedKey)
+            ? context.GlobalPresharedKey
+            : (await ExecuteWgCommandAsync(["genpsk"], cancellationToken)).Trim();
         var allowedIps = AllocateNextPeerAddress(context.Config);
         var peer = PeerSection.Create(
             publicKey,
             presharedKey,
             allowedIps,
-            request.UserExternalId,
+            publicKey,
             request.DisplayName,
             request.UserEmail,
             privateKey);
@@ -45,7 +46,7 @@ public sealed class AgentAccessService(
         context.ClientsTable.Upsert(ClientTableEntry.Create(peer.PublicKey, peer.DisplayName, peer.AllowedIps));
 
         await PersistAsync(context, cancellationToken);
-        await ApplyPeerRuntimeAsync(context.InterfaceName, peer, cancellationToken);
+        await SyncRuntimeConfigAsync(context.InterfaceName, context.ConfigPath, cancellationToken);
 
         var clientConfig = BuildClientConfig(context.Config, context.ServerPublicKey, request.EndpointHost, peer);
         return new IssueAccessResponse(
@@ -54,7 +55,7 @@ public sealed class AgentAccessService(
                 peer.AllowedIps,
                 peer.PresharedKey,
                 privateKey,
-                request.UserExternalId,
+                publicKey,
                 request.DisplayName,
                 request.UserEmail),
             BuildClientConfigFileName(request.DisplayName),
@@ -75,7 +76,7 @@ public sealed class AgentAccessService(
 
             var peer = PeerSection.Create(
                 request.Peer.PublicKey,
-                request.Peer.PresharedKey,
+                string.IsNullOrWhiteSpace(request.Peer.PresharedKey) ? context.GlobalPresharedKey : request.Peer.PresharedKey,
                 request.Peer.AllowedIps,
                 request.Peer.UserExternalId,
                 request.Peer.DisplayName,
@@ -86,7 +87,7 @@ public sealed class AgentAccessService(
             context.ClientsTable.Upsert(ClientTableEntry.Create(peer.PublicKey, peer.DisplayName, peer.AllowedIps));
 
             await PersistAsync(context, cancellationToken);
-            await ApplyPeerRuntimeAsync(context.InterfaceName, peer, cancellationToken);
+            await SyncRuntimeConfigAsync(context.InterfaceName, context.ConfigPath, cancellationToken);
 
             string? clientConfig = null;
             string? fileName = null;
@@ -99,13 +100,46 @@ public sealed class AgentAccessService(
             return new SetAccessStateResponse(request.Peer.PublicKey, true, fileName, clientConfig);
         }
 
-        context.Config.RemovePeer(request.Peer.PublicKey);
-        context.ClientsTable.Remove(request.Peer.PublicKey);
-
-        await PersistAsync(context, cancellationToken);
-        await RemovePeerRuntimeAsync(context.InterfaceName, request.Peer.PublicKey, cancellationToken);
+        await RemovePeerAsync(context, request.Peer.PublicKey, cancellationToken);
 
         return new SetAccessStateResponse(request.Peer.PublicKey, false, null, null);
+    }
+
+    public async Task<DeleteAccessResponse> DeleteAsync(DeleteAccessRequest request, CancellationToken cancellationToken)
+    {
+        ValidateRequired(request.PublicKey, nameof(request.PublicKey));
+
+        var context = await LoadContextAsync(cancellationToken);
+        await RemovePeerAsync(context, request.PublicKey, cancellationToken);
+
+        return new DeleteAccessResponse(request.PublicKey, true);
+    }
+
+    public async Task<GetAccessConfigResponse> GetConfigAsync(GetAccessConfigRequest request, CancellationToken cancellationToken)
+    {
+        ValidateRequired(request.Peer.PublicKey, nameof(request.Peer.PublicKey));
+        ValidateRequired(request.Peer.AllowedIps, nameof(request.Peer.AllowedIps));
+        ValidateRequired(request.Peer.DisplayName, nameof(request.Peer.DisplayName));
+        ValidateRequired(request.EndpointHost, nameof(request.EndpointHost));
+
+        var context = await LoadContextAsync(cancellationToken);
+        var clientPrivateKey = request.Peer.ClientPrivateKey;
+        if (string.IsNullOrWhiteSpace(clientPrivateKey))
+        {
+            throw new InvalidOperationException("Client private key is unavailable for this access.");
+        }
+
+        var peer = PeerSection.Create(
+            request.Peer.PublicKey,
+            string.IsNullOrWhiteSpace(request.Peer.PresharedKey) ? context.GlobalPresharedKey : request.Peer.PresharedKey,
+            request.Peer.AllowedIps,
+            request.Peer.UserExternalId,
+            request.Peer.DisplayName,
+            request.Peer.UserEmail,
+            clientPrivateKey);
+
+        var clientConfig = BuildClientConfig(context.Config, context.ServerPublicKey, request.EndpointHost, peer);
+        return new GetAccessConfigResponse(peer.PublicKey, BuildClientConfigFileName(peer.DisplayName), clientConfig);
     }
 
     private async Task<AgentContext> LoadContextAsync(CancellationToken cancellationToken)
@@ -113,16 +147,19 @@ public sealed class AgentAccessService(
         var configPath = Path.Combine(options.Value.ConfigDirectory, "wg0.conf");
         var clientsTablePath = Path.Combine(options.Value.ConfigDirectory, "clientsTable");
         var serverPublicKeyPath = Path.Combine(options.Value.ConfigDirectory, "wireguard_server_public_key.key");
+        var presharedKeyPath = Path.Combine(options.Value.ConfigDirectory, "wireguard_psk.key");
 
         var config = await LoadConfigAsync(configPath, cancellationToken);
         var clientsTable = await LoadClientsTableAsync(clientsTablePath, cancellationToken);
         var serverPublicKey = (await ReadFileTextAsync(serverPublicKeyPath, cancellationToken)).Trim();
+        var globalPresharedKey = await TryReadOptionalTextAsync(presharedKeyPath, cancellationToken);
 
         return new AgentContext(
             configPath,
             clientsTablePath,
             Path.GetFileNameWithoutExtension(configPath),
             serverPublicKey,
+            globalPresharedKey,
             config,
             clientsTable);
     }
@@ -145,10 +182,32 @@ public sealed class AgentAccessService(
         return string.Join('\n', lines);
     }
 
+    private async Task<string?> TryReadOptionalTextAsync(string filePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var text = await ReadFileTextAsync(filePath, cancellationToken);
+            return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private async Task PersistAsync(AgentContext context, CancellationToken cancellationToken)
     {
         await fileWriter.WriteAllTextAsync(context.ConfigPath, context.Config.Render(), cancellationToken);
         await fileWriter.WriteAllTextAsync(context.ClientsTablePath, context.ClientsTable.Render(), cancellationToken);
+    }
+
+    private async Task RemovePeerAsync(AgentContext context, string publicKey, CancellationToken cancellationToken)
+    {
+        context.Config.RemovePeer(publicKey);
+        context.ClientsTable.Remove(publicKey);
+
+        await PersistAsync(context, cancellationToken);
+        await SyncRuntimeConfigAsync(context.InterfaceName, context.ConfigPath, cancellationToken);
     }
 
     private async Task<string> ExecuteWgCommandAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
@@ -177,30 +236,17 @@ public sealed class AgentAccessService(
         return await commandExecutor.ExecuteAsync("sh", ["-lc", script], cancellationToken);
     }
 
-    private async Task ApplyPeerRuntimeAsync(string interfaceName, PeerSection peer, CancellationToken cancellationToken)
-    {
-        var commands = new List<string>();
-        if (!string.IsNullOrWhiteSpace(peer.PresharedKey))
-        {
-            commands.Add($"tmp=$(mktemp)");
-            commands.Add($"printf '%s' '{EscapeShell(peer.PresharedKey)}' > \"$tmp\"");
-            commands.Add(
-                $"{EscapeShell(options.Value.WgExecutablePath)} set {EscapeShell(interfaceName)} peer '{EscapeShell(peer.PublicKey)}' preshared-key \"$tmp\" allowed-ips '{EscapeShell(peer.AllowedIps)}'");
-            commands.Add("rm -f \"$tmp\"");
-        }
-        else
-        {
-            commands.Add(
-                $"{EscapeShell(options.Value.WgExecutablePath)} set {EscapeShell(interfaceName)} peer '{EscapeShell(peer.PublicKey)}' allowed-ips '{EscapeShell(peer.AllowedIps)}'");
-        }
-
-        await ExecuteShellAsync(string.Join("; ", commands), cancellationToken);
-    }
-
-    private Task RemovePeerRuntimeAsync(string interfaceName, string publicKey, CancellationToken cancellationToken)
+    private Task SyncRuntimeConfigAsync(string interfaceName, string configPath, CancellationToken cancellationToken)
     {
         return ExecuteShellAsync(
-            $"{EscapeShell(options.Value.WgExecutablePath)} set {EscapeShell(interfaceName)} peer '{EscapeShell(publicKey)}' remove >/dev/null 2>&1 || true",
+            $"if {EscapeShell(options.Value.WgExecutablePath)} show '{EscapeShell(interfaceName)}' >/dev/null 2>&1; then " +
+            "tmp=$(mktemp); " +
+            $"{EscapeShell(options.Value.WgQuickExecutablePath)} strip '{EscapeShell(configPath)}' > \"$tmp\"; " +
+            $"{EscapeShell(options.Value.WgExecutablePath)} syncconf '{EscapeShell(interfaceName)}' \"$tmp\"; " +
+            "rm -f \"$tmp\"; " +
+            "else " +
+            $"{EscapeShell(options.Value.WgQuickExecutablePath)} up '{EscapeShell(configPath)}'; " +
+            "fi",
             cancellationToken);
     }
 
@@ -350,6 +396,7 @@ public sealed class AgentAccessService(
         string ClientsTablePath,
         string InterfaceName,
         string ServerPublicKey,
+        string? GlobalPresharedKey,
         WireGuardConfigDocument Config,
         ClientsTableDocument ClientsTable);
 

@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<INodeRepository, EfNodeRepository>();
         services.AddScoped<IUserRepository, EfUserRepository>();
+        services.AddScoped<IAccessRepository, EfAccessRepository>();
         services.AddScoped<IDashboardReadService, DashboardReadService>();
         services.AddScoped<INodeSnapshotWriter, EfNodeSnapshotWriter>();
         services.AddSingleton<IClock, SystemClock>();

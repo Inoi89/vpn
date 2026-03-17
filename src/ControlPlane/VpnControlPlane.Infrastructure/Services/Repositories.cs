@@ -68,6 +68,66 @@ internal sealed class EfUserRepository(ControlPlaneDbContext dbContext) : IUserR
     }
 }
 
+internal sealed class EfAccessRepository(ControlPlaneDbContext dbContext) : IAccessRepository
+{
+    public async Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid userId, string publicKey, CancellationToken cancellationToken)
+    {
+        var peerConfig = await dbContext.PeerConfigs
+            .FirstOrDefaultAsync(
+                x => x.NodeId == nodeId && x.UserId == userId && x.PublicKey == publicKey,
+                cancellationToken);
+
+        if (peerConfig is null)
+        {
+            return false;
+        }
+
+        var sessionIds = await dbContext.Sessions
+            .Where(x => x.NodeId == nodeId && (x.PeerConfigId == peerConfig.Id || x.PeerPublicKey == publicKey))
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        var trafficForPeer = dbContext.TrafficStats
+            .Where(x => x.PeerConfigId == peerConfig.Id || (x.SessionId.HasValue && sessionIds.Contains(x.SessionId.Value)));
+        dbContext.TrafficStats.RemoveRange(trafficForPeer);
+
+        var sessionsForPeer = dbContext.Sessions
+            .Where(x => x.NodeId == nodeId && (x.PeerConfigId == peerConfig.Id || x.PeerPublicKey == publicKey));
+        dbContext.Sessions.RemoveRange(sessionsForPeer);
+
+        dbContext.PeerConfigs.Remove(peerConfig);
+
+        var hasOtherPeerConfigs = await dbContext.PeerConfigs
+            .AnyAsync(x => x.UserId == userId && x.Id != peerConfig.Id, cancellationToken);
+
+        if (hasOtherPeerConfigs)
+        {
+            return false;
+        }
+
+        var orphanSessionIds = await dbContext.Sessions
+            .Where(x => x.UserId == userId)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        var trafficForUser = dbContext.TrafficStats
+            .Where(x => x.UserId == userId || (x.SessionId.HasValue && orphanSessionIds.Contains(x.SessionId.Value)));
+        dbContext.TrafficStats.RemoveRange(trafficForUser);
+
+        var sessionsForUser = dbContext.Sessions.Where(x => x.UserId == userId);
+        dbContext.Sessions.RemoveRange(sessionsForUser);
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+        if (user is not null)
+        {
+            dbContext.Users.Remove(user);
+            return true;
+        }
+
+        return false;
+    }
+}
+
 internal sealed class DashboardReadService(ControlPlaneDbContext dbContext) : IDashboardReadService
 {
     public async Task<IReadOnlyList<NodeSummaryDto>> GetNodesAsync(CancellationToken cancellationToken)
@@ -346,6 +406,7 @@ internal sealed class EfNodeSnapshotWriter(ControlPlaneDbContext dbContext, IClo
                     sessionSnapshot.PublicKey,
                     sessionSnapshot.Endpoint,
                     sessionSnapshot.LatestHandshakeAtUtc,
+                    sessionSnapshot.IsActive,
                     snapshot.CollectedAtUtc,
                     sessionSnapshot.RxBytes,
                     sessionSnapshot.TxBytes,

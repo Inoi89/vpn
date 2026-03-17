@@ -23,6 +23,11 @@ public interface IUserRepository
     Task<VpnUser?> FindByEmailAsync(string email, CancellationToken cancellationToken);
 }
 
+public interface IAccessRepository
+{
+    Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid userId, string publicKey, CancellationToken cancellationToken);
+}
+
 public interface IDashboardReadService
 {
     Task<IReadOnlyList<NodeSummaryDto>> GetNodesAsync(CancellationToken cancellationToken);
