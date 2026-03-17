@@ -14,4 +14,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Infrastructure\VpnClient.Infrastructure.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="VpnControlPlane.Application.Tests\**\*.cs" />
+  </ItemGroup>
 </Project>

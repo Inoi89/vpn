@@ -24,8 +24,7 @@ class Program
         builder.Services.AddLogging();
         builder.Services.AddSingleton<ObservableCollection<LogEntry>>();
         builder.Services.AddSingleton<ObservableLoggerProvider>();
-        builder.Services.AddSingleton<IConfigService>(sp =>
-            new ConfigService(Path.Combine(AppContext.BaseDirectory, "vpn.conf")));
+        builder.Services.AddSingleton<IConfigService, ConfigService>();
         builder.Services.AddSingleton<IWintunService, WintunService>();
         builder.Services.AddSingleton<IVpnService, VpnService>();
         builder.Services.AddSingleton<MainWindow>();

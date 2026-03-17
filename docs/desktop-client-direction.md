@@ -51,6 +51,18 @@ Current state of that client:
 - it can call `ConnectAsync` / `DisconnectAsync`;
 - it is currently much closer to a WireGuard test harness than to a production-ready Amnezia client.
 
+Current implementation snapshot in this repo:
+
+- [`Core/Models/ImportedProfile.cs`](../Core/Models/ImportedProfile.cs) stores the normalized local profile shape;
+- [`Infrastructure/Services/ConfigService.cs`](../Infrastructure/Services/ConfigService.cs) now imports both `.conf` and `.vpn` into that local model;
+- [`UI/ViewModels/MainWindowViewModel.cs`](../UI/ViewModels/MainWindowViewModel.cs) is now centered on one active imported profile, not on hardcoded file paths;
+- [`UI/Views/MainWindow.axaml`](../UI/Views/MainWindow.axaml) has been reshaped into an Amnezia-like desktop shell focused on `import -> connect -> diagnostics`.
+
+This is an intentional halfway point:
+
+- the UI direction is now aligned with the product goal;
+- the runtime is still the old thin `VpnService`, so full Amnezia parity is **not** claimed yet.
+
 ## 3. Upstream Amnezia Flow We Need To Mirror
 
 The two most important upstream areas are:

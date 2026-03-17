@@ -2,9 +2,101 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="VpnClient.UI.App"
              RequestedThemeVariant="Dark">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Styles>
         <FluentTheme />
+
+        <Style Selector="Window">
+            <Setter Property="Background" Value="#0E0E11" />
+            <Setter Property="Foreground" Value="#D7D8DB" />
+        </Style>
+
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="#878B91" />
+        </Style>
+
+        <Style Selector="TextBlock.heading">
+            <Setter Property="FontSize" Value="30" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.metric-title">
+            <Setter Property="Foreground" Value="#878B91" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <Style Selector="Border.sidebar">
+            <Setter Property="Background" Value="#16171B" />
+            <Setter Property="CornerRadius" Value="26" />
+            <Setter Property="BorderBrush" Value="#2C2D30" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#16171B" />
+            <Setter Property="CornerRadius" Value="26" />
+            <Setter Property="BorderBrush" Value="#2C2D30" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Border.inner-panel">
+            <Setter Property="Background" Value="#1C1D21" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="BorderBrush" Value="#2C2D30" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Border.status-pill">
+            <Setter Property="Background" Value="#261E1A" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="BorderBrush" Value="#84603D" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Border.info-chip">
+            <Setter Property="Background" Value="#1C1D21" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="BorderBrush" Value="#2C2D30" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.import-button">
+            <Setter Property="Background" Value="#FBB26A" />
+            <Setter Property="Foreground" Value="#0E0E11" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="20,14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.connect-button">
+            <Setter Property="Background" Value="#1C1D21" />
+            <Setter Property="Foreground" Value="#FBB26A" />
+            <Setter Property="BorderBrush" Value="#FBB26A" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.connect-button:pointerover">
+            <Setter Property="Background" Value="#261E1A" />
+        </Style>
+
+        <Style Selector="Button.ghost-button">
+            <Setter Property="Background" Value="#1C1D21" />
+            <Setter Property="Foreground" Value="#D7D8DB" />
+            <Setter Property="BorderBrush" Value="#2C2D30" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="18,12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
     </Application.Styles>
 </Application>

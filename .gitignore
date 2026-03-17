@@ -17,3 +17,9 @@ WintunWrapper.dll
 # Local deployment artifacts
 certs/
 *.tar.gz
+
+# Local research and scratch publish output
+.research/
+artifacts/appsettings.45.json
+artifacts/control-api-publish/
+artifacts/test.current.vpn
