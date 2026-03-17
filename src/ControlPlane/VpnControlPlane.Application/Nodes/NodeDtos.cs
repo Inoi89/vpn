@@ -35,7 +35,19 @@ public sealed record UserSummaryDto(
     bool IsEnabled,
     int PeerCount,
     IReadOnlyList<Guid> NodeIds,
+    IReadOnlyList<Guid> EnabledNodeIds,
     DateTimeOffset? LastActivityAtUtc);
+
+public sealed record IssuedNodeAccessDto(
+    Guid NodeId,
+    Guid UserId,
+    string ExternalId,
+    string DisplayName,
+    string? Email,
+    string PublicKey,
+    string AllowedIps,
+    string ClientConfigFileName,
+    string ClientConfig);
 
 public sealed record TrafficPointDto(
     DateTimeOffset CapturedAtUtc,

@@ -11,6 +11,10 @@ public interface IClock
 public interface INodeAgentClient
 {
     Task<NodeSnapshotResponse> GetSnapshotAsync(Node node, CancellationToken cancellationToken);
+
+    Task<IssueAccessResponse> IssueAccessAsync(Node node, IssueAccessRequest request, CancellationToken cancellationToken);
+
+    Task<SetAccessStateResponse> SetAccessStateAsync(Node node, SetAccessStateRequest request, CancellationToken cancellationToken);
 }
 
 public interface ISessionRealtimeNotifier

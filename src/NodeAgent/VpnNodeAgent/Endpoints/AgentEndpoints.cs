@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using VpnControlPlane.Contracts.Nodes;
 using VpnNodeAgent.Abstractions;
 
 namespace VpnNodeAgent.Endpoints;
@@ -13,6 +14,18 @@ public static class AgentEndpoints
         {
             var snapshot = await snapshotService.BuildSnapshotAsync(cancellationToken);
             return Results.Ok(snapshot);
+        });
+
+        group.MapPost("/accesses/issue", async (IssueAccessRequest request, IAgentAccessService accessService, CancellationToken cancellationToken) =>
+        {
+            var result = await accessService.IssueAsync(request, cancellationToken);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/accesses/state", async (SetAccessStateRequest request, IAgentAccessService accessService, CancellationToken cancellationToken) =>
+        {
+            var result = await accessService.SetStateAsync(request, cancellationToken);
+            return Results.Ok(result);
         });
 
         return endpoints;

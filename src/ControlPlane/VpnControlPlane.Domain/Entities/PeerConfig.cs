@@ -32,6 +32,7 @@ public sealed class PeerConfig : AuditableEntity
         MetadataJson = metadataJson;
         Revision = revision;
         LastSyncedAtUtc = lastSyncedAtUtc;
+        IsEnabled = true;
         MarkCreated(now);
     }
 
@@ -56,6 +57,8 @@ public sealed class PeerConfig : AuditableEntity
     public int Revision { get; private set; }
 
     public DateTimeOffset LastSyncedAtUtc { get; private set; }
+
+    public bool IsEnabled { get; private set; }
 
     public static PeerConfig Create(
         Guid id,
@@ -101,6 +104,14 @@ public sealed class PeerConfig : AuditableEntity
         MetadataJson = string.IsNullOrWhiteSpace(metadataJson) ? null : metadataJson.Trim();
         Revision = revision;
         LastSyncedAtUtc = lastSyncedAtUtc;
+        IsEnabled = true;
+        MarkUpdated(now);
+    }
+
+    public void Disable(DateTimeOffset lastSyncedAtUtc, DateTimeOffset now)
+    {
+        LastSyncedAtUtc = lastSyncedAtUtc;
+        IsEnabled = false;
         MarkUpdated(now);
     }
 }

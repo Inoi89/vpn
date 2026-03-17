@@ -46,3 +46,34 @@ public sealed record PeerConfigSnapshot(
     IReadOnlyList<string> AllowedIps,
     string? MetadataJson,
     int Revision);
+
+public sealed record AgentPeerMaterial(
+    string PublicKey,
+    string AllowedIps,
+    string? PresharedKey,
+    string? ClientPrivateKey,
+    string UserExternalId,
+    string DisplayName,
+    string? UserEmail);
+
+public sealed record IssueAccessRequest(
+    string UserExternalId,
+    string DisplayName,
+    string? UserEmail,
+    string EndpointHost);
+
+public sealed record IssueAccessResponse(
+    AgentPeerMaterial Peer,
+    string ClientConfigFileName,
+    string ClientConfig);
+
+public sealed record SetAccessStateRequest(
+    AgentPeerMaterial Peer,
+    bool IsEnabled,
+    string? EndpointHost);
+
+public sealed record SetAccessStateResponse(
+    string PublicKey,
+    bool IsEnabled,
+    string? ClientConfigFileName,
+    string? ClientConfig);

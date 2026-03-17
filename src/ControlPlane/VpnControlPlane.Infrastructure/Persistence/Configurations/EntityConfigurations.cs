@@ -53,6 +53,7 @@ internal sealed class PeerConfigConfiguration : IEntityTypeConfiguration<PeerCon
         builder.Property(x => x.AllowedIps).HasMaxLength(1024);
         builder.Property(x => x.ProtocolFlavor).HasConversion<string>().HasMaxLength(64);
         builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
+        builder.Property(x => x.IsEnabled).HasDefaultValue(true);
         builder.HasIndex(x => new { x.NodeId, x.PublicKey }).IsUnique();
         builder.HasOne(x => x.Node).WithMany(x => x.PeerConfigs).HasForeignKey(x => x.NodeId);
         builder.HasOne(x => x.User).WithMany(x => x.PeerConfigs).HasForeignKey(x => x.UserId);

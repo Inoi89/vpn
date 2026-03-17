@@ -38,4 +38,24 @@ internal sealed class NodeAgentClient(HttpClient httpClient, IOptions<AgentClien
         var snapshot = await response.Content.ReadFromJsonAsync<NodeSnapshotResponse>(cancellationToken: cancellationToken);
         return snapshot ?? throw new InvalidOperationException($"Node agent '{node.AgentIdentifier}' returned an empty snapshot.");
     }
+
+    public async Task<IssueAccessResponse> IssueAccessAsync(Node node, IssueAccessRequest request, CancellationToken cancellationToken)
+    {
+        var endpoint = $"{node.AgentBaseAddress}{options.Value.IssueAccessPath}";
+        var response = await httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<IssueAccessResponse>(cancellationToken: cancellationToken);
+        return payload ?? throw new InvalidOperationException($"Node agent '{node.AgentIdentifier}' returned an empty issue-access payload.");
+    }
+
+    public async Task<SetAccessStateResponse> SetAccessStateAsync(Node node, SetAccessStateRequest request, CancellationToken cancellationToken)
+    {
+        var endpoint = $"{node.AgentBaseAddress}{options.Value.SetAccessStatePath}";
+        var response = await httpClient.PostAsJsonAsync(endpoint, request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<SetAccessStateResponse>(cancellationToken: cancellationToken);
+        return payload ?? throw new InvalidOperationException($"Node agent '{node.AgentIdentifier}' returned an empty set-access-state payload.");
+    }
 }

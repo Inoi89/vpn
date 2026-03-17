@@ -30,6 +30,7 @@ public sealed class CreateUserCommandHandler(
                 existing.IsEnabled,
                 existing.PeerConfigs.Count,
                 existing.PeerConfigs.Select(x => x.NodeId).Distinct().ToArray(),
+                existing.PeerConfigs.Where(x => x.IsEnabled).Select(x => x.NodeId).Distinct().ToArray(),
                 null);
         }
 
@@ -44,6 +45,6 @@ public sealed class CreateUserCommandHandler(
         await userRepository.AddAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new UserSummaryDto(user.Id, user.ExternalId, user.DisplayName, user.Email, user.IsEnabled, 0, [], null);
+        return new UserSummaryDto(user.Id, user.ExternalId, user.DisplayName, user.Email, user.IsEnabled, 0, [], [], null);
     }
 }

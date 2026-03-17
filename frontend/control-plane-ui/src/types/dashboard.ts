@@ -35,6 +35,7 @@ export type UserSummary = {
   isEnabled: boolean
   peerCount: number
   nodeIds: string[]
+  enabledNodeIds: string[]
   lastActivityAtUtc?: string | null
 }
 
@@ -59,9 +60,23 @@ export type NodeRealtimeEnvelope = {
   sessions: SessionSummary[]
 }
 
-export type UpsertUserRequest = {
-  externalId: string
+export type IssueNodeAccessRequest = {
   displayName: string
   email?: string
+}
+
+export type IssuedNodeAccess = {
+  nodeId: string
+  userId: string
+  externalId: string
+  displayName: string
+  email?: string | null
+  publicKey: string
+  allowedIps: string
+  clientConfigFileName: string
+  clientConfig: string
+}
+
+export type SetNodeAccessStateRequest = {
   isEnabled: boolean
 }

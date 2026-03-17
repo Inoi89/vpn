@@ -68,8 +68,10 @@ builder.Services.AddSingleton<IWireGuardCommandRunner, WgCommandRunner>();
 builder.Services.AddSingleton<IWireGuardDumpParser, WireGuardDumpParser>();
 builder.Services.AddSingleton<IConfigFileCatalog, ConfigFileCatalog>();
 builder.Services.AddSingleton<IConfigFileReader, ConfigFileReader>();
+builder.Services.AddSingleton<IConfigFileWriter, ConfigFileWriter>();
 builder.Services.AddSingleton<IWireGuardConfigParser, WireGuardConfigParser>();
 builder.Services.AddSingleton<IAgentSnapshotService, AgentSnapshotService>();
+builder.Services.AddSingleton<IAgentAccessService, AgentAccessService>();
 builder.Services.AddSingleton<ProcessCommandExecutor>();
 
 var app = builder.Build();

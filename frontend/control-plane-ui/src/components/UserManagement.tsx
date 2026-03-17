@@ -1,30 +1,40 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { UpsertUserRequest, UserSummary } from '../types/dashboard'
+import type { IssueNodeAccessRequest, IssuedNodeAccess, SetNodeAccessStateRequest, UserSummary } from '../types/dashboard'
 import { formatDateTime, formatRelativeTime } from '../utils/format'
 
 type UserManagementProps = {
   users: UserSummary[]
   activeUserIds: Set<string>
+  selectedNodeId: string | null
   selectedNodeName: string | null
+  issuedAccess?: IssuedNodeAccess
   isSaving: boolean
-  onSave: (request: UpsertUserRequest) => Promise<unknown>
+  onIssueAccess: (nodeId: string, payload: IssueNodeAccessRequest) => Promise<unknown>
+  onSetAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) => Promise<unknown>
 }
 
-const defaultForm: UpsertUserRequest = {
-  externalId: '',
+const defaultForm: IssueNodeAccessRequest = {
   displayName: '',
   email: '',
-  isEnabled: true,
 }
 
-export function UserManagement({ users, activeUserIds, selectedNodeName, isSaving, onSave }: UserManagementProps) {
+export function UserManagement({
+  users,
+  activeUserIds,
+  selectedNodeId,
+  selectedNodeName,
+  issuedAccess,
+  isSaving,
+  onIssueAccess,
+  onSetAccessState,
+}: UserManagementProps) {
   const [form, setForm] = useState(defaultForm)
   const [query, setQuery] = useState('')
-  const [busyExternalId, setBusyExternalId] = useState<string | null>(null)
+  const [busyUserId, setBusyUserId] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement | null>(null)
-
   const normalizedQuery = query.trim().toLowerCase()
+
   const sortedUsers = [...users].sort((left, right) => {
     const leftActive = activeUserIds.has(left.id) ? 1 : 0
     const rightActive = activeUserIds.has(right.id) ? 1 : 0
@@ -33,14 +43,16 @@ export function UserManagement({ users, activeUserIds, selectedNodeName, isSavin
       return rightActive - leftActive
     }
 
+    const leftEnabled = selectedNodeId ? left.enabledNodeIds.includes(selectedNodeId) : left.isEnabled
+    const rightEnabled = selectedNodeId ? right.enabledNodeIds.includes(selectedNodeId) : right.isEnabled
+    if (leftEnabled !== rightEnabled) {
+      return Number(rightEnabled) - Number(leftEnabled)
+    }
+
     const leftActivity = left.lastActivityAtUtc ?? ''
     const rightActivity = right.lastActivityAtUtc ?? ''
     if (leftActivity !== rightActivity) {
       return rightActivity.localeCompare(leftActivity)
-    }
-
-    if (left.isEnabled !== right.isEnabled) {
-      return Number(right.isEnabled) - Number(left.isEnabled)
     }
 
     return left.displayName.localeCompare(right.displayName, 'ru-RU')
@@ -57,30 +69,55 @@ export function UserManagement({ users, activeUserIds, selectedNodeName, isSavin
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    await onSave(form)
+    if (!selectedNodeId) {
+      return
+    }
+
+    await onIssueAccess(selectedNodeId, form)
     setForm(defaultForm)
   }
 
   async function handleToggleUser(user: UserSummary) {
-    setBusyExternalId(user.externalId)
+    if (!selectedNodeId) {
+      return
+    }
+
+    setBusyUserId(user.id)
 
     try {
-      await onSave({
-        externalId: user.externalId,
-        displayName: user.displayName,
-        email: user.email ?? '',
-        isEnabled: !user.isEnabled,
-      })
+      const isEnabledOnNode = user.enabledNodeIds.includes(selectedNodeId)
+      await onSetAccessState(selectedNodeId, user.id, { isEnabled: !isEnabledOnNode })
     } finally {
-      setBusyExternalId(null)
+      setBusyUserId(null)
     }
   }
 
   function focusForm() {
+    if (!selectedNodeId) {
+      return
+    }
+
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     const firstInput = formRef.current?.querySelector('input')
     firstInput?.focus()
   }
+
+  function downloadIssuedConfig() {
+    if (!issuedAccess) {
+      return
+    }
+
+    const blob = new Blob([issuedAccess.clientConfig], { type: 'text/plain;charset=utf-8' })
+    const objectUrl = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = objectUrl
+    anchor.download = issuedAccess.clientConfigFileName
+    anchor.click()
+    URL.revokeObjectURL(objectUrl)
+  }
+
+  const hasSelectedNode = Boolean(selectedNodeId)
+  const visibleIssuedAccess = hasSelectedNode && issuedAccess?.nodeId === selectedNodeId ? issuedAccess : undefined
 
   return (
     <div className="row">
@@ -89,14 +126,14 @@ export function UserManagement({ users, activeUserIds, selectedNodeName, isSavin
           <div className="card-header">
             <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
               <div>
-                <h5>{selectedNodeName ? `Пользователи ноды ${selectedNodeName}` : 'Каталог доступа'}</h5>
+                <h5>{selectedNodeName ? `Ключи ноды ${selectedNodeName}` : 'Каталог доступа'}</h5>
                 <small>
                   {selectedNodeName
-                    ? 'Список ключей и доступов, привязанных к выбранной ноде.'
-                    : 'Общий каталог ключей и быстрые действия включения и отключения доступа.'}
+                    ? 'Реальные peer-доступы выбранной ноды с включением, отключением и выдачей новых конфигов.'
+                    : 'Общий каталог ключей. Для выдачи и переключения состояния открой конкретную ноду.'}
                 </small>
               </div>
-              <button type="button" className="btn btn-primary btn-sm" onClick={focusForm}>
+              <button type="button" className="btn btn-primary btn-sm" disabled={!hasSelectedNode} onClick={focusForm}>
                 Добавить
               </button>
             </div>
@@ -129,7 +166,8 @@ export function UserManagement({ users, activeUserIds, selectedNodeName, isSavin
                   <tbody>
                     {filteredUsers.map((user) => {
                       const isActive = activeUserIds.has(user.id)
-                      const isBusy = busyExternalId === user.externalId && isSaving
+                      const isEnabledOnNode = selectedNodeId ? user.enabledNodeIds.includes(selectedNodeId) : user.isEnabled
+                      const isBusy = busyUserId === user.id && isSaving
 
                       return (
                         <tr key={user.id}>
@@ -142,8 +180,8 @@ export function UserManagement({ users, activeUserIds, selectedNodeName, isSavin
                               <span className={`badge ${isActive ? 'badge-light-success' : 'badge-light-secondary'}`}>
                                 {isActive ? 'В сети' : 'Не в сети'}
                               </span>
-                              <span className={`badge ${user.isEnabled ? 'badge-light-primary' : 'badge-light-secondary'}`}>
-                                {user.isEnabled ? 'Доступ открыт' : 'Доступ отключён'}
+                              <span className={`badge ${isEnabledOnNode ? 'badge-light-primary' : 'badge-light-secondary'}`}>
+                                {isEnabledOnNode ? 'Ключ включён' : 'Ключ отключён'}
                               </span>
                             </div>
                           </td>
@@ -153,14 +191,18 @@ export function UserManagement({ users, activeUserIds, selectedNodeName, isSavin
                             <div className="text-muted small">{formatDateTime(user.lastActivityAtUtc)}</div>
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              className={`btn btn-sm ${user.isEnabled ? 'btn-light-danger' : 'btn-light-success'}`}
-                              disabled={isSaving}
-                              onClick={() => void handleToggleUser(user)}
-                            >
-                              {isBusy ? 'Сохранение...' : user.isEnabled ? 'Отключить' : 'Включить'}
-                            </button>
+                            {selectedNodeId ? (
+                              <button
+                                type="button"
+                                className={`btn btn-sm ${isEnabledOnNode ? 'btn-light-danger' : 'btn-light-success'}`}
+                                disabled={isSaving}
+                                onClick={() => void handleToggleUser(user)}
+                              >
+                                {isBusy ? 'Сохранение...' : isEnabledOnNode ? 'Отключить' : 'Включить'}
+                              </button>
+                            ) : (
+                              <span className="text-muted small">Выберите ноду</span>
+                            )}
                           </td>
                         </tr>
                       )
@@ -173,63 +215,73 @@ export function UserManagement({ users, activeUserIds, selectedNodeName, isSavin
         </div>
       </div>
 
-      <div className="col-12">
-        <div className="card">
-          <div className="card-header">
-            <h5>Добавить пользователя</h5>
+      {hasSelectedNode ? (
+        <>
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header">
+                <h5>{selectedNodeName ? `Выдать доступ на ${selectedNodeName}` : 'Выдать доступ'}</h5>
+              </div>
+              <div className="card-body">
+                <form onSubmit={handleSubmit} ref={formRef}>
+                  <div className="form-group">
+                    <label>Имя в панели</label>
+                    <input
+                      className="form-control"
+                      required
+                      value={form.displayName}
+                      onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Почта</label>
+                    <input
+                      className="form-control"
+                      type="email"
+                      value={form.email ?? ''}
+                      onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                    />
+                  </div>
+
+                  <button className="btn btn-primary" disabled={isSaving} type="submit">
+                    {isSaving ? 'Выдача...' : 'Выдать ключ'}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
-          <div className="card-body">
-            <form onSubmit={handleSubmit} ref={formRef}>
-              <div className="form-group">
-                <label>Внешний идентификатор</label>
-                <input
-                  className="form-control"
-                  required
-                  value={form.externalId}
-                  onChange={(event) => setForm((current) => ({ ...current, externalId: event.target.value }))}
-                />
-              </div>
 
-              <div className="form-group">
-                <label>Имя в панели</label>
-                <input
-                  className="form-control"
-                  required
-                  value={form.displayName}
-                  onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
-                />
+          {visibleIssuedAccess ? (
+            <div className="col-12">
+              <div className="card">
+                <div className="card-header">
+                  <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                    <div>
+                      <h5>Последний выданный конфиг</h5>
+                      <small>
+                        {visibleIssuedAccess.displayName} · {visibleIssuedAccess.allowedIps}
+                      </small>
+                    </div>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={downloadIssuedConfig}>
+                      Скачать .conf
+                    </button>
+                  </div>
+                </div>
+                <div className="card-body">
+                  <div className="text-muted small m-b-10">{visibleIssuedAccess.clientConfigFileName}</div>
+                  <textarea
+                    className="form-control issued-config"
+                    readOnly
+                    rows={14}
+                    value={visibleIssuedAccess.clientConfig}
+                  />
+                </div>
               </div>
-
-              <div className="form-group">
-                <label>Почта</label>
-                <input
-                  className="form-control"
-                  type="email"
-                  value={form.email ?? ''}
-                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                />
-              </div>
-
-              <div className="form-check m-b-20">
-                <input
-                  className="form-check-input"
-                  id="enable-user"
-                  type="checkbox"
-                  checked={form.isEnabled}
-                  onChange={(event) => setForm((current) => ({ ...current, isEnabled: event.target.checked }))}
-                />
-                <label className="form-check-label" htmlFor="enable-user">
-                  Сразу включить доступ
-                </label>
-              </div>
-
-              <button className="btn btn-primary" disabled={isSaving} type="submit">
-                {isSaving ? 'Сохранение...' : 'Сохранить пользователя'}
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
+            </div>
+          ) : null}
+        </>
+      ) : null}
     </div>
   )
 }

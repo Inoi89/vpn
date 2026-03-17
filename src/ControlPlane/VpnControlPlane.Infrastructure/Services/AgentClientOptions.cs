@@ -6,6 +6,10 @@ public sealed class AgentClientOptions
 
     public string SnapshotPath { get; set; } = "/v1/agent/snapshot";
 
+    public string IssueAccessPath { get; set; } = "/v1/agent/accesses/issue";
+
+    public string SetAccessStatePath { get; set; } = "/v1/agent/accesses/state";
+
     public string? ClientCertificatePath { get; set; }
 
     public string? ClientCertificatePassword { get; set; }

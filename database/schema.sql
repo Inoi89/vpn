@@ -40,6 +40,7 @@ create table if not exists peer_configs (
     metadata_json jsonb,
     revision integer not null,
     last_synced_at_utc timestamptz not null,
+    is_enabled boolean not null default true,
     created_at_utc timestamptz not null,
     updated_at_utc timestamptz not null
 );

@@ -22,6 +22,7 @@ internal sealed class EfNodeRepository(ControlPlaneDbContext dbContext) : INodeR
         {
             query = query
                 .Include(x => x.PeerConfigs)
+                .ThenInclude(x => x.User)
                 .Include(x => x.Sessions);
         }
 
@@ -91,7 +92,7 @@ internal sealed class DashboardReadService(ControlPlaneDbContext dbContext) : ID
 
         var enabledPeerCounts = await dbContext.PeerConfigs
             .AsNoTracking()
-            .Where(x => x.User.IsEnabled)
+            .Where(x => x.IsEnabled)
             .GroupBy(x => x.NodeId)
             .Select(x => new { NodeId = x.Key, Count = x.Count() })
             .ToDictionaryAsync(x => x.NodeId, x => x.Count, cancellationToken);
@@ -183,18 +184,41 @@ internal sealed class DashboardReadService(ControlPlaneDbContext dbContext) : ID
                 x => x.Key,
                 x => (IReadOnlyList<Guid>)x.Select(y => y.NodeId).ToArray());
 
+        var enabledNodeLinks = await dbContext.PeerConfigs
+            .AsNoTracking()
+            .Where(x => x.IsEnabled)
+            .Select(x => new { x.UserId, x.NodeId })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var enabledNodeIdsByUser = enabledNodeLinks
+            .GroupBy(x => x.UserId)
+            .ToDictionary(
+                x => x.Key,
+                x => (IReadOnlyList<Guid>)x.Select(y => y.NodeId).ToArray());
+
         var lastActivityByUser = lastActivities.ToDictionary(x => x.UserId, x => x.LastActivityAtUtc);
 
         var items = users
-            .Select(x => new UserSummaryDto(
-                x.Id,
-                x.ExternalId,
-                x.DisplayName,
-                x.Email,
-                x.IsEnabled,
-                x.PeerCount,
-                nodeIdsByUser.TryGetValue(x.Id, out var nodeIds) ? nodeIds : [],
-                lastActivityByUser.TryGetValue(x.Id, out var lastActivityAtUtc) ? lastActivityAtUtc : null))
+            .Select(x =>
+            {
+                var nodeIds = nodeIdsByUser.TryGetValue(x.Id, out var foundNodeIds) ? foundNodeIds : [];
+                var enabledNodeIds = enabledNodeIdsByUser.TryGetValue(x.Id, out var foundEnabledNodeIds)
+                    ? foundEnabledNodeIds
+                    : [];
+                var effectiveIsEnabled = enabledNodeIds.Count > 0 || (nodeIds.Count == 0 && x.IsEnabled);
+
+                return new UserSummaryDto(
+                    x.Id,
+                    x.ExternalId,
+                    x.DisplayName,
+                    x.Email,
+                    effectiveIsEnabled,
+                    x.PeerCount,
+                    nodeIds,
+                    enabledNodeIds,
+                    lastActivityByUser.TryGetValue(x.Id, out var lastActivityAtUtc) ? lastActivityAtUtc : null);
+            })
             .ToList();
 
         return items;
@@ -228,9 +252,11 @@ internal sealed class EfNodeSnapshotWriter(ControlPlaneDbContext dbContext, IClo
         var peerConfigsByKey = node.PeerConfigs.ToDictionary(x => x.PublicKey, StringComparer.OrdinalIgnoreCase);
         var sessionsByKey = node.Sessions.ToDictionary(x => x.PeerPublicKey, StringComparer.OrdinalIgnoreCase);
         var observedPublicKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var observedPeerKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var configSnapshot in snapshot.PeerConfigs)
         {
+            observedPeerKeys.Add(configSnapshot.PublicKey);
             var user = await ResolveUserAsync(
                 configSnapshot.UserExternalId,
                 configSnapshot.UserEmail,
@@ -359,6 +385,11 @@ internal sealed class EfNodeSnapshotWriter(ControlPlaneDbContext dbContext, IClo
         foreach (var missingSession in node.Sessions.Where(x => !observedPublicKeys.Contains(x.PeerPublicKey) && x.State == SessionState.Active))
         {
             missingSession.Disconnect(snapshot.CollectedAtUtc, now);
+        }
+
+        foreach (var missingPeer in node.PeerConfigs.Where(x => !observedPeerKeys.Contains(x.PublicKey) && x.IsEnabled))
+        {
+            missingPeer.Disable(snapshot.CollectedAtUtc, now);
         }
     }
 

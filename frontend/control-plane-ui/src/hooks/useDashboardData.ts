@@ -2,7 +2,13 @@ import { useEffect, useEffectEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { apiClient } from '../api/client'
-import type { DashboardSnapshot, NodeRealtimeEnvelope, UpsertUserRequest } from '../types/dashboard'
+import type {
+  DashboardSnapshot,
+  IssueNodeAccessRequest,
+  IssuedNodeAccess,
+  NodeRealtimeEnvelope,
+  SetNodeAccessStateRequest,
+} from '../types/dashboard'
 
 const dashboardKey = ['dashboard']
 
@@ -15,8 +21,24 @@ export function useDashboardData() {
     refetchInterval: 15000,
   })
 
-  const upsertUserMutation = useMutation({
-    mutationFn: (payload: UpsertUserRequest) => apiClient.upsertUser(payload),
+  const issueNodeAccessMutation = useMutation({
+    mutationFn: ({ nodeId, payload }: { nodeId: string; payload: IssueNodeAccessRequest }) =>
+      apiClient.issueNodeAccess(nodeId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: dashboardKey })
+    },
+  })
+
+  const setNodeAccessStateMutation = useMutation({
+    mutationFn: ({
+      nodeId,
+      userId,
+      payload,
+    }: {
+      nodeId: string
+      userId: string
+      payload: SetNodeAccessStateRequest
+    }) => apiClient.setNodeAccessState(nodeId, userId, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: dashboardKey })
     },
@@ -85,7 +107,11 @@ export function useDashboardData() {
     isError: dashboardQuery.isError,
     error: dashboardQuery.error,
     refresh: dashboardQuery.refetch,
-    upsertUser: upsertUserMutation.mutateAsync,
-    isSavingUser: upsertUserMutation.isPending,
+    issueNodeAccess: (nodeId: string, payload: IssueNodeAccessRequest) =>
+      issueNodeAccessMutation.mutateAsync({ nodeId, payload }),
+    setNodeAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) =>
+      setNodeAccessStateMutation.mutateAsync({ nodeId, userId, payload }),
+    isSavingUser: issueNodeAccessMutation.isPending || setNodeAccessStateMutation.isPending,
+    issuedAccess: issueNodeAccessMutation.data as IssuedNodeAccess | undefined,
   }
 }

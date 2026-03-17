@@ -1,4 +1,10 @@
-import type { DashboardSnapshot, UpsertUserRequest, UserSummary } from '../types/dashboard'
+import type {
+  DashboardSnapshot,
+  IssueNodeAccessRequest,
+  IssuedNodeAccess,
+  SetNodeAccessStateRequest,
+  UserSummary,
+} from '../types/dashboard'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
 const accessToken = import.meta.env.VITE_ACCESS_TOKEN ?? ''
@@ -27,8 +33,13 @@ export const apiClient = {
   accessToken,
   baseUrl: apiBaseUrl,
   getDashboard: () => request<DashboardSnapshot>('/api/dashboard?trafficPoints=120'),
-  upsertUser: (payload: UpsertUserRequest) =>
-    request<UserSummary>('/api/users', {
+  issueNodeAccess: (nodeId: string, payload: IssueNodeAccessRequest) =>
+    request<IssuedNodeAccess>(`/api/nodes/${nodeId}/accesses`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  setNodeAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) =>
+    request<UserSummary>(`/api/nodes/${nodeId}/accesses/${userId}/state`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),

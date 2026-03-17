@@ -139,6 +139,7 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<ControlPlaneDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
     await WaitForDatabaseAsync(dbContext, logger, app.Lifetime.ApplicationStopping);
+    await EnsureSchemaUpgradesAsync(dbContext, app.Lifetime.ApplicationStopping);
 
     var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
     recurringJobManager.AddOrUpdate<NodePollingJob>(
@@ -177,4 +178,14 @@ static async Task WaitForDatabaseAsync(
     }
 
     await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+}
+
+static Task EnsureSchemaUpgradesAsync(ControlPlaneDbContext dbContext, CancellationToken cancellationToken)
+{
+    return dbContext.Database.ExecuteSqlRawAsync(
+        """
+        alter table if exists peer_configs
+            add column if not exists is_enabled boolean not null default true;
+        """,
+        cancellationToken);
 }

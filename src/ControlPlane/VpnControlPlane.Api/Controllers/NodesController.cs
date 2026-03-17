@@ -51,4 +51,37 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
 
         return CreatedAtAction(nameof(GetNodes), new { id = response.NodeId }, response);
     }
+
+    [HttpPost("{nodeId:guid}/accesses")]
+    public async Task<ActionResult<VpnControlPlane.Application.IssuedNodeAccessDto>> IssueNodeAccess(
+        Guid nodeId,
+        [FromBody] IssueNodeAccessRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await commandDispatcher.Send(
+            new IssueNodeAccessCommand(nodeId, request.DisplayName, request.Email),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPost("{nodeId:guid}/accesses/{userId:guid}/state")]
+    public async Task<ActionResult<VpnControlPlane.Application.UserSummaryDto>> SetNodeAccessState(
+        Guid nodeId,
+        Guid userId,
+        [FromBody] NodeAccessStateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await commandDispatcher.Send(
+            new SetNodeAccessStateCommand(nodeId, userId, request.IsEnabled),
+            cancellationToken);
+
+        return Ok(result);
+    }
 }
+
+public sealed record IssueNodeAccessRequest(
+    string DisplayName,
+    string? Email);
+
+public sealed record NodeAccessStateRequest(bool IsEnabled);

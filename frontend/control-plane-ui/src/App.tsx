@@ -8,7 +8,8 @@ import { useDashboardData } from './hooks/useDashboardData'
 import { formatDateTime, formatNodeStatus, formatRelativeTime } from './utils/format'
 
 function App() {
-  const { dashboard, isLoading, isError, error, refresh, upsertUser, isSavingUser } = useDashboardData()
+  const { dashboard, isLoading, isError, error, refresh, issueNodeAccess, setNodeAccessState, isSavingUser, issuedAccess } =
+    useDashboardData()
   const [selectedNodeId, setSelectedNodeId] = useState<string | null | undefined>(undefined)
 
   useEffect(() => {
@@ -141,9 +142,12 @@ function App() {
                   <UserManagement
                     users={scopedUsers}
                     activeUserIds={activeUserIds}
+                    selectedNodeId={selectedNode.id}
                     selectedNodeName={selectedNode.name}
                     isSaving={isSavingUser}
-                    onSave={upsertUser}
+                    issuedAccess={issuedAccess}
+                    onIssueAccess={issueNodeAccess}
+                    onSetAccessState={setNodeAccessState}
                   />
                 </div>
                 <div className="col-md-12">
@@ -165,9 +169,12 @@ function App() {
                   <UserManagement
                     users={scopedUsers}
                     activeUserIds={activeUserIds}
+                    selectedNodeId={null}
                     selectedNodeName={null}
                     isSaving={isSavingUser}
-                    onSave={upsertUser}
+                    issuedAccess={issuedAccess}
+                    onIssueAccess={issueNodeAccess}
+                    onSetAccessState={setNodeAccessState}
                   />
                 </div>
               </>
