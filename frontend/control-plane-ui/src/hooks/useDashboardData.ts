@@ -4,6 +4,7 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { apiClient } from '../api/client'
 import type {
   AccessConfig,
+  AccessConfigFormat,
   DeletedNodeAccess,
   DashboardSnapshot,
   IssueNodeAccessRequest,
@@ -127,7 +128,8 @@ export function useDashboardData() {
     setNodeAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) =>
       setNodeAccessStateMutation.mutateAsync({ nodeId, userId, payload }),
     deleteNodeAccess: (nodeId: string, userId: string) => deleteNodeAccessMutation.mutateAsync({ nodeId, userId }),
-    getNodeAccessConfig: (nodeId: string, userId: string) => apiClient.getNodeAccessConfig(nodeId, userId) as Promise<AccessConfig>,
+    getNodeAccessConfig: (nodeId: string, userId: string, format: AccessConfigFormat) =>
+      apiClient.getNodeAccessConfig(nodeId, userId, format) as Promise<AccessConfig>,
     isSavingUser: issueNodeAccessMutation.isPending || setNodeAccessStateMutation.isPending || deleteNodeAccessMutation.isPending,
     issuedAccess,
   }

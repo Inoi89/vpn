@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using VpnControlPlane.Contracts.Nodes;
 using VpnNodeAgent.Abstractions;
@@ -48,7 +50,13 @@ public sealed class AgentAccessService(
         await PersistAsync(context, cancellationToken);
         await SyncRuntimeConfigAsync(context.InterfaceName, context.ConfigPath, cancellationToken);
 
-        var clientConfig = BuildClientConfig(context.Config, context.ServerPublicKey, request.EndpointHost, peer);
+        var (clientConfigFileName, clientConfig) = BuildClientExport(
+            context.Config,
+            context.ServerPublicKey,
+            request.EndpointHost,
+            peer,
+            options.Value,
+            request.Format);
         return new IssueAccessResponse(
             new AgentPeerMaterial(
                 peer.PublicKey,
@@ -58,7 +66,7 @@ public sealed class AgentAccessService(
                 publicKey,
                 request.DisplayName,
                 request.UserEmail),
-            BuildClientConfigFileName(request.DisplayName),
+            clientConfigFileName,
             clientConfig);
     }
 
@@ -93,8 +101,13 @@ public sealed class AgentAccessService(
             string? fileName = null;
             if (!string.IsNullOrWhiteSpace(request.Peer.ClientPrivateKey) && !string.IsNullOrWhiteSpace(request.EndpointHost))
             {
-                clientConfig = BuildClientConfig(context.Config, context.ServerPublicKey, request.EndpointHost, peer);
-                fileName = BuildClientConfigFileName(peer.DisplayName);
+                (fileName, clientConfig) = BuildClientExport(
+                    context.Config,
+                    context.ServerPublicKey,
+                    request.EndpointHost,
+                    peer,
+                    options.Value,
+                    AccessConfigFormats.AmneziaAwgNative);
             }
 
             return new SetAccessStateResponse(request.Peer.PublicKey, true, fileName, clientConfig);
@@ -138,8 +151,14 @@ public sealed class AgentAccessService(
             request.Peer.UserEmail,
             clientPrivateKey);
 
-        var clientConfig = BuildClientConfig(context.Config, context.ServerPublicKey, request.EndpointHost, peer);
-        return new GetAccessConfigResponse(peer.PublicKey, BuildClientConfigFileName(peer.DisplayName), clientConfig);
+        var (fileName, clientConfig) = BuildClientExport(
+            context.Config,
+            context.ServerPublicKey,
+            request.EndpointHost,
+            peer,
+            options.Value,
+            request.Format);
+        return new GetAccessConfigResponse(peer.PublicKey, fileName, clientConfig);
     }
 
     private async Task<AgentContext> LoadContextAsync(CancellationToken cancellationToken)
@@ -260,51 +279,63 @@ public sealed class AgentAccessService(
         var parts = interfaceAddress.Split('/', 2, StringSplitOptions.TrimEntries);
         if (parts.Length != 2
             || !IPAddress.TryParse(parts[0], out var networkAddress)
-            || networkAddress.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork
-            || !int.TryParse(parts[1], out var prefixLength))
+            || networkAddress.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
         {
             throw new InvalidOperationException($"Unsupported interface address format '{interfaceAddress}'.");
         }
 
-        var usedAddresses = config.Peers
-            .SelectMany(peer => peer.AllowedIps.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Select(value => value.Split('/', 2, StringSplitOptions.TrimEntries)[0])
-            .Where(value => IPAddress.TryParse(value, out _))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var seedAddress = config.GetLastPeerIpv4Address() ?? FromUInt32(ToUInt32(networkAddress) + 1);
+        return $"{GetNextSequentialPeerAddress(seedAddress)}/32";
+    }
 
-        var networkValue = ToUInt32(networkAddress);
-        var hostBits = 32 - prefixLength;
-        var subnetSize = hostBits <= 0 ? 1u : 1u << hostBits;
-        var broadcast = networkValue + subnetSize - 1;
+    private static (string FileName, string Payload) BuildClientExport(
+        WireGuardConfigDocument config,
+        string serverPublicKey,
+        string endpointHost,
+        PeerSection peer,
+        AgentOptions agentOptions,
+        string? format)
+    {
+        var normalizedFormat = AccessConfigFormats.Normalize(format);
+        var clientConfig = BuildClientConfig(config, serverPublicKey, endpointHost, peer, agentOptions, useDnsPlaceholders: false);
 
-        for (var candidate = networkValue + 2; candidate < broadcast; candidate++)
+        if (string.Equals(normalizedFormat, AccessConfigFormats.AmneziaVpn, StringComparison.OrdinalIgnoreCase))
         {
-            var ip = FromUInt32(candidate).ToString();
-            if (!usedAddresses.Contains(ip))
-            {
-                return $"{ip}/32";
-            }
+            return (BuildClientConfigFileName(peer.DisplayName, ".vpn"), BuildAmneziaVpnConfig(config, serverPublicKey, endpointHost, peer, agentOptions));
         }
 
-        throw new InvalidOperationException("No free client addresses are available in the current subnet.");
+        return (BuildClientConfigFileName(peer.DisplayName, ".conf"), clientConfig);
     }
 
     private static string BuildClientConfig(
         WireGuardConfigDocument config,
         string serverPublicKey,
         string endpointHost,
-        PeerSection peer)
+        PeerSection peer,
+        AgentOptions agentOptions,
+        bool useDnsPlaceholders)
     {
+        var dnsServers = GetClientDnsServers(agentOptions);
+        var allowedIps = GetClientTunnelRoutes(agentOptions);
         var buffer = new StringBuilder();
         buffer.AppendLine("[Interface]");
+        buffer.AppendLine($"Address = {peer.AllowedIps}");
+        if (dnsServers.Count > 0)
+        {
+            buffer.AppendLine($"DNS = {BuildDnsValue(dnsServers, useDnsPlaceholders)}");
+        }
+
         if (!string.IsNullOrWhiteSpace(peer.ClientPrivateKey))
         {
             buffer.AppendLine($"PrivateKey = {peer.ClientPrivateKey}");
         }
 
-        buffer.AppendLine($"Address = {peer.AllowedIps}");
+        if (agentOptions.DefaultClientMtu > 0)
+        {
+            buffer.AppendLine($"MTU = {agentOptions.DefaultClientMtu.ToString(CultureInfo.InvariantCulture)}");
+        }
 
-        foreach (var amneziaKey in new[] { "Jc", "Jmin", "Jmax", "S1", "S2", "H1", "H2", "H3", "H4" })
+        foreach (var amneziaKey in new[] { "Jc", "Jmin", "Jmax", "S1", "S2", "S3", "S4", "H1", "H2", "H3", "H4", "I1", "I2", "I3", "I4", "I5" })
         {
             var value = config.GetInterfaceValue(amneziaKey);
             if (!string.IsNullOrWhiteSpace(value))
@@ -322,14 +353,133 @@ public sealed class AgentAccessService(
         }
 
         var listenPort = config.GetInterfaceValue("ListenPort") ?? "51820";
-        buffer.AppendLine("AllowedIPs = 0.0.0.0/0, ::/0");
+        buffer.AppendLine($"AllowedIPs = {string.Join(", ", allowedIps)}");
         buffer.AppendLine($"Endpoint = {endpointHost}:{listenPort}");
         buffer.AppendLine("PersistentKeepalive = 25");
 
         return buffer.ToString().TrimEnd();
     }
 
-    private static string BuildClientConfigFileName(string displayName)
+    private static string BuildAmneziaVpnConfig(
+        WireGuardConfigDocument config,
+        string serverPublicKey,
+        string endpointHost,
+        PeerSection peer,
+        AgentOptions agentOptions)
+    {
+        var dnsServers = GetClientDnsServers(agentOptions);
+        var allowedIps = GetClientTunnelRoutes(agentOptions);
+        var listenPort = config.GetInterfaceValue("ListenPort") ?? "51820";
+        var clientConfig = BuildClientConfig(config, serverPublicKey, endpointHost, peer, agentOptions, useDnsPlaceholders: dnsServers.Count > 0);
+        var lastConfig = new JsonObject
+        {
+            ["config"] = clientConfig,
+            ["hostName"] = endpointHost,
+            ["port"] = int.TryParse(listenPort, NumberStyles.Integer, CultureInfo.InvariantCulture, out var port) ? port : 51820,
+            ["clientId"] = peer.PublicKey,
+            ["client_priv_key"] = peer.ClientPrivateKey,
+            ["client_ip"] = StripCidrSuffix(peer.AllowedIps),
+            ["client_pub_key"] = peer.PublicKey,
+            ["psk_key"] = peer.PresharedKey,
+            ["server_pub_key"] = serverPublicKey,
+            ["mtu"] = agentOptions.DefaultClientMtu.ToString(CultureInfo.InvariantCulture),
+            ["persistent_keep_alive"] = "25",
+            ["allowed_ips"] = new JsonArray(allowedIps.Select(route => JsonValue.Create(route)).ToArray<JsonNode?>())
+        };
+
+        foreach (var amneziaKey in new[] { "Jc", "Jmin", "Jmax", "S1", "S2", "S3", "S4", "H1", "H2", "H3", "H4", "I1", "I2", "I3", "I4", "I5" })
+        {
+            var value = config.GetInterfaceValue(amneziaKey);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                lastConfig[amneziaKey] = value;
+            }
+        }
+
+        var awgConfig = new JsonObject
+        {
+            ["last_config"] = lastConfig.ToJsonString(),
+            ["port"] = listenPort,
+            ["transport_proto"] = "udp"
+        };
+
+        foreach (var amneziaKey in new[] { "Jc", "Jmin", "Jmax", "S1", "S2", "S3", "S4", "H1", "H2", "H3", "H4", "I1", "I2", "I3", "I4", "I5" })
+        {
+            var value = config.GetInterfaceValue(amneziaKey);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                awgConfig[amneziaKey] = value;
+            }
+        }
+
+        var hasAwgV2Fields = awgConfig["S3"] is not null && awgConfig["S4"] is not null;
+        var hasAwgV15Fields = awgConfig["I1"] is not null
+                              || awgConfig["I2"] is not null
+                              || awgConfig["I3"] is not null
+                              || awgConfig["I4"] is not null
+                              || awgConfig["I5"] is not null;
+        if (hasAwgV2Fields)
+        {
+            awgConfig["protocol_version"] = "2";
+        }
+        else if (hasAwgV15Fields)
+        {
+            awgConfig["protocol_version"] = "1.5";
+        }
+
+        var payload = new JsonObject
+        {
+            ["containers"] = new JsonArray(
+                new JsonObject
+                {
+                    ["container"] = "amnezia-awg",
+                    ["awg"] = awgConfig
+                }),
+            ["defaultContainer"] = "amnezia-awg",
+            ["description"] = endpointHost,
+            ["hostName"] = endpointHost
+        };
+
+        if (dnsServers.Count > 0)
+        {
+            payload["dns1"] = dnsServers[0];
+        }
+
+        if (dnsServers.Count > 1)
+        {
+            payload["dns2"] = dnsServers[1];
+        }
+
+        var json = payload.ToJsonString();
+        var bytes = Encoding.UTF8.GetBytes(json);
+        var compressed = QtCompress(bytes);
+        return $"vpn://{ToBase64Url(compressed)}";
+    }
+
+    private static byte[] QtCompress(byte[] payload)
+    {
+        using var output = new MemoryStream();
+
+        var length = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(payload.Length));
+        output.Write(length, 0, length.Length);
+
+        using (var zlib = new ZLibStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            zlib.Write(payload, 0, payload.Length);
+        }
+
+        return output.ToArray();
+    }
+
+    private static string ToBase64Url(byte[] payload)
+    {
+        return Convert.ToBase64String(payload)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    private static string BuildClientConfigFileName(string displayName, string extension)
     {
         var safeName = new string(
             displayName
@@ -343,7 +493,49 @@ public sealed class AgentAccessService(
             safeName = "vpn-access";
         }
 
-        return $"{safeName}.conf";
+        return $"{safeName}{extension}";
+    }
+
+    private static string StripCidrSuffix(string value)
+    {
+        var separatorIndex = value.IndexOf('/');
+        return separatorIndex >= 0 ? value[..separatorIndex] : value;
+    }
+
+    private static IReadOnlyList<string> GetClientDnsServers(AgentOptions agentOptions)
+    {
+        return agentOptions.ClientDnsServers
+            .Where(server => !string.IsNullOrWhiteSpace(server))
+            .Select(server => server.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(2)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> GetClientTunnelRoutes(AgentOptions agentOptions)
+    {
+        var routes = new List<string> { "0.0.0.0/0" };
+        if (agentOptions.IncludeIpv6DefaultRoute)
+        {
+            routes.Add("::/0");
+        }
+
+        return routes;
+    }
+
+    private static string BuildDnsValue(IReadOnlyList<string> dnsServers, bool useDnsPlaceholders)
+    {
+        if (!useDnsPlaceholders)
+        {
+            return string.Join(", ", dnsServers);
+        }
+
+        return dnsServers.Count switch
+        {
+            > 1 => "$PRIMARY_DNS, $SECONDARY_DNS",
+            1 => "$PRIMARY_DNS",
+            _ => string.Empty
+        };
     }
 
     private static void ValidateRequired(string value, string paramName)
@@ -391,6 +583,20 @@ public sealed class AgentAccessService(
         return new IPAddress(bytes);
     }
 
+    private static IPAddress GetNextSequentialPeerAddress(IPAddress previousAddress)
+    {
+        var previousValue = ToUInt32(previousAddress);
+        var lastOctet = previousAddress.GetAddressBytes()[3];
+        var increment = lastOctet switch
+        {
+            254 => 3u,
+            255 => 2u,
+            _ => 1u
+        };
+
+        return FromUInt32(previousValue + increment);
+    }
+
     private sealed record AgentContext(
         string ConfigPath,
         string ClientsTablePath,
@@ -411,6 +617,25 @@ public sealed class AgentAccessService(
         public string? GetInterfaceValue(string key)
         {
             return InterfaceEntries.LastOrDefault(entry => string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase))?.Value;
+        }
+
+        public IPAddress? GetLastPeerIpv4Address()
+        {
+            foreach (var peer in Peers.AsEnumerable().Reverse())
+            {
+                var ipv4Address = peer.AllowedIps
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(value => value.Split('/', 2, StringSplitOptions.TrimEntries)[0])
+                    .FirstOrDefault(value => IPAddress.TryParse(value, out var address)
+                                             && address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+
+                if (!string.IsNullOrWhiteSpace(ipv4Address) && IPAddress.TryParse(ipv4Address, out var address))
+                {
+                    return address;
+                }
+            }
+
+            return null;
         }
 
         public void UpsertPeer(PeerSection peer)

@@ -1,5 +1,6 @@
 import type {
   AccessConfig,
+  AccessConfigFormat,
   DeletedNodeAccess,
   DashboardSnapshot,
   IssueNodeAccessRequest,
@@ -49,6 +50,6 @@ export const apiClient = {
     request<DeletedNodeAccess>(`/api/nodes/${nodeId}/accesses/${userId}`, {
       method: 'DELETE',
     }),
-  getNodeAccessConfig: (nodeId: string, userId: string) =>
-    request<AccessConfig>(`/api/nodes/${nodeId}/accesses/${userId}/config`),
+  getNodeAccessConfig: (nodeId: string, userId: string, format: AccessConfigFormat) =>
+    request<AccessConfig>(`/api/nodes/${nodeId}/accesses/${userId}/config?format=${encodeURIComponent(format)}`),
 }

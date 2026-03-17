@@ -7,7 +7,8 @@ namespace VpnControlPlane.Application.Nodes.Commands;
 public sealed record IssueNodeAccessCommand(
     Guid NodeId,
     string DisplayName,
-    string? Email) : ICommand<IssuedNodeAccessDto>;
+    string? Email,
+    string? Format) : ICommand<IssuedNodeAccessDto>;
 
 public sealed class IssueNodeAccessCommandHandler(
     INodeRepository nodeRepository,
@@ -28,7 +29,8 @@ public sealed class IssueNodeAccessCommandHandler(
                 $"issued-{Guid.NewGuid():N}",
                 command.DisplayName,
                 command.Email,
-                GetEndpointHost(node.AgentBaseAddress)),
+                GetEndpointHost(node.AgentBaseAddress),
+                command.Format),
             cancellationToken);
 
         var user = VpnUser.Create(

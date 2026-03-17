@@ -1,3 +1,5 @@
+export type AccessConfigFormat = 'amnezia-awg-native' | 'amnezia-vpn'
+
 export type NodeSummary = {
   id: string
   agentIdentifier: string
@@ -62,6 +64,7 @@ export type NodeRealtimeEnvelope = {
 
 export type IssueNodeAccessRequest = {
   displayName: string
+  configFormat: AccessConfigFormat
 }
 
 export type IssuedNodeAccess = {

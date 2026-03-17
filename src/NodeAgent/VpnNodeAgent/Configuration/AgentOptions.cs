@@ -26,5 +26,11 @@ public sealed class AgentOptions
 
     public int ActiveHandshakeWindowSeconds { get; set; } = 180;
 
+    public int DefaultClientMtu { get; set; } = 1376;
+
+    public bool IncludeIpv6DefaultRoute { get; set; } = true;
+
+    public List<string> ClientDnsServers { get; set; } = ["8.8.8.8", "8.8.4.4"];
+
     public List<string> AllowedClientThumbprints { get; set; } = [];
 }

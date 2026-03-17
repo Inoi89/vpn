@@ -1,4 +1,20 @@
+using System;
+
 namespace VpnControlPlane.Contracts.Nodes;
+
+public static class AccessConfigFormats
+{
+    public const string AmneziaAwgNative = "amnezia-awg-native";
+
+    public const string AmneziaVpn = "amnezia-vpn";
+
+    public static string Normalize(string? format)
+    {
+        return string.Equals(format, AmneziaVpn, StringComparison.OrdinalIgnoreCase)
+            ? AmneziaVpn
+            : AmneziaAwgNative;
+    }
+}
 
 public sealed record RegisterNodeRequest(
     string AgentIdentifier,
@@ -60,7 +76,8 @@ public sealed record IssueAccessRequest(
     string UserExternalId,
     string DisplayName,
     string? UserEmail,
-    string EndpointHost);
+    string EndpointHost,
+    string? Format);
 
 public sealed record IssueAccessResponse(
     AgentPeerMaterial Peer,
@@ -86,7 +103,8 @@ public sealed record DeleteAccessResponse(
 
 public sealed record GetAccessConfigRequest(
     AgentPeerMaterial Peer,
-    string EndpointHost);
+    string EndpointHost,
+    string? Format);
 
 public sealed record GetAccessConfigResponse(
     string PublicKey,

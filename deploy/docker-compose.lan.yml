@@ -36,7 +36,6 @@ services:
       context: ..
       dockerfile: frontend/control-plane-ui/Dockerfile
       args:
-        VITE_API_BASE_URL: http://192.168.1.2:7001
         VITE_ACCESS_TOKEN: >-
           eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ2cG4tY29udHJvbC1wbGFuZSIsImF1ZCI6InZwbi1jb250cm9sLXBsYW5lLXVpIiwic3ViIjoibG9jYWwtYWRtaW4iLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE4MDUyNDg4MDB9.lOwaCUd4jtzUQSvHYWwvEbyI50GVVW6bp1c4-jxbYWw
     restart: unless-stopped

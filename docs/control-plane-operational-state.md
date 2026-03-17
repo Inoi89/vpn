@@ -6,6 +6,7 @@ This document captures the current operational state of the VPN control plane wo
 
 Related baseline design:
 - [architecture.md](../architecture.md)
+- [docs/operational-state.md](./operational-state.md)
 
 ## 1. What Exists Today
 
@@ -100,17 +101,18 @@ Current live nodes known to the control plane as of this snapshot:
 
 | Node | Agent Identifier | Status | Active Sessions | Enabled Peers | Endpoint | Notes |
 |---|---|---:|---:|---:|---|---|
-| `37.1.197.163` | `amnezia-node-01` | Healthy | 7 | 14 | `https://37.1.197.163:8443` | Main working node in the fleet today. |
-| `5.61.40.132` | `amnezia-5-61-40-132` | Healthy | 5 | 23 | `https://5.61.40.132:8443` | Large existing node, useful for validating historical configs. |
+| `5.61.37.29` | `amnezia-5-61-37-29` | Healthy | 2 | 11 | `https://5.61.37.29:8443` | Primary operator node. Pinned first in the UI and labeled as primary. |
+| `37.1.197.163` | `amnezia-node-01` | Healthy | 6 | 13 | `https://37.1.197.163:8443` | Legacy agent identifier retained, but visible name normalized to `Amnezia 37.1.197.163`. |
+| `5.61.40.132` | `amnezia-5-61-40-132` | Healthy | 3 | 21 | `https://5.61.40.132:8443` | Large existing node, useful for validating historical configs. |
 | `38.180.137.249` | `amnezia-38-180-137-249` | Healthy | 0 | 3 | `https://38.180.137.249:8443` | Healthy, low activity. |
 | `45.136.49.191` | `amnezia-45-136-49-191` | Healthy | 0 | 1 | `https://45.136.49.191:8443` | Test node for access-generation debugging. |
 | `185.21.10.217` | `amnezia-185-21-10-217` | Healthy | 0 | 5 | `https://185.21.10.217:8443` | Healthy, low activity. |
 
-Not yet onboarded into the control plane:
+UI-specific ordering and naming rules currently in effect:
 
-- `5.61.37.29` is the user's primary operator node.
-- It is live and working in Amnezia, but it is not yet represented in the current control plane inventory.
-- The UI still needs a pinned/top position concept for this node.
+- `5.61.37.29` is treated as the primary node and is pinned to the top of the sidebar.
+- The sidebar renders a visible primary badge for that node.
+- Generic names such as `Amnezia Node 01` are normalized in the UI to `Amnezia <ip>` using `agentBaseAddress` or `agentIdentifier` fallback logic.
 
 ## 4. Decisions and Rollout Notes
 
@@ -148,12 +150,12 @@ This matters because config generation behavior has been a moving target during 
 
 ### 4.4 Naming Convention
 
-Current naming in the fleet is inconsistent:
+Current naming in the fleet is partially normalized:
 
-- Most nodes are named `Amnezia <IP>`.
-- One node still appears as `Amnezia Node 01`.
+- Most nodes are registered as `Amnezia <IP>`.
+- `37.1.197.163` still keeps the legacy agent identifier `amnezia-node-01`, but the visible name is now normalized to the IP-based form.
 
-The intended convention is to normalize all visible names to the IP-based form and to visually mark the primary operator node.
+The intended convention is to keep all visible names IP-based and to preserve the operator's main server as a distinct pinned node.
 
 ## 5. Known Problems and Risks
 
@@ -176,7 +178,8 @@ We confirmed a few concrete issues and fixes:
 - Older panel-generated configs were missing DNS in some cases.
 - That caused classic `unknown host` failures.
 - We also found that a raw `.conf` export can differ from Amnezia's internal enrollment path in more than one way.
-- `probe-45-20260318` on `45.136.49.191` currently shows a live handshake from the client, but traffic is still tiny compared to normal usage.
+- `probe-45-20260318` on `45.136.49.191` shows a live handshake from the client, but traffic remains tiny compared to normal browsing.
+- Raw `.conf` exports now explicitly include `MTU`, because the previous export path silently dropped node-specific MTU overrides.
 
 ### 5.3 Current Hypothesis
 
@@ -275,15 +278,12 @@ Node-level sanity checks:
 
 ## 8. Useful Artifacts
 
-Current workspace artifacts and investigation files:
+Current workspace artifacts and committed operator-facing files:
 
-- [`artifacts/node-agent-publish/`](../artifacts/node-agent-publish/)
-- [`artifacts/control-api-publish/`](../artifacts/control-api-publish/)
-- [`artifacts/test.current.vpn`](../artifacts/test.current.vpn)
-- [`artifacts/appsettings.45.json`](../artifacts/appsettings.45.json)
 - [`frontend/control-plane-ui/nginx.conf`](../frontend/control-plane-ui/nginx.conf)
 - [`src/ControlPlane/VpnControlPlane.Api/VpnControlPlane.Api.http`](../src/ControlPlane/VpnControlPlane.Api/VpnControlPlane.Api.http)
 - [`src/NodeAgent/VpnNodeAgent/VpnNodeAgent.http`](../src/NodeAgent/VpnNodeAgent/VpnNodeAgent.http)
+- [`docs/operational-state.md`](./operational-state.md)
 
 ## 9. Phase 2 Direction
 
@@ -298,4 +298,3 @@ The intended direction is:
 - keep the Amnezia fleet as the transport layer for now.
 
 This is the right next layer because the transport is already operational. The unresolved part is the user-facing import/enrollment experience.
-

@@ -6,7 +6,8 @@ namespace VpnControlPlane.Application.Nodes.Commands;
 
 public sealed record GetNodeAccessConfigCommand(
     Guid NodeId,
-    Guid UserId) : ICommand<AccessConfigDto>;
+    Guid UserId,
+    string? Format) : ICommand<AccessConfigDto>;
 
 public sealed class GetNodeAccessConfigCommandHandler(
     INodeRepository nodeRepository,
@@ -38,7 +39,8 @@ public sealed class GetNodeAccessConfigCommandHandler(
                 peerConfig.User.ExternalId,
                 peerConfig.DisplayName,
                 peerConfig.User.Email),
-            GetEndpointHost(node.AgentBaseAddress));
+            GetEndpointHost(node.AgentBaseAddress),
+            command.Format);
 
         var result = await nodeAgentClient.GetAccessConfigAsync(node, payload, cancellationToken);
         return new AccessConfigDto(node.Id, command.UserId, result.PublicKey, result.ClientConfigFileName, result.ClientConfig);

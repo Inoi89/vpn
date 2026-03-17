@@ -59,7 +59,7 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
         CancellationToken cancellationToken)
     {
         var result = await commandDispatcher.Send(
-            new IssueNodeAccessCommand(nodeId, request.DisplayName, request.Email),
+            new IssueNodeAccessCommand(nodeId, request.DisplayName, request.Email, request.ConfigFormat),
             cancellationToken);
 
         return Ok(result);
@@ -96,10 +96,11 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
     public async Task<ActionResult<VpnControlPlane.Application.AccessConfigDto>> GetNodeAccessConfig(
         Guid nodeId,
         Guid userId,
+        [FromQuery] string? format,
         CancellationToken cancellationToken)
     {
         var result = await commandDispatcher.Send(
-            new GetNodeAccessConfigCommand(nodeId, userId),
+            new GetNodeAccessConfigCommand(nodeId, userId, format),
             cancellationToken);
 
         return Ok(result);
@@ -108,6 +109,7 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
 
 public sealed record IssueNodeAccessRequest(
     string DisplayName,
-    string? Email);
+    string? Email,
+    string? ConfigFormat);
 
 public sealed record NodeAccessStateRequest(bool IsEnabled);

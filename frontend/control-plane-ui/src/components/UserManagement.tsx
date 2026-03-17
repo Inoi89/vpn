@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { AccessConfig, IssueNodeAccessRequest, IssuedNodeAccess, SetNodeAccessStateRequest, UserSummary } from '../types/dashboard'
+import type { AccessConfig, AccessConfigFormat, IssueNodeAccessRequest, IssuedNodeAccess, SetNodeAccessStateRequest, UserSummary } from '../types/dashboard'
 import { formatDateTime, formatRelativeTime } from '../utils/format'
 
 type UserManagementProps = {
@@ -13,11 +13,14 @@ type UserManagementProps = {
   onIssueAccess: (nodeId: string, payload: IssueNodeAccessRequest) => Promise<unknown>
   onSetAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) => Promise<unknown>
   onDeleteAccess: (nodeId: string, userId: string) => Promise<unknown>
-  onDownloadAccessConfig: (nodeId: string, userId: string) => Promise<AccessConfig>
+  onDownloadAccessConfig: (nodeId: string, userId: string, format: AccessConfigFormat) => Promise<AccessConfig>
 }
+
+const defaultConfigFormat: AccessConfigFormat = 'amnezia-vpn'
 
 const defaultForm: IssueNodeAccessRequest = {
   displayName: '',
+  configFormat: defaultConfigFormat,
 }
 
 type BusyAction = 'toggle' | 'delete' | 'download' | null
@@ -38,6 +41,7 @@ export function UserManagement({
   const [query, setQuery] = useState('')
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<BusyAction>(null)
+  const [exportFormat, setExportFormat] = useState<AccessConfigFormat>(defaultConfigFormat)
   const formRef = useRef<HTMLFormElement | null>(null)
   const normalizedQuery = query.trim().toLowerCase()
 
@@ -80,7 +84,7 @@ export function UserManagement({
     }
 
     await onIssueAccess(selectedNodeId, form)
-    setForm(defaultForm)
+    setForm({ displayName: '', configFormat: exportFormat })
   }
 
   async function handleToggleUser(user: UserSummary) {
@@ -133,7 +137,7 @@ export function UserManagement({
     setBusyAction('download')
 
     try {
-      const config = await onDownloadAccessConfig(selectedNodeId, user.id)
+      const config = await onDownloadAccessConfig(selectedNodeId, user.id, exportFormat)
       const blob = new Blob([config.clientConfig], { type: 'text/plain;charset=utf-8' })
       const objectUrl = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
@@ -175,6 +179,11 @@ export function UserManagement({
 
   const hasSelectedNode = Boolean(selectedNodeId)
   const visibleIssuedAccess = hasSelectedNode && issuedAccess?.nodeId === selectedNodeId ? issuedAccess : undefined
+  const downloadLabel = exportFormat === 'amnezia-vpn' ? 'Скачать .vpn' : 'Скачать .conf'
+  const exportFormatHint =
+    exportFormat === 'amnezia-vpn'
+      ? 'Базовый формат Amnezia (.vpn)'
+      : 'Оригинальный конфиг AmneziaWG (.conf)'
 
   function renderIdentifier(user: UserSummary) {
     if (!user.externalId || user.externalId.startsWith('issued-')) {
@@ -198,9 +207,27 @@ export function UserManagement({
                     : 'Общий каталог ключей. Для выдачи и управления открой конкретную ноду.'}
                 </small>
               </div>
-              <button type="button" className="btn btn-primary btn-sm" disabled={!hasSelectedNode} onClick={focusForm}>
-                Добавить
-              </button>
+              <div className="d-flex flex-wrap align-items-end gap-2">
+                <div>
+                  <label className="form-label mb-1">Формат выдачи</label>
+                  <select
+                    className="form-select form-select-sm"
+                    value={exportFormat}
+                    onChange={(event) => {
+                      const nextFormat = event.target.value as AccessConfigFormat
+                      setExportFormat(nextFormat)
+                      setForm((current) => ({ ...current, configFormat: nextFormat }))
+                    }}
+                  >
+                    <option value="amnezia-vpn">Amnezia (.vpn)</option>
+                    <option value="amnezia-awg-native">AmneziaWG (.conf)</option>
+                  </select>
+                  <small className="text-muted">{exportFormatHint}</small>
+                </div>
+                <button type="button" className="btn btn-primary btn-sm" disabled={!hasSelectedNode} onClick={focusForm}>
+                  Добавить
+                </button>
+              </div>
             </div>
           </div>
           <div className="card-body">
@@ -264,7 +291,7 @@ export function UserManagement({
                                   disabled={isSaving}
                                   onClick={() => void handleDownloadConfig(user)}
                                 >
-                                  {isBusy && busyAction === 'download' ? 'Подготовка...' : 'Скачать .conf'}
+                                  {isBusy && busyAction === 'download' ? 'Подготовка...' : downloadLabel}
                                 </button>
                                 <button
                                   type="button"
@@ -321,6 +348,22 @@ export function UserManagement({
                     />
                   </div>
 
+                  <div className="form-group">
+                    <label>Формат конфига</label>
+                    <select
+                      className="form-select"
+                      value={form.configFormat}
+                      onChange={(event) => {
+                        const nextFormat = event.target.value as AccessConfigFormat
+                        setExportFormat(nextFormat)
+                        setForm((current) => ({ ...current, configFormat: nextFormat }))
+                      }}
+                    >
+                      <option value="amnezia-vpn">Amnezia (.vpn)</option>
+                      <option value="amnezia-awg-native">AmneziaWG (.conf)</option>
+                    </select>
+                  </div>
+
                   <button className="btn btn-primary" disabled={isSaving} type="submit">
                     {isSaving ? 'Выдача...' : 'Выдать ключ'}
                   </button>
@@ -341,7 +384,7 @@ export function UserManagement({
                       </small>
                     </div>
                     <button type="button" className="btn btn-primary btn-sm" onClick={downloadIssuedConfig}>
-                      Скачать .conf
+                      {visibleIssuedAccess.clientConfigFileName.endsWith('.vpn') ? 'Скачать .vpn' : 'Скачать .conf'}
                     </button>
                   </div>
                 </div>
