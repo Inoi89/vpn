@@ -6,6 +6,7 @@ import { TrafficChart } from './components/TrafficChart'
 import { UserManagement } from './components/UserManagement'
 import { useDashboardData } from './hooks/useDashboardData'
 import { formatDateTime, formatNodeStatus, formatRelativeTime } from './utils/format'
+import { getNodeDisplayName, sortNodesForDisplay } from './utils/nodeDisplay'
 
 function App() {
   const { dashboard, isLoading, isError, error, refresh, issueNodeAccess, setNodeAccessState, deleteNodeAccess, getNodeAccessConfig, isSavingUser, issuedAccess } =
@@ -40,6 +41,8 @@ function App() {
   }
 
   const selectedNode = selectedNodeId ? dashboard.nodes.find((node) => node.id === selectedNodeId) ?? null : null
+  const displayNodes = sortNodesForDisplay(dashboard.nodes)
+  const selectedNodeLabel = selectedNode ? getNodeDisplayName(selectedNode) : null
   const scopedSessions = selectedNode
     ? dashboard.sessions.filter((session) => session.nodeId === selectedNode.id)
     : dashboard.sessions
@@ -66,7 +69,7 @@ function App() {
         </div>
 
         <div className="navbar-content">
-          <NodeList nodes={dashboard.nodes} selectedNodeId={selectedNodeId ?? null} onSelectNode={setSelectedNodeId} />
+          <NodeList nodes={displayNodes} selectedNodeId={selectedNodeId ?? null} onSelectNode={setSelectedNodeId} />
         </div>
       </nav>
 
@@ -143,7 +146,7 @@ function App() {
                     users={scopedUsers}
                     activeUserIds={activeUserIds}
                     selectedNodeId={selectedNode.id}
-                    selectedNodeName={selectedNode.name}
+                    selectedNodeName={selectedNodeLabel}
                     isSaving={isSavingUser}
                     issuedAccess={issuedAccess}
                     onIssueAccess={issueNodeAccess}
@@ -153,7 +156,7 @@ function App() {
                   />
                 </div>
                 <div className="col-md-12">
-                  <SessionsPanel sessions={scopedSessions} selectedNodeName={selectedNode.name} />
+                  <SessionsPanel sessions={scopedSessions} selectedNodeName={selectedNodeLabel} />
                 </div>
               </>
             ) : (

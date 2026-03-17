@@ -1,5 +1,6 @@
 import type { NodeSummary, SessionSummary, UserSummary } from '../types/dashboard'
 import { formatDateTime, formatNodeStatus, formatRelativeTime } from '../utils/format'
+import { getNodeBadgeLabel, getNodeDisplayName, isPrimaryNode } from '../utils/nodeDisplay'
 
 type NodeInspectorProps = {
   node: NodeSummary | null
@@ -34,6 +35,7 @@ export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorPro
 
   const details = node
     ? [
+        { title: 'Имя', value: getNodeDisplayName(node) },
         { title: 'Статус', value: formatNodeStatus(node.status) },
         { title: 'Кластер', value: node.cluster },
         { title: 'Адрес агента', value: node.agentBaseAddress },
@@ -49,7 +51,10 @@ export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorPro
   return (
     <div className="card">
       <div className="card-header">
-        <h5>{node ? `Нода ${node.name}` : 'Состояние контура'}</h5>
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <h5 className="mb-0">{node ? `Нода ${getNodeDisplayName(node)}` : 'Состояние контура'}</h5>
+          {node && isPrimaryNode(node) ? <span className="badge badge-light-primary">{getNodeBadgeLabel(node)}</span> : null}
+        </div>
       </div>
       <div className="card-body">
         <div className="row">

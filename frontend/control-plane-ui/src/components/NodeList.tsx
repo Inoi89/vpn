@@ -1,5 +1,6 @@
 import type { NodeSummary } from '../types/dashboard'
 import { formatNodeStatus, formatRelativeTime } from '../utils/format'
+import { getNodeBadgeLabel, getNodeDisplayName, isPrimaryNode } from '../utils/nodeDisplay'
 
 type NodeListProps = {
   nodes: NodeSummary[]
@@ -38,18 +39,26 @@ export function NodeList({ nodes, selectedNodeId, onSelectNode }: NodeListProps)
             <div className="pc-link empty-nav-item">Пока нет ни одной зарегистрированной ноды.</div>
           </li>
         ) : (
-          nodes.map((node) => (
-            <li className={`pc-item ${selectedNodeId === node.id ? 'active' : ''}`} key={node.id}>
-              <button type="button" className="pc-link" onClick={() => onSelectNode(node.id)}>
-                <span className="pc-mtext">{node.name}</span>
-                <small>
-                  {formatNodeStatus(node.status)} · {node.activeSessions} сессий
-                </small>
-                <small>{node.enabledPeerCount} ключей включено</small>
-                <small>{formatRelativeTime(node.lastSeenAtUtc)}</small>
-              </button>
-            </li>
-          ))
+          nodes.map((node) => {
+            const badgeLabel = getNodeBadgeLabel(node)
+
+            return (
+              <li className={`pc-item ${selectedNodeId === node.id ? 'active' : ''}`} key={node.id}>
+                <button type="button" className="pc-link" onClick={() => onSelectNode(node.id)}>
+                  <div className="d-flex align-items-center justify-content-between gap-2">
+                    <span className="pc-mtext">{getNodeDisplayName(node)}</span>
+                    {badgeLabel ? <span className="badge badge-light-primary">{badgeLabel}</span> : null}
+                  </div>
+                  <small>
+                    {formatNodeStatus(node.status)} · {node.activeSessions} сессий
+                  </small>
+                  <small>{node.enabledPeerCount} ключей включено</small>
+                  {isPrimaryNode(node) ? <small>Основная нода</small> : null}
+                  <small>{formatRelativeTime(node.lastSeenAtUtc)}</small>
+                </button>
+              </li>
+            )
+          })
         )}
       </ul>
     </div>
