@@ -298,3 +298,6 @@ The intended direction is:
 - keep the Amnezia fleet as the transport layer for now.
 
 This is the right next layer because the transport is already operational. The unresolved part is the user-facing import/enrollment experience.
+
+See also:
+- [docs/desktop-client-direction.md](./desktop-client-direction.md)
