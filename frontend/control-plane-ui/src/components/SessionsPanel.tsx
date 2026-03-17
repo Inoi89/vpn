@@ -1,53 +1,91 @@
+import { useState } from 'react'
 import type { SessionSummary } from '../types/dashboard'
+import { formatBytes, formatRelativeTime, formatSessionState, formatTime, shortKey } from '../utils/format'
 
 type SessionsPanelProps = {
   sessions: SessionSummary[]
+  selectedNodeName: string | null
 }
 
-function formatBytes(bytes: number) {
-  if (bytes <= 0) {
-    return '0 B'
-  }
+export function SessionsPanel({ sessions, selectedNodeName }: SessionsPanelProps) {
+  const [query, setQuery] = useState('')
 
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
-  const value = bytes / 1024 ** index
-  return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[index]}`
-}
+  const normalizedQuery = query.trim().toLowerCase()
+  const filteredSessions = sessions.filter((session) => {
+    if (!normalizedQuery) {
+      return true
+    }
 
-export function SessionsPanel({ sessions }: SessionsPanelProps) {
+    const haystack = [session.userDisplayName, session.nodeName, session.endpoint ?? '', session.publicKey]
+      .join(' ')
+      .toLowerCase()
+
+    return haystack.includes(normalizedQuery)
+  })
+
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <div>
-          <p className="eyebrow">Sessions</p>
-          <h2>Active tunnels</h2>
-        </div>
-        <p className="panel-meta">{sessions.length} live</p>
-      </div>
-      <div className="session-table">
-        <div className="session-table-header">
-          <span>User</span>
-          <span>Node</span>
-          <span>Endpoint</span>
-          <span>RX</span>
-          <span>TX</span>
-          <span>Handshake</span>
-        </div>
-        {sessions.map((session) => (
-          <div className="session-row" key={session.id}>
-            <div>
-              <strong>{session.userDisplayName}</strong>
-              <p>{session.publicKey.slice(0, 16)}...</p>
-            </div>
-            <span>{session.nodeName}</span>
-            <span>{session.endpoint ?? 'n/a'}</span>
-            <span>{formatBytes(session.rxBytes)}</span>
-            <span>{formatBytes(session.txBytes)}</span>
-            <span>{session.latestHandshakeAtUtc ? new Date(session.latestHandshakeAtUtc).toLocaleTimeString() : 'none'}</span>
+    <div className="card">
+      <div className="card-header">
+        <div className="d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <div>
+            <h5>{selectedNodeName ? `Активные туннели ноды ${selectedNodeName}` : 'Активные туннели'}</h5>
+            <small>Текущие подключения пользователей, endpoint клиентов и счётчики трафика.</small>
           </div>
-        ))}
+          <div className="form-search">
+            <input
+              type="search"
+              className="form-control"
+              placeholder="пользователь, адрес клиента, ключ"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+        </div>
       </div>
-    </section>
+      <div className="card-body p-0">
+        {filteredSessions.length === 0 ? (
+          <div className="empty-panel">Нет активных сессий для текущего фильтра.</div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-hover table-align-center mb-0">
+              <thead>
+                <tr>
+                  <th>Пользователь</th>
+                  <th>Нода</th>
+                  <th>Адрес клиента</th>
+                  <th>Последний обмен</th>
+                  <th>Входящий</th>
+                  <th>Исходящий</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSessions.map((session) => (
+                  <tr key={session.id}>
+                    <td>
+                      <strong>{session.userDisplayName}</strong>
+                      <div className="text-muted small">{shortKey(session.publicKey, 8)}</div>
+                    </td>
+                    <td>
+                      <strong>{session.nodeName}</strong>
+                      <div className="text-muted small">{formatSessionState(session.state)}</div>
+                    </td>
+                    <td>
+                      <strong>{session.endpoint ?? 'нет'}</strong>
+                      <div className="text-muted small">Подключена {formatRelativeTime(session.connectedAtUtc)}</div>
+                    </td>
+                    <td>
+                      <strong>{formatTime(session.latestHandshakeAtUtc)}</strong>
+                      <div className="text-muted small">{formatRelativeTime(session.latestHandshakeAtUtc)}</div>
+                    </td>
+                    <td>{formatBytes(session.rxBytes)}</td>
+                    <td>{formatBytes(session.txBytes)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

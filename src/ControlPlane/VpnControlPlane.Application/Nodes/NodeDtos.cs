@@ -10,6 +10,7 @@ public sealed record NodeSummaryDto(
     string? AgentVersion,
     DateTimeOffset? LastSeenAtUtc,
     int ActiveSessions,
+    int EnabledPeerCount,
     string? LastError);
 
 public sealed record SessionDto(
@@ -32,7 +33,9 @@ public sealed record UserSummaryDto(
     string DisplayName,
     string? Email,
     bool IsEnabled,
-    int PeerCount);
+    int PeerCount,
+    IReadOnlyList<Guid> NodeIds,
+    DateTimeOffset? LastActivityAtUtc);
 
 public sealed record TrafficPointDto(
     DateTimeOffset CapturedAtUtc,

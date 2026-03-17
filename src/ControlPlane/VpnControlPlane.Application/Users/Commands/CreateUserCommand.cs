@@ -28,7 +28,9 @@ public sealed class CreateUserCommandHandler(
                 existing.DisplayName,
                 existing.Email,
                 existing.IsEnabled,
-                existing.PeerConfigs.Count);
+                existing.PeerConfigs.Count,
+                existing.PeerConfigs.Select(x => x.NodeId).Distinct().ToArray(),
+                null);
         }
 
         var user = VpnUser.Create(
@@ -42,6 +44,6 @@ public sealed class CreateUserCommandHandler(
         await userRepository.AddAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new UserSummaryDto(user.Id, user.ExternalId, user.DisplayName, user.Email, user.IsEnabled, 0);
+        return new UserSummaryDto(user.Id, user.ExternalId, user.DisplayName, user.Email, user.IsEnabled, 0, [], null);
     }
 }

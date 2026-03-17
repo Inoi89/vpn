@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import 'bootstrap/dist/css/bootstrap.min.css'
 import './styles/app.css'
 
 const queryClient = new QueryClient()

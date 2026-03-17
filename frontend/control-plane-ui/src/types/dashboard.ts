@@ -8,6 +8,7 @@ export type NodeSummary = {
   agentVersion?: string | null
   lastSeenAtUtc?: string | null
   activeSessions: number
+  enabledPeerCount: number
   lastError?: string | null
 }
 
@@ -33,6 +34,8 @@ export type UserSummary = {
   email?: string | null
   isEnabled: boolean
   peerCount: number
+  nodeIds: string[]
+  lastActivityAtUtc?: string | null
 }
 
 export type TrafficPoint = {

@@ -71,21 +71,45 @@ internal sealed class DashboardReadService(ControlPlaneDbContext dbContext) : ID
 {
     public async Task<IReadOnlyList<NodeSummaryDto>> GetNodesAsync(CancellationToken cancellationToken)
     {
-        var items = await dbContext.Nodes
+        var nodes = await dbContext.Nodes
             .AsNoTracking()
             .OrderBy(x => x.Name)
+            .Select(x => new
+            {
+                x.Id,
+                x.AgentIdentifier,
+                x.Name,
+                x.Cluster,
+                x.AgentBaseAddress,
+                Status = x.Status.ToString(),
+                x.AgentVersion,
+                x.LastSeenAtUtc,
+                ActiveSessions = x.Sessions.Count(y => y.State == SessionState.Active),
+                x.LastError
+            })
+            .ToListAsync(cancellationToken);
+
+        var enabledPeerCounts = await dbContext.PeerConfigs
+            .AsNoTracking()
+            .Where(x => x.User.IsEnabled)
+            .GroupBy(x => x.NodeId)
+            .Select(x => new { NodeId = x.Key, Count = x.Count() })
+            .ToDictionaryAsync(x => x.NodeId, x => x.Count, cancellationToken);
+
+        var items = nodes
             .Select(x => new NodeSummaryDto(
                 x.Id,
                 x.AgentIdentifier,
                 x.Name,
                 x.Cluster,
                 x.AgentBaseAddress,
-                x.Status.ToString(),
+                x.Status,
                 x.AgentVersion,
                 x.LastSeenAtUtc,
-                x.Sessions.Count(y => y.State == SessionState.Active),
+                x.ActiveSessions,
+                enabledPeerCounts.GetValueOrDefault(x.Id, 0),
                 x.LastError))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return items;
     }
@@ -123,17 +147,55 @@ internal sealed class DashboardReadService(ControlPlaneDbContext dbContext) : ID
 
     public async Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(CancellationToken cancellationToken)
     {
-        var items = await dbContext.Users
+        var users = await dbContext.Users
             .AsNoTracking()
             .OrderBy(x => x.DisplayName)
+            .Select(x => new
+            {
+                x.Id,
+                x.ExternalId,
+                x.DisplayName,
+                x.Email,
+                x.IsEnabled,
+                PeerCount = x.PeerConfigs.Count
+            })
+            .ToListAsync(cancellationToken);
+
+        var nodeLinks = await dbContext.PeerConfigs
+            .AsNoTracking()
+            .Select(x => new { x.UserId, x.NodeId })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var lastActivities = await dbContext.Sessions
+            .AsNoTracking()
+            .GroupBy(x => x.UserId)
+            .Select(x => new
+            {
+                UserId = x.Key,
+                LastActivityAtUtc = x.Max(y => (DateTimeOffset?)(y.LastHandshakeAtUtc ?? y.LastObservedAtUtc))
+            })
+            .ToListAsync(cancellationToken);
+
+        var nodeIdsByUser = nodeLinks
+            .GroupBy(x => x.UserId)
+            .ToDictionary(
+                x => x.Key,
+                x => (IReadOnlyList<Guid>)x.Select(y => y.NodeId).ToArray());
+
+        var lastActivityByUser = lastActivities.ToDictionary(x => x.UserId, x => x.LastActivityAtUtc);
+
+        var items = users
             .Select(x => new UserSummaryDto(
                 x.Id,
                 x.ExternalId,
                 x.DisplayName,
                 x.Email,
                 x.IsEnabled,
-                x.PeerConfigs.Count))
-            .ToListAsync(cancellationToken);
+                x.PeerCount,
+                nodeIdsByUser.TryGetValue(x.Id, out var nodeIds) ? nodeIds : [],
+                lastActivityByUser.TryGetValue(x.Id, out var lastActivityAtUtc) ? lastActivityAtUtc : null))
+            .ToList();
 
         return items;
     }
