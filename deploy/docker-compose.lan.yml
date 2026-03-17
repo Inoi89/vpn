@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vpn_control_plane
+      POSTGRES_USER: vpn
+      POSTGRES_PASSWORD: vpn
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+
+  control-api:
+    build:
+      context: ..
+      dockerfile: src/ControlPlane/VpnControlPlane.Api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=vpn_control_plane;Username=vpn;Password=vpn
+      AgentClient__ClientCertificatePath: /app/certs/control-plane-client.pfx
+      AgentClient__ClientCertificatePassword: changeit
+      AgentClient__AllowInvalidServerCertificate: "true"
+      Security__Jwt__Issuer: vpn-control-plane
+      Security__Jwt__Audience: vpn-control-plane-ui
+      Security__Jwt__SigningKey: vpn-control-plane-lan-2026-03-17-super-secret-change-me
+      Cors__AllowedOrigins__0: http://192.168.1.2:5080
+    volumes:
+      - ../certs:/app/certs:ro
+    ports:
+      - "7001:8080"
+
+  control-ui:
+    build:
+      context: ..
+      dockerfile: frontend/control-plane-ui/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://192.168.1.2:7001
+        VITE_ACCESS_TOKEN: >-
+          eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ2cG4tY29udHJvbC1wbGFuZSIsImF1ZCI6InZwbi1jb250cm9sLXBsYW5lLXVpIiwic3ViIjoibG9jYWwtYWRtaW4iLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE4MDUyNDg4MDB9.lOwaCUd4jtzUQSvHYWwvEbyI50GVVW6bp1c4-jxbYWw
+    restart: unless-stopped
+    depends_on:
+      - control-api
+    ports:
+      - "5080:80"
+
+volumes:
+  postgres-data:

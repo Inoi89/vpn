@@ -2,6 +2,7 @@ using System.Text;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using VpnControlPlane.Api.Hubs;
@@ -136,12 +137,44 @@ app.MapHub<SessionUpdatesHub>("/hubs/sessions");
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ControlPlaneDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    await WaitForDatabaseAsync(dbContext, logger, app.Lifetime.ApplicationStopping);
+
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    recurringJobManager.AddOrUpdate<NodePollingJob>(
+        "poll-nodes",
+        job => job.PollAsync(),
+        "*/15 * * * * *");
 }
 
-RecurringJob.AddOrUpdate<NodePollingJob>(
-    "poll-nodes",
-    job => job.PollAsync(),
-    "*/15 * * * * *");
-
 app.Run();
+
+static async Task WaitForDatabaseAsync(
+    ControlPlaneDbContext dbContext,
+    ILogger logger,
+    CancellationToken cancellationToken)
+{
+    const int maxAttempts = 20;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        try
+        {
+            await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+            logger.LogInformation("Database is ready after {Attempt} attempt(s).", attempt);
+            return;
+        }
+        catch (Exception exception) when (attempt < maxAttempts)
+        {
+            logger.LogWarning(
+                exception,
+                "Database is not ready yet. Retrying startup in 3 seconds. Attempt {Attempt}/{MaxAttempts}.",
+                attempt,
+                maxAttempts);
+
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+        }
+    }
+
+    await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+}

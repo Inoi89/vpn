@@ -3,20 +3,22 @@ services:
     build:
       context: ..
       dockerfile: src/NodeAgent/VpnNodeAgent/Dockerfile
-    network_mode: host
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/ssl/private/node-agent.pfx:/app/certs/node-agent.pfx:ro
+      - ../certs:/app/certs:ro
     environment:
-      ASPNETCORE_Kestrel__Certificates__Default__Path: /app/certs/node-agent.pfx
-      ASPNETCORE_Kestrel__Certificates__Default__Password: change-me
-      Agent__AgentIdentifier: node-01
-      Agent__Hostname: vpn-node-01
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /app/certs/node-agent-server.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: changeit
+      Agent__AgentIdentifier: amnezia-node-01
+      Agent__Hostname: amnezia-node-01
+      Agent__AgentVersion: 1.0.0
       Agent__OperationMode: Docker
       Agent__DockerExecutablePath: docker
       Agent__DockerContainerName: amnezia-awg
       Agent__ConfigDirectory: /opt/amnezia/awg
       Agent__ConfigSearchPatterns__0: wg0.conf
       Agent__ConfigSearchPatterns__1: clientsTable
-      Agent__AllowedClientThumbprints__0: REPLACE_WITH_CONTROL_PLANE_CLIENT_CERT_THUMBPRINT
-    restart: unless-stopped
+      Agent__AllowedClientThumbprints__0: ${CONTROL_PLANE_CLIENT_CERT_THUMBPRINT}

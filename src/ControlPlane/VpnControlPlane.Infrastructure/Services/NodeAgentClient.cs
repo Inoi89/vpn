@@ -21,6 +21,11 @@ internal sealed class NodeAgentClient(HttpClient httpClient, IOptions<AgentClien
             handler.ClientCertificates.Add(certificate);
         }
 
+        if (settings.AllowInvalidServerCertificate)
+        {
+            handler.ServerCertificateCustomValidationCallback = static (_, _, _, _) => true;
+        }
+
         return handler;
     }
 

@@ -10,11 +10,17 @@ public sealed class AgentOptions
 
     public string AgentVersion { get; set; } = "1.0.0";
 
+    public string OperationMode { get; set; } = "Host";
+
     public string WgExecutablePath { get; set; } = "wg";
+
+    public string DockerExecutablePath { get; set; } = "docker";
+
+    public string? DockerContainerName { get; set; }
 
     public string ConfigDirectory { get; set; } = "/etc/wireguard";
 
-    public List<string> ConfigSearchPatterns { get; set; } = ["*.conf"];
+    public List<string> ConfigSearchPatterns { get; set; } = ["*.conf", "clientsTable"];
 
     public int ActiveHandshakeWindowSeconds { get; set; } = 180;
 

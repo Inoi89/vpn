@@ -16,7 +16,8 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     options.ConfigureHttpsDefaults(httpsOptions =>
     {
-        httpsOptions.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
+        httpsOptions.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
+        httpsOptions.AllowAnyClientCertificate();
     });
 });
 
@@ -24,6 +25,8 @@ builder.Services
     .AddAuthentication(CertificateAuthenticationDefaults.AuthenticationScheme)
     .AddCertificate(options =>
     {
+        options.AllowedCertificateTypes = CertificateTypes.All;
+        options.RevocationMode = X509RevocationMode.NoCheck;
         options.Events = new CertificateAuthenticationEvents
         {
             OnCertificateValidated = context =>
@@ -64,8 +67,10 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddSingleton<IWireGuardCommandRunner, WgCommandRunner>();
 builder.Services.AddSingleton<IWireGuardDumpParser, WireGuardDumpParser>();
 builder.Services.AddSingleton<IConfigFileCatalog, ConfigFileCatalog>();
+builder.Services.AddSingleton<IConfigFileReader, ConfigFileReader>();
 builder.Services.AddSingleton<IWireGuardConfigParser, WireGuardConfigParser>();
 builder.Services.AddSingleton<IAgentSnapshotService, AgentSnapshotService>();
+builder.Services.AddSingleton<ProcessCommandExecutor>();
 
 var app = builder.Build();
 

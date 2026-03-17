@@ -21,7 +21,7 @@ public sealed class WireGuardDumpParser(IOptions<AgentOptions> options) : IWireG
                 continue;
             }
 
-            if (columns.Length == 5)
+            if (columns.Length == 5 || !LooksLikePeerLine(columns))
             {
                 continue;
             }
@@ -44,6 +44,18 @@ public sealed class WireGuardDumpParser(IOptions<AgentOptions> options) : IWireG
         }
 
         return peers;
+    }
+
+    private static bool LooksLikePeerLine(string[] columns)
+    {
+        var allowedIps = columns[4];
+        if (string.IsNullOrWhiteSpace(allowedIps))
+        {
+            return false;
+        }
+
+        return allowedIps.Contains('/', StringComparison.Ordinal)
+            || string.Equals(allowedIps, "(none)", StringComparison.OrdinalIgnoreCase);
     }
 
     private static DateTimeOffset? ParseHandshake(string value)

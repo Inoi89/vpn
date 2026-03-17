@@ -1,29 +1,27 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using VpnNodeAgent.Abstractions;
 using VpnNodeAgent.Configuration;
 
 namespace VpnNodeAgent.Services;
 
-public sealed class WgCommandRunner(
+public sealed class ConfigFileReader(
     IOptions<AgentOptions> options,
-    ProcessCommandExecutor commandExecutor) : IWireGuardCommandRunner
+    ProcessCommandExecutor commandExecutor) : IConfigFileReader
 {
-    public async Task<string> ExecuteShowAllDumpAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> ReadAllLinesAsync(string filePath, CancellationToken cancellationToken)
     {
         if (string.Equals(options.Value.OperationMode, "Docker", StringComparison.OrdinalIgnoreCase))
         {
             var containerName = GetRequiredContainerName();
-            return await commandExecutor.ExecuteAsync(
+            var output = await commandExecutor.ExecuteAsync(
                 options.Value.DockerExecutablePath,
-                ["exec", containerName, options.Value.WgExecutablePath, "show", "all", "dump"],
+                ["exec", containerName, "cat", filePath],
                 cancellationToken);
+
+            return output.Split(['\r', '\n'], StringSplitOptions.None);
         }
 
-        return await commandExecutor.ExecuteAsync(
-            options.Value.WgExecutablePath,
-            ["show", "all", "dump"],
-            cancellationToken);
+        return await File.ReadAllLinesAsync(filePath, cancellationToken);
     }
 
     private string GetRequiredContainerName()

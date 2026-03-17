@@ -18,6 +18,11 @@ public interface IConfigFileCatalog
     Task<IReadOnlyList<string>> ListConfigFilesAsync(CancellationToken cancellationToken);
 }
 
+public interface IConfigFileReader
+{
+    Task<IReadOnlyList<string>> ReadAllLinesAsync(string filePath, CancellationToken cancellationToken);
+}
+
 public interface IWireGuardConfigParser
 {
     Task<IReadOnlyList<PeerConfigSnapshot>> ParseAsync(IReadOnlyList<string> configFiles, CancellationToken cancellationToken);

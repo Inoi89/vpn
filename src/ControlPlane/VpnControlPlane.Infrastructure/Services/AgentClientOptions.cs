@@ -9,4 +9,6 @@ public sealed class AgentClientOptions
     public string? ClientCertificatePath { get; set; }
 
     public string? ClientCertificatePassword { get; set; }
+
+    public bool AllowInvalidServerCertificate { get; set; }
 }

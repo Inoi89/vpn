@@ -13,3 +13,7 @@ node_modules/
 wg.exe
 wintun.dll
 WintunWrapper.dll
+
+# Local deployment artifacts
+certs/
+*.tar.gz
