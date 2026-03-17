@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: vpn_control_plane
+      POSTGRES_USER: vpn
+      POSTGRES_PASSWORD: vpn
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+
+  control-api:
+    build:
+      context: ..
+      dockerfile: src/ControlPlane/VpnControlPlane.Api/Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=vpn_control_plane;Username=vpn;Password=vpn
+      Security__Jwt__Issuer: vpn-control-plane
+      Security__Jwt__Audience: vpn-control-plane-ui
+      Security__Jwt__SigningKey: replace-with-a-production-secret
+    ports:
+      - "7001:8080"
+
+  control-ui:
+    build:
+      context: ..
+      dockerfile: frontend/control-plane-ui/Dockerfile
+    depends_on:
+      - control-api
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres-data:

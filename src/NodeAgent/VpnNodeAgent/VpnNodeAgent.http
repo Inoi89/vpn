@@ -1,0 +1,7 @@
+@host = https://localhost:8443
+
+### Health
+GET {{host}}/healthz
+
+### Snapshot
+GET {{host}}/v1/agent/snapshot

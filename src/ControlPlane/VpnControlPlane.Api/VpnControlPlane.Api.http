@@ -1,0 +1,35 @@
+@host = https://localhost:7001
+@token = REPLACE_WITH_JWT
+
+### Health
+GET {{host}}/healthz
+
+### Register node
+POST {{host}}/api/nodes/register
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "agentIdentifier": "node-01",
+  "name": "Amsterdam Node",
+  "cluster": "eu-west",
+  "agentBaseAddress": "https://10.0.0.5:8443",
+  "certificateThumbprint": "AA11BB22CC33",
+  "description": "Primary WireGuard node"
+}
+
+### Dashboard
+GET {{host}}/api/dashboard?trafficPoints=50
+Authorization: Bearer {{token}}
+
+### Upsert user
+POST {{host}}/api/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "externalId": "user-001",
+  "displayName": "Alice Adams",
+  "email": "alice@example.com",
+  "isEnabled": true
+}
