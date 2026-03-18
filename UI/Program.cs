@@ -1,13 +1,13 @@
-using System;
 using Avalonia;
-using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.Collections.ObjectModel;
-using VpnClient.Core.Models;
-using VpnClient.Infrastructure.Logging;
+using VpnClient.Application.Imports;
+using VpnClient.Application.Profiles;
 using VpnClient.Core.Interfaces;
+using VpnClient.Infrastructure.Diagnostics;
+using VpnClient.Infrastructure.Import;
+using VpnClient.Infrastructure.Persistence;
+using VpnClient.Infrastructure.Runtime;
 using VpnClient.Infrastructure.Services;
 using VpnClient.UI.ViewModels;
 
@@ -22,19 +22,30 @@ class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
         builder.Services.AddLogging();
-        builder.Services.AddSingleton<ObservableCollection<LogEntry>>();
-        builder.Services.AddSingleton<ObservableLoggerProvider>();
-        builder.Services.AddSingleton<IConfigService, ConfigService>();
+
+        builder.Services.AddSingleton<IImportService, AmneziaImportService>();
+        builder.Services.AddSingleton<IProfileRepository, JsonProfileRepository>();
+        builder.Services.AddSingleton<ImportTunnelConfigUseCase>();
+        builder.Services.AddSingleton<ImportProfileUseCase>();
+        builder.Services.AddSingleton<AddProfileUseCase>();
+        builder.Services.AddSingleton<ListProfilesUseCase>();
+        builder.Services.AddSingleton<RenameProfileUseCase>();
+        builder.Services.AddSingleton<DeleteProfileUseCase>();
+        builder.Services.AddSingleton<SetActiveProfileUseCase>();
+
         builder.Services.AddSingleton<IWintunService, WintunService>();
-        builder.Services.AddSingleton<IVpnService, VpnService>();
+        builder.Services.AddSingleton<IRuntimeEnvironment, DefaultRuntimeEnvironment>();
+        builder.Services.AddSingleton<IRuntimeCommandExecutor, ProcessRuntimeCommandExecutor>();
+        builder.Services.AddSingleton<IAmneziaDaemonTransport, NamedPipeAmneziaDaemonTransport>();
+        builder.Services.AddSingleton<WindowsFirstVpnRuntimeAdapter>();
+        builder.Services.AddSingleton<AmneziaDaemonRuntimeAdapter>();
+        builder.Services.AddSingleton<IVpnRuntimeAdapter, HybridVpnRuntimeAdapter>();
+        builder.Services.AddSingleton<IVpnDiagnosticsService, VpnDiagnosticsService>();
+
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddSingleton<MainWindowViewModel>();
 
         var host = builder.Build();
-
-        var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
-        var provider = host.Services.GetRequiredService<ObservableLoggerProvider>();
-        loggerFactory.AddProvider(provider);
 
         Services = host.Services;
 

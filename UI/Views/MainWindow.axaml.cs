@@ -18,6 +18,16 @@ public partial class MainWindow : Window
         DataContext = vm;
     }
 
+    protected override async void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            await viewModel.InitializeAsync();
+        }
+    }
+
     private async void OnImportConfigClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel || StorageProvider is null)

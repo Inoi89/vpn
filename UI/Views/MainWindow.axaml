@@ -2,209 +2,299 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:models="clr-namespace:VpnClient.Core.Models;assembly=VpnClient.Core"
+        xmlns:diag="clr-namespace:VpnClient.Core.Models.Diagnostics;assembly=VpnClient.Core"
         xmlns:vm="clr-namespace:VpnClient.UI.ViewModels"
         mc:Ignorable="d"
         x:Class="VpnClient.UI.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="Amnezia Desktop"
-        Width="1260"
-        Height="840"
-        MinWidth="1120"
-        MinHeight="760">
+        Title="Your VPN Client"
+        Width="1440"
+        Height="940"
+        MinWidth="1200"
+        MinHeight="820">
 
-    <Grid ColumnDefinitions="320,*" Margin="24">
-        <Border Classes="sidebar" Padding="24">
-            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
-                <StackPanel Spacing="10">
-                    <TextBlock Text="Amnezia Desktop" FontSize="28" FontWeight="SemiBold" />
+    <Grid ColumnDefinitions="320,*" Margin="20" ColumnSpacing="20">
+        <Border Classes="sidebar" Padding="20">
+            <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="18">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="app-title" Text="Your VPN Client" />
                     <TextBlock Classes="muted"
-                               Text="Локальный клиент поверх конфигов Amnezia. Без генерации ключей и без панели управления."
+                               Text="Локальный клиент поверх существующих Amnezia-конфигов. Только import, connect и диагностика."
                                TextWrapping="Wrap" />
                 </StackPanel>
 
-                <Border Classes="inner-panel" Grid.Row="1" Margin="0,24,0,0" Padding="18">
-                    <StackPanel Spacing="12">
-                        <TextBlock Classes="section-title" Text="Импорт сервера" />
-                        <TextBlock Classes="muted"
-                                   Text="Открой .vpn или .conf. Профиль сохранится локально и станет активным для подключения."
-                                   TextWrapping="Wrap" />
-                        <Button Classes="import-button"
-                                Content="{Binding ImportButtonText}"
-                                Click="OnImportConfigClick" />
-                        <TextBlock Text="{Binding ImportStateText}" TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
+                <StackPanel Grid.Row="1" Spacing="10">
+                    <Button Classes="primary"
+                            Content="Добавить конфиг"
+                            Click="OnImportConfigClick" />
 
-                <Border Classes="inner-panel" Grid.Row="2" Margin="0,18,0,0" Padding="18">
-                    <StackPanel Spacing="10">
-                        <TextBlock Classes="section-title" Text="Текущий сервер" />
-                        <TextBlock Text="{Binding ProfileSummary}" TextWrapping="Wrap" />
-                        <TextBlock Classes="muted"
-                                   Text="Сначала импорт, потом одно действие подключения. Никакой выдачи ключей внутри клиента."
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
+                    <Border Classes="pill" Padding="14,10">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="Последнее действие" />
+                            <TextBlock Text="{Binding LastOperationMessage}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
-                <Border Classes="inner-panel" Grid.Row="4" Padding="18">
-                    <StackPanel Spacing="10">
-                        <TextBlock Classes="section-title" Text="Фокус" />
+                <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="section-title" Text="Профили" />
+                        <TextBlock Classes="muted" Text="Импортированные локально конфиги" />
+                    </StackPanel>
+
+                    <ListBox Grid.Row="1"
+                             Classes="profile-list"
+                             ItemsSource="{Binding Profiles}"
+                             SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:ImportedServerProfile">
+                                <Border Classes="profile-item" Padding="14">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding DisplayName}" FontSize="16" FontWeight="SemiBold" />
+                                        <TextBlock Classes="muted" Text="{Binding SourceFileName}" />
+                                        <TextBlock Classes="label" Text="{Binding Endpoint}" />
+                                        <TextBlock Classes="label" Text="{Binding Address}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+
+                <Border Grid.Row="3" Classes="card-subtle" Padding="16" IsVisible="{Binding HasProfiles}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="Напоминание" />
                         <TextBlock Classes="muted"
-                                   Text="Следующий этап: добить полную совместимость import path Amnezia и только после этого наращивать multi-profile UX."
+                                   Text="Если handshake есть, а трафика нет, смотри runtime warnings и diagnostics. Ключевой риск сейчас именно в client runtime path."
                                    TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </Grid>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="22,0,0,0">
-            <Border Classes="panel" Padding="24">
-                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Подключение" Classes="section-title" />
-                        <TextBlock Classes="muted"
-                                   Text="Клиент повторяет import/connect flow Amnezia, а не сценарии control plane."
-                                   TextWrapping="Wrap" />
+        <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="20">
+            <Border Classes="card" Padding="22">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="page-title" Text="{Binding StatusTitle}" />
+                        <TextBlock Classes="muted" Text="{Binding StatusDescription}" TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <Border Grid.Column="1"
-                            Classes="status-pill"
-                            Padding="14,8"
-                            VerticalAlignment="Center">
-                        <TextBlock Text="{Binding ConnectionStatus}" Foreground="#FBB26A" FontWeight="SemiBold" />
-                    </Border>
-
-                    <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="10" Margin="0,18,0,0">
-                        <Border Classes="info-chip" Padding="12,7">
-                            <TextBlock Text="{Binding ProfileFormat}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Classes="pill" Padding="12,8">
+                            <TextBlock Text="{Binding CurrentRuntimeLabel}" />
                         </Border>
-                        <Border Classes="info-chip" Padding="12,7">
-                            <TextBlock Text="{Binding ProfileDns}" />
+                        <Border Classes="pill" Padding="12,8">
+                            <TextBlock Text="{Binding CurrentFormatLabel}" />
                         </Border>
+                        <Button Classes="secondary"
+                                Content="Обновить"
+                                Command="{Binding RefreshCommand}" />
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <Grid Grid.Row="1" ColumnDefinitions="420,*" Margin="0,22,0,22">
-                <Border Classes="panel" Padding="24" Margin="0,0,22,0">
-                    <Grid RowDefinitions="Auto,*,Auto">
+            <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="20">
+                <Border Classes="card" Padding="22" IsVisible="{Binding HasNoProfiles}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
                         <StackPanel Spacing="8">
-                            <TextBlock Classes="section-title" Text="Туннель" />
-                            <TextBlock Classes="muted" Text="{Binding ConnectionHint}" TextWrapping="Wrap" />
+                            <TextBlock Classes="section-title" Text="{Binding EmptyStateTitle}" />
+                            <TextBlock Classes="muted" Text="{Binding EmptyStateText}" TextWrapping="Wrap" />
                         </StackPanel>
 
-                        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Border Width="264"
-                                    Height="264"
-                                    Background="Transparent"
-                                    BorderBrush="#2C2D30"
-                                    BorderThickness="1"
-                                    CornerRadius="132" />
-
-                            <Border Width="228"
-                                    Height="228"
-                                    Background="Transparent"
-                                    BorderBrush="#FBB26A"
-                                    BorderThickness="2"
-                                    CornerRadius="114"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center" />
-
-                            <Button Classes="connect-button"
-                                    Width="188"
-                                    Height="188"
-                                    Content="{Binding PrimaryButtonText}"
-                                    Command="{Binding ToggleConnectionCommand}"
-                                    IsEnabled="{Binding CanToggleConnection}"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center" />
-                        </Grid>
-
-                        <StackPanel Grid.Row="2" Spacing="8">
-                            <TextBlock Classes="metric-title" Text="Файл профиля" />
-                            <TextBlock Text="{Binding ProfileFileName}" TextWrapping="Wrap" />
-                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="primary"
+                                Content="Добавить .vpn или .conf"
+                                Click="OnImportConfigClick"
+                                VerticalAlignment="Center" />
                     </Grid>
                 </Border>
 
-                <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
-                    <Border Classes="panel" Padding="24">
-                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                            <TextBlock Classes="section-title" Text="Параметры сервера" />
+                <Grid Grid.Row="1"
+                      IsVisible="{Binding HasProfiles}"
+                      ColumnDefinitions="1.3*,0.9*"
+                      ColumnSpacing="20">
+                    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="20">
+                        <Border Classes="card" Padding="22">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Classes="section-title" Text="{Binding SelectedProfile.DisplayName}" />
+                                    <TextBlock Classes="muted" Text="{Binding SelectedProfile.SourcePath}" TextWrapping="Wrap" />
 
-                            <Grid Grid.Row="1" ColumnDefinitions="150,*" Margin="0,22,0,0">
-                                <TextBlock Classes="metric-title" Text="Имя" />
-                                <TextBlock Grid.Column="1" Text="{Binding ProfileTitle}" />
-                            </Grid>
+                                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal" Spacing="10">
+                                        <Border Classes="pill" Padding="12,8">
+                                            <TextBlock Text="{Binding EndpointText}" />
+                                        </Border>
+                                        <Border Classes="pill" Padding="12,8">
+                                            <TextBlock Text="{Binding DnsText}" />
+                                        </Border>
+                                        <Border Classes="pill" Padding="12,8">
+                                            <TextBlock Text="{Binding MtuText}" />
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
 
-                            <Grid Grid.Row="2" ColumnDefinitions="150,*" Margin="0,12,0,0">
-                                <TextBlock Classes="metric-title" Text="Endpoint" />
-                                <TextBlock Grid.Column="1" Text="{Binding ProfileEndpoint}" />
+                                <StackPanel Grid.Column="1" Width="220" Spacing="12">
+                                    <Button Classes="connect-toggle"
+                                            Content="{Binding PrimaryActionText}"
+                                            Command="{Binding ToggleConnectionCommand}"
+                                            IsEnabled="{Binding CanToggleConnection}" />
+                                    <TextBlock Classes="muted"
+                                               Text="Один клик на connect/disconnect. Генерации peer'ов и control plane логики здесь нет."
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
                             </Grid>
+                        </Border>
 
-                            <Grid Grid.Row="3" ColumnDefinitions="150,*" Margin="0,12,0,0">
-                                <TextBlock Classes="metric-title" Text="Адрес" />
-                                <TextBlock Grid.Column="1" Text="{Binding ProfileAddress}" />
-                            </Grid>
+                        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
+                            <Border Classes="metric-panel" Padding="16">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="label" Text="Последний handshake" />
+                                    <TextBlock Text="{Binding HandshakeText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
 
-                            <Grid Grid.Row="4" ColumnDefinitions="150,*" Margin="0,12,0,0">
-                                <TextBlock Classes="metric-title" Text="DNS" />
-                                <TextBlock Grid.Column="1" Text="{Binding ProfileDns}" />
-                            </Grid>
+                            <Border Grid.Column="1" Classes="metric-panel" Padding="16">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="label" Text="Входящий трафик" />
+                                    <TextBlock Text="{Binding DownloadText}" />
+                                </StackPanel>
+                            </Border>
 
-                            <Grid Grid.Row="5" ColumnDefinitions="150,*" Margin="0,12,0,0">
-                                <TextBlock Classes="metric-title" Text="Импорт" />
-                                <TextBlock Grid.Column="1" Text="{Binding ImportedAt}" />
-                            </Grid>
+                            <Border Grid.Column="2" Classes="metric-panel" Padding="16">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="label" Text="Исходящий трафик" />
+                                    <TextBlock Text="{Binding UploadText}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="3" Classes="metric-panel" Padding="16">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="label" Text="Адрес туннеля" />
+                                    <TextBlock Text="{Binding AddressText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
                         </Grid>
-                    </Border>
 
-                    <Border Classes="panel" Grid.Row="1" Padding="24" Margin="0,18,0,0">
-                        <StackPanel Spacing="8">
-                            <TextBlock Classes="section-title" Text="Источник" />
-                            <TextBlock Text="{Binding ProfileSourcePath}" TextWrapping="Wrap" />
-                            <TextBlock Classes="muted"
-                                       Text="Пока храним один локальный активный профиль. Следующий шаг — аккуратный multi-profile слой без логики выдачи."
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
+                        <Grid Grid.Row="2" ColumnDefinitions="1.1*,0.9*" ColumnSpacing="20">
+                            <Border Classes="card" Padding="22" Margin="0,0,0,20">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="14">
+                                    <TextBlock Classes="section-title" Text="Параметры профиля" />
 
-                    <Border Classes="panel" Grid.Row="2" Padding="24" Margin="0,18,0,0">
-                        <StackPanel Spacing="8">
-                            <TextBlock Classes="section-title" Text="Границы клиента" />
-                            <TextBlock Classes="muted"
-                                       Text="Никакого добавления пользователей, управления нодами и генерации ключей. Только импорт, подключение и локальная диагностика."
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
+                                    <Grid Grid.Row="1" ColumnDefinitions="160,*">
+                                        <TextBlock Classes="label" Text="Endpoint" />
+                                        <TextBlock Grid.Column="1" Text="{Binding EndpointText}" TextWrapping="Wrap" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="2" ColumnDefinitions="160,*">
+                                        <TextBlock Classes="label" Text="DNS" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DnsText}" TextWrapping="Wrap" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="3" ColumnDefinitions="160,*">
+                                        <TextBlock Classes="label" Text="Allowed IPs" />
+                                        <TextBlock Grid.Column="1" Text="{Binding AllowedIpsText}" TextWrapping="Wrap" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="4" ColumnDefinitions="160,*">
+                                        <TextBlock Classes="label" Text="Runtime" />
+                                        <TextBlock Grid.Column="1" Text="{Binding CurrentRuntimeLabel}" TextWrapping="Wrap" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" Spacing="20">
+                                <Border Classes="card" Padding="22">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Classes="section-title" Text="Имя профиля" />
+                                        <TextBox Classes="inline-editor"
+                                                 Text="{Binding RenameDraft, Mode=TwoWay}" />
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                            <Button Classes="secondary"
+                                                    Content="Переименовать"
+                                                    Command="{Binding RenameSelectedProfileCommand}"
+                                                    IsEnabled="{Binding CanRenameSelectedProfile}" />
+                                            <Button Grid.Column="1"
+                                                    Classes="danger"
+                                                    Content="Удалить профиль"
+                                                    Command="{Binding DeleteSelectedProfileCommand}"
+                                                    IsEnabled="{Binding CanDeleteSelectedProfile}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Classes="card" Padding="22">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Classes="section-title" Text="Warnings" />
+                                        <ItemsControl ItemsSource="{Binding WarningItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Classes="metric-panel" Padding="12" Margin="0,0,0,8">
+                                                        <TextBlock Text="{Binding .}" TextWrapping="Wrap" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+
+                    <Grid Grid.Column="1" RowDefinitions="1.1*,0.9*" RowSpacing="20">
+                        <Border Classes="card" Padding="22">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="16">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Classes="section-title" Text="Diagnostics" />
+                                    <TextBlock Classes="muted" Text="{Binding ImportErrorSummary}" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <ScrollViewer Grid.Row="1">
+                                    <ItemsControl ItemsSource="{Binding ConnectionLogs}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="diag:ConnectionLogEntry">
+                                                <Border Classes="metric-panel" Padding="12" Margin="0,0,0,10">
+                                                    <StackPanel Spacing="6">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                                            <TextBlock Classes="label"
+                                                                       Text="{Binding TimestampUtc, StringFormat='{}{0:HH:mm:ss}'}" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap" />
+                                                            <TextBlock Grid.Column="2" Classes="label" Text="{Binding Level}" />
+                                                        </Grid>
+                                                        <TextBlock Classes="label" Text="{Binding Source}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Row="1" Classes="card" Padding="22">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="16">
+                                <TextBlock Classes="section-title" Text="Ошибки импорта" />
+                                <ScrollViewer Grid.Row="1">
+                                    <ItemsControl ItemsSource="{Binding ImportValidationErrors}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="diag:ImportValidationError">
+                                                <Border Classes="metric-panel" Padding="12" Margin="0,0,0,10">
+                                                    <StackPanel Spacing="6">
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                                                        <TextBlock Classes="label" Text="{Binding Stage}" />
+                                                        <TextBlock Classes="label" Text="{Binding FileName}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Grid>
-
-            <Border Classes="panel" Grid.Row="2" Padding="24">
-                <Grid RowDefinitions="Auto,*">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <TextBlock Classes="section-title" Text="Диагностика" />
-                        <TextBlock Classes="muted" Text="Локальный журнал клиента" VerticalAlignment="Center" />
-                    </StackPanel>
-
-                    <ScrollViewer Grid.Row="1" Margin="0,18,0,0">
-                        <ItemsControl ItemsSource="{Binding LogEntries}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Padding="0,0,0,12" BorderBrush="#2C2D30" BorderThickness="0,0,0,1">
-                                        <Grid ColumnDefinitions="120,*">
-                                            <TextBlock Classes="muted"
-                                                       Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}" />
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding Message}"
-                                                       TextWrapping="Wrap" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
         </Grid>
     </Grid>
 </Window>
