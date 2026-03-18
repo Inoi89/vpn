@@ -27,6 +27,7 @@ The desktop client currently supports:
 - traffic counters
 - import diagnostics
 - runtime warnings
+- MSI-based self-update checks
 
 It intentionally does not support:
 
@@ -61,6 +62,7 @@ Windows packaging script:
 
 - [publish-win-x64.ps1](/c:/Users/rrese/source/repos/vpn/deploy/client/publish-win-x64.ps1)
 - [build-msi.ps1](/c:/Users/rrese/source/repos/vpn/deploy/client/build-msi.ps1)
+- [generate-update-manifest.ps1](/c:/Users/rrese/source/repos/vpn/deploy/client/generate-update-manifest.ps1)
 
 UI composition root:
 
@@ -70,6 +72,14 @@ Main shell:
 
 - [MainWindowViewModel.cs](/c:/Users/rrese/source/repos/vpn/UI/ViewModels/MainWindowViewModel.cs)
 - [MainWindow.axaml](/c:/Users/rrese/source/repos/vpn/UI/Views/MainWindow.axaml)
+
+Updater launcher:
+
+- [Program.cs](/c:/Users/rrese/source/repos/vpn/Updater/Program.cs)
+
+Update strategy:
+
+- [update-strategy.md](/c:/Users/rrese/source/repos/vpn/docs/update-strategy.md)
 
 ## 3. Persistence
 
@@ -159,6 +169,9 @@ The UI surfaces:
 - import errors
 - connection logs
 - runtime warnings
+- current app version
+- update status
+- download/install action for a newer MSI
 
 ## 7. Verification Status
 
@@ -176,6 +189,7 @@ Relevant tests:
 - [WindowsFirstVpnRuntimeAdapterTests.cs](/c:/Users/rrese/source/repos/vpn/Tests/Runtime/WindowsFirstVpnRuntimeAdapterTests.cs)
 - [AmneziaDaemonRuntimeAdapterTests.cs](/c:/Users/rrese/source/repos/vpn/Tests/Runtime/AmneziaDaemonRuntimeAdapterTests.cs)
 - [VpnDiagnosticsServiceTests.cs](/c:/Users/rrese/source/repos/vpn/Tests/Diagnostics/VpnDiagnosticsServiceTests.cs)
+- [AppVersionParserTests.cs](/c:/Users/rrese/source/repos/vpn/Tests/Updates/AppVersionParserTests.cs)
 
 What these tests prove:
 
@@ -187,6 +201,7 @@ What these tests prove:
 - legacy fallback runtime still applies DNS/MTU/routes explicitly
 - daemon payload carries AWG/DNS/AllowedIPs fields
 - diagnostics snapshots are wired correctly
+- update version comparison handles prerelease suffixes sanely
 
 What these tests do not prove:
 
@@ -256,13 +271,16 @@ The client now has a real clean-machine packaging path:
 - the UI manifest requests administrator elevation
 - the primary clean-machine backend no longer depends on a preinstalled Amnezia or WireGuard desktop app
 - a WiX-based per-machine MSI installer now builds successfully
+- the desktop client now has a JSON-manifest self-update path layered on top of the MSI
 
 What is still not fully complete:
 
 - the MSI still needs live validation on a truly clean Windows machine
 - there is still no full upstream manager-service integration beyond the tunnel-service path
 - if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
+- release signing and hosted manifest infrastructure still need production values
 
 See:
 
 - [windows-packaging.md](/c:/Users/rrese/source/repos/vpn/docs/windows-packaging.md)
+- [update-strategy.md](/c:/Users/rrese/source/repos/vpn/docs/update-strategy.md)

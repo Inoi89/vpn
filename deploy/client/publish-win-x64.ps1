@@ -10,7 +10,9 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $projectPath = Join-Path $repoRoot "UI\VpnClient.UI.csproj"
+$updaterProjectPath = Join-Path $repoRoot "Updater\VpnClient.Updater.csproj"
 $publishDirectory = Join-Path $repoRoot (Join-Path $OutputRoot $RuntimeIdentifier)
+$updaterPublishDirectory = Join-Path $publishDirectory ".updater-staging"
 $runtimeSourceDirectory = Join-Path $repoRoot "third_party\windows\wireguard"
 $runtimeTargetDirectory = Join-Path $publishDirectory "runtime\wireguard"
 
@@ -28,6 +30,23 @@ dotnet publish $projectPath `
     /p:PublishTrimmed=false `
     /p:Version=$Version `
     -o $publishDirectory
+
+dotnet publish $updaterProjectPath `
+    -c $Configuration `
+    -r $RuntimeIdentifier `
+    --self-contained true `
+    /p:PublishSingleFile=true `
+    /p:PublishTrimmed=false `
+    /p:Version=$Version `
+    -o $updaterPublishDirectory
+
+$updaterExecutablePath = Join-Path $updaterPublishDirectory "VpnClient.Updater.exe"
+if (-not (Test-Path $updaterExecutablePath)) {
+    throw "Updater launcher was not produced at '$updaterExecutablePath'."
+}
+
+Copy-Item $updaterExecutablePath (Join-Path $publishDirectory "VpnClient.Updater.exe") -Force
+Remove-Item $updaterPublishDirectory -Recurse -Force
 
 New-Item -ItemType Directory -Path $runtimeTargetDirectory -Force | Out-Null
 
@@ -66,6 +85,7 @@ foreach ($file in $optionalRuntimeFiles) {
 Write-Host ""
 Write-Host "Published client to: $publishDirectory"
 Write-Host "Bundled runtime directory: $runtimeTargetDirectory"
+Write-Host "Bundled updater launcher: $(Join-Path $publishDirectory 'VpnClient.Updater.exe')"
 
 if ($missingRequired.Count -gt 0) {
     Write-Warning ("Missing required bundled runtime files: " + ($missingRequired -join ", "))

@@ -19,6 +19,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnClient.Diagnostics.Tests", "Tests\VpnClient.Diagnostics.Tests.csproj", "{D3732BFD-3457-4A0E-850E-DA568EE76C2C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Updater", "Updater", "{E4D06EF3-4A34-0221-57B6-390073E3859C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnClient.Updater", "Updater\VpnClient.Updater.csproj", "{233D87B1-F9E1-480C-AA7C-F8737195BCF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -100,6 +104,18 @@ Global
 		{D3732BFD-3457-4A0E-850E-DA568EE76C2C}.Release|x64.Build.0 = Release|Any CPU
 		{D3732BFD-3457-4A0E-850E-DA568EE76C2C}.Release|x86.ActiveCfg = Release|Any CPU
 		{D3732BFD-3457-4A0E-850E-DA568EE76C2C}.Release|x86.Build.0 = Release|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Debug|x64.Build.0 = Debug|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Debug|x86.Build.0 = Debug|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Release|x64.ActiveCfg = Release|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Release|x64.Build.0 = Release|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Release|x86.ActiveCfg = Release|Any CPU
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -107,6 +123,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{FEA2B096-DF8A-4915-B786-97A9A241E88F} = {A74F262E-BDE7-D5D2-89E9-785413424D0A}
 		{D3732BFD-3457-4A0E-850E-DA568EE76C2C} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{233D87B1-F9E1-480C-AA7C-F8737195BCF9} = {E4D06EF3-4A34-0221-57B6-390073E3859C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F6BE3710-3DB4-4601-9A7F-67FB9FACE278}

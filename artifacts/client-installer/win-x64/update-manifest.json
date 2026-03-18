@@ -1,0 +1,16 @@
+﻿{
+    "applicationId":  "YourVpnClient",
+    "channel":  "stable",
+    "release":  {
+                    "version":  "0.1.0-local",
+                    "packageUrl":  "https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.0-local.msi",
+                    "sha256":  "81a3e29c21ad3d3df76a11a5a2eaa26445ce6eba6f500233b30a06c404d08df3",
+                    "sizeBytes":  63832064,
+                    "publishedAtUtc":  "2026-03-18T16:50:11.2016600+00:00",
+                    "releaseNotes":  "Initial MSI updater pipeline.",
+                    "isMandatory":  false,
+                    "minimumSupportedVersion":  null,
+                    "channel":  "stable",
+                    "packageCertificateThumbprint":  null
+                }
+}

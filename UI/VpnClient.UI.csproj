@@ -29,4 +29,10 @@
     <ProjectReference Include="..\Core\VpnClient.Core.csproj" />
     <ProjectReference Include="..\Application\VpnClient.Application.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

@@ -59,6 +59,10 @@ Installer output:
 
 `artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi`
 
+Update manifest generator:
+
+- [generate-update-manifest.ps1](/c:/Users/rrese/source/repos/vpn/deploy/client/generate-update-manifest.ps1)
+
 ## 4. Why Folder Publish Instead Of Single File
 
 The product needs to ship native runtime assets and keep their paths stable.
@@ -69,6 +73,7 @@ Folder publish is the correct choice because:
 - `wintun.dll` and the bundled AmneziaWG binaries do not need extraction tricks
 - installer tooling can package the folder as-is
 - debugging clean-machine failures is simpler than with single-file self-extract behavior
+- the external updater launcher can sit next to the main executable without extra extraction logic
 
 ## 5. Elevation
 
@@ -112,6 +117,8 @@ There are two layers of productization:
 - zip package works
 - WiX-based per-machine MSI now builds successfully
 - the installer packages bundled `amneziawg.exe`, `awg.exe`, and `wintun.dll`
+- the publish output includes `VpnClient.Updater.exe`
+- the release flow can now emit a JSON update manifest for hosted MSI updates
 
 ### Next milestone
 
@@ -148,3 +155,31 @@ If you want a portable test bundle instead of MSI:
    - `VpnClient.UI.exe`
 
 The MSI path is the preferred product path because it preserves elevation, runtime asset layout, and per-machine installation semantics.
+
+## 10. Self-Update
+
+The desktop client now has a first production update path:
+
+- the UI reads `Updates:ManifestUrl`
+- it checks a hosted JSON manifest
+- it downloads a newer MSI into `%LocalAppData%/YourVpnClient/Updates`
+- it verifies SHA-256 and optionally the signer thumbprint
+- it launches `VpnClient.Updater.exe`
+- the updater waits for the UI process to exit, runs `msiexec`, then relaunches the app
+
+The current repo default now points to the live origin:
+
+- `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
+
+See:
+
+- [appsettings.json](/c:/Users/rrese/source/repos/vpn/UI/appsettings.json)
+- [JsonManifestAppUpdateService.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Updates/JsonManifestAppUpdateService.cs)
+- [Program.cs](/c:/Users/rrese/source/repos/vpn/Updater/Program.cs)
+- [update-strategy.md](/c:/Users/rrese/source/repos/vpn/docs/update-strategy.md)
+
+Current hosted origin:
+
+- intended HTTPS URL: `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
+- backing server: `37.1.197.163`
+- HTTPS is live through Let's Encrypt on `vpn.udni.ru`

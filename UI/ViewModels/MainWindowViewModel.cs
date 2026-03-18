@@ -1,12 +1,16 @@
 using System.Collections.ObjectModel;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using VpnClient.Application.Profiles;
+using VpnClient.Application.Updates;
 using VpnClient.Core.Interfaces;
 using VpnClient.Core.Models;
 using VpnClient.Core.Models.Diagnostics;
+using VpnClient.Core.Models.Updates;
 
 namespace VpnClient.UI.ViewModels;
 
@@ -17,6 +21,10 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly RenameProfileUseCase _renameProfileUseCase;
     private readonly DeleteProfileUseCase _deleteProfileUseCase;
     private readonly SetActiveProfileUseCase _setActiveProfileUseCase;
+    private readonly IAppUpdateService _appUpdateService;
+    private readonly CheckForAppUpdatesUseCase _checkForAppUpdatesUseCase;
+    private readonly PrepareAppUpdateUseCase _prepareAppUpdateUseCase;
+    private readonly LaunchPreparedAppUpdateUseCase _launchPreparedAppUpdateUseCase;
     private readonly IVpnRuntimeAdapter _runtimeAdapter;
     private readonly IVpnDiagnosticsService _diagnosticsService;
     private readonly ILogger<MainWindowViewModel> _logger;
@@ -32,6 +40,10 @@ public partial class MainWindowViewModel : ObservableObject
         RenameProfileUseCase renameProfileUseCase,
         DeleteProfileUseCase deleteProfileUseCase,
         SetActiveProfileUseCase setActiveProfileUseCase,
+        IAppUpdateService appUpdateService,
+        CheckForAppUpdatesUseCase checkForAppUpdatesUseCase,
+        PrepareAppUpdateUseCase prepareAppUpdateUseCase,
+        LaunchPreparedAppUpdateUseCase launchPreparedAppUpdateUseCase,
         IVpnRuntimeAdapter runtimeAdapter,
         IVpnDiagnosticsService diagnosticsService,
         ILogger<MainWindowViewModel> logger)
@@ -41,6 +53,10 @@ public partial class MainWindowViewModel : ObservableObject
         _renameProfileUseCase = renameProfileUseCase;
         _deleteProfileUseCase = deleteProfileUseCase;
         _setActiveProfileUseCase = setActiveProfileUseCase;
+        _appUpdateService = appUpdateService;
+        _checkForAppUpdatesUseCase = checkForAppUpdatesUseCase;
+        _prepareAppUpdateUseCase = prepareAppUpdateUseCase;
+        _launchPreparedAppUpdateUseCase = launchPreparedAppUpdateUseCase;
         _runtimeAdapter = runtimeAdapter;
         _diagnosticsService = diagnosticsService;
         _logger = logger;
@@ -77,6 +93,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool isBusy;
 
+    [ObservableProperty]
+    private AppUpdateState updateState = AppUpdateState.Disabled("0.0.0");
+
     public bool HasProfiles => Profiles.Count > 0;
 
     public bool HasNoProfiles => Profiles.Count == 0;
@@ -84,6 +103,71 @@ public partial class MainWindowViewModel : ObservableObject
     public bool HasSelectedProfile => SelectedProfile is not null;
 
     public bool HasImportErrors => ImportValidationErrors.Count > 0;
+
+    public bool UpdatesEnabled => UpdateState.IsEnabled;
+
+    public bool CanRunUpdateAction =>
+        !IsBusy
+        && UpdateState.Status is not AppUpdateStatus.Disabled
+        && UpdateState.Status is not AppUpdateStatus.Checking
+        && UpdateState.Status is not AppUpdateStatus.Downloading
+        && UpdateState.Status is not AppUpdateStatus.Installing;
+
+    public string CurrentVersionText => UpdateState.CurrentVersion;
+
+    public string UpdateStatusTitle => UpdateState.Status switch
+    {
+        AppUpdateStatus.Disabled => "Обновления отключены",
+        AppUpdateStatus.Checking => "Проверка обновлений",
+        AppUpdateStatus.UpToDate => "Обновление не требуется",
+        AppUpdateStatus.UpdateAvailable => "Доступно новое обновление",
+        AppUpdateStatus.Downloading => "Загрузка обновления",
+        AppUpdateStatus.ReadyToInstall => "Обновление готово",
+        AppUpdateStatus.Installing => "Установка обновления",
+        AppUpdateStatus.Failed => "Ошибка обновления",
+        _ => "Обновления приложения"
+    };
+
+    public string UpdateStatusDescription
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(UpdateState.LastError))
+            {
+                return UpdateState.LastError;
+            }
+
+            if (!UpdatesEnabled)
+            {
+                return "Укажите Updates:ManifestUrl в appsettings.json или через переменные окружения, чтобы включить self-update.";
+            }
+
+            if (UpdateState.AvailableRelease is null)
+            {
+                return $"Текущая версия {UpdateState.CurrentVersion}. Клиент может проверять новый MSI через update manifest.";
+            }
+
+            return UpdateState.Status switch
+            {
+                AppUpdateStatus.UpdateAvailable => $"Найдена версия {UpdateState.AvailableRelease.Version}. Можно скачать и установить обновление.",
+                AppUpdateStatus.Downloading => $"Загружается версия {UpdateState.AvailableRelease.Version}. После проверки хеша начнётся установка.",
+                AppUpdateStatus.ReadyToInstall => $"Версия {UpdateState.AvailableRelease.Version} скачана и готова к установке.",
+                AppUpdateStatus.Installing => $"Запущена установка версии {UpdateState.AvailableRelease.Version}. Приложение будет закрыто и затем перезапущено.",
+                AppUpdateStatus.UpToDate => $"У вас уже актуальная версия {UpdateState.CurrentVersion}.",
+                _ => $"Последняя доступная версия: {UpdateState.AvailableRelease.Version}."
+            };
+        }
+    }
+
+    public string UpdateActionText => UpdateState.Status switch
+    {
+        AppUpdateStatus.UpdateAvailable => $"Скачать {UpdateState.AvailableRelease?.Version}",
+        AppUpdateStatus.ReadyToInstall => $"Установить {UpdateState.AvailableRelease?.Version}",
+        AppUpdateStatus.Checking => "Проверяем...",
+        AppUpdateStatus.Downloading => "Загружаем...",
+        AppUpdateStatus.Installing => "Устанавливаем...",
+        _ => "Проверить обновления"
+    };
 
     public string EmptyStateTitle => "Добавьте конфигурацию";
 
@@ -240,6 +324,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         _initialized = true;
+        UpdateState = _appUpdateService.CurrentState;
         var snapshot = await _listProfilesUseCase.ExecuteAsync();
         ApplySnapshot(snapshot, snapshot.ActiveProfileId);
 
@@ -258,6 +343,11 @@ public partial class MainWindowViewModel : ObservableObject
 
         await RefreshDiagnosticsAsync();
         _refreshTimer.Start();
+
+        if (UpdatesEnabled)
+        {
+            _ = CheckForUpdatesInBackgroundAsync();
+        }
     }
 
     public async Task ImportConfigAsync(string path)
@@ -278,6 +368,59 @@ public partial class MainWindowViewModel : ObservableObject
             LastOperationMessage = $"Ошибка импорта: {exception.Message}";
             _logger.LogError(exception, "Failed to import config from {Path}", path);
             await RefreshDiagnosticsAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyViewStateChanged();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RunUpdateActionAsync()
+    {
+        if (!CanRunUpdateAction)
+        {
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            NotifyViewStateChanged();
+
+            if (UpdateState.Status is AppUpdateStatus.UpdateAvailable or AppUpdateStatus.ReadyToInstall)
+            {
+                UpdateState = await _prepareAppUpdateUseCase.ExecuteAsync();
+                if (UpdateState.Status == AppUpdateStatus.ReadyToInstall)
+                {
+                    UpdateState = await _launchPreparedAppUpdateUseCase.ExecuteAsync();
+                    if (UpdateState.Status == AppUpdateStatus.Installing)
+                    {
+                        LastOperationMessage = $"Запущена установка обновления {UpdateState.AvailableRelease?.Version}.";
+                        ShutdownApplication();
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                UpdateState = await _checkForAppUpdatesUseCase.ExecuteAsync();
+            }
+
+            LastOperationMessage = UpdateState.Status switch
+            {
+                AppUpdateStatus.UpToDate => $"У вас уже актуальная версия {UpdateState.CurrentVersion}.",
+                AppUpdateStatus.UpdateAvailable => $"Найдена версия {UpdateState.AvailableRelease?.Version}. Нажмите ещё раз, чтобы скачать и установить.",
+                AppUpdateStatus.ReadyToInstall => $"Обновление {UpdateState.AvailableRelease?.Version} готово к установке.",
+                AppUpdateStatus.Failed => $"Ошибка обновления: {UpdateState.LastError}",
+                _ => UpdateStatusDescription
+            };
+        }
+        catch (Exception exception)
+        {
+            LastOperationMessage = $"Ошибка обновления: {exception.Message}";
+            _logger.LogError(exception, "Update action failed.");
         }
         finally
         {
@@ -445,6 +588,7 @@ public partial class MainWindowViewModel : ObservableObject
             var snapshot = await _diagnosticsService.CaptureSnapshotAsync();
 
             ConnectionState = snapshot.ConnectionState;
+            UpdateState = _appUpdateService.CurrentState;
             ReplaceCollection(ConnectionLogs, snapshot.ConnectionLogs.OrderByDescending(entry => entry.TimestampUtc));
             ReplaceCollection(ImportValidationErrors, snapshot.ImportValidationErrors.OrderByDescending(entry => entry.TimestampUtc));
 
@@ -465,6 +609,19 @@ public partial class MainWindowViewModel : ObservableObject
         finally
         {
             _refreshInFlight = false;
+        }
+    }
+
+    private async Task CheckForUpdatesInBackgroundAsync()
+    {
+        try
+        {
+            UpdateState = await _checkForAppUpdatesUseCase.ExecuteAsync();
+            NotifyViewStateChanged();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Background update check failed.");
         }
     }
 
@@ -519,6 +676,12 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasProfiles));
         OnPropertyChanged(nameof(HasNoProfiles));
         OnPropertyChanged(nameof(HasSelectedProfile));
+        OnPropertyChanged(nameof(UpdatesEnabled));
+        OnPropertyChanged(nameof(CanRunUpdateAction));
+        OnPropertyChanged(nameof(CurrentVersionText));
+        OnPropertyChanged(nameof(UpdateStatusTitle));
+        OnPropertyChanged(nameof(UpdateStatusDescription));
+        OnPropertyChanged(nameof(UpdateActionText));
         OnPropertyChanged(nameof(PrimaryActionText));
         OnPropertyChanged(nameof(CanToggleConnection));
         OnPropertyChanged(nameof(CanRenameSelectedProfile));
@@ -537,6 +700,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(UploadText));
         OnPropertyChanged(nameof(ImportErrorSummary));
         OnPropertyChanged(nameof(WarningItems));
+        RunUpdateActionCommand.NotifyCanExecuteChanged();
         ToggleConnectionCommand.NotifyCanExecuteChanged();
         RenameSelectedProfileCommand.NotifyCanExecuteChanged();
         DeleteSelectedProfileCommand.NotifyCanExecuteChanged();
@@ -565,5 +729,13 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         return $"{value:0.##} {suffixes[suffixIndex]}";
+    }
+
+    private static void ShutdownApplication()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        {
+            desktopLifetime.Shutdown();
+        }
     }
 }

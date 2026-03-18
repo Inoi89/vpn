@@ -24,6 +24,10 @@ Zip package:
 
 `artifacts/client-publish/VpnClient-win-x64.zip`
 
+Bundled updater:
+
+`artifacts/client-publish/win-x64/VpnClient.Updater.exe`
+
 ## MSI installer entry point
 
 Use:
@@ -35,6 +39,29 @@ powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configur
 Output:
 
 `artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi`
+
+## Update manifest entry point
+
+Use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.0-local -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.0-local.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
+```
+
+Output:
+
+`artifacts/client-installer/win-x64/update-manifest.json`
+
+Direct publish helper for the current update origin:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.0-local -ServerPassword <root-password> -ReleaseNotes "Initial MSI updater pipeline." -UploadZip
+```
+
+Current origin target:
+
+- `vpn.udni.ru`
+- `/srv/vpn-updates/vpn-client/stable`
 
 ## Expected runtime assets
 
@@ -65,3 +92,23 @@ The MSI build now:
 - marks harvested components as 64-bit
 - installs the app per-machine under `Program Files`
 - creates a Start Menu shortcut
+- bundles the external updater launcher used for self-update
+
+## Self-update notes
+
+The desktop client does not patch files in place from the main process.
+
+Instead it:
+
+- checks a hosted JSON manifest
+- downloads the MSI into `%LocalAppData%/YourVpnClient/Updates`
+- verifies the package
+- launches `VpnClient.Updater.exe`
+- lets that external elevated process run `msiexec`
+
+That fits a VPN product better than trying to overwrite `Program Files` while the main UI is still running.
+
+Current infrastructure note:
+
+- `37.1.197.163` already serves the update payloads over HTTP
+- `vpn.udni.ru` now serves the update payloads over HTTPS

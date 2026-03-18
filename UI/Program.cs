@@ -1,14 +1,17 @@
 using Avalonia;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VpnClient.Application.Imports;
 using VpnClient.Application.Profiles;
+using VpnClient.Application.Updates;
 using VpnClient.Core.Interfaces;
 using VpnClient.Infrastructure.Diagnostics;
 using VpnClient.Infrastructure.Import;
 using VpnClient.Infrastructure.Persistence;
 using VpnClient.Infrastructure.Runtime;
 using VpnClient.Infrastructure.Services;
+using VpnClient.Infrastructure.Updates;
 using VpnClient.UI.ViewModels;
 
 namespace VpnClient.UI;
@@ -32,6 +35,9 @@ class Program
         builder.Services.AddSingleton<RenameProfileUseCase>();
         builder.Services.AddSingleton<DeleteProfileUseCase>();
         builder.Services.AddSingleton<SetActiveProfileUseCase>();
+        builder.Services.AddSingleton<CheckForAppUpdatesUseCase>();
+        builder.Services.AddSingleton<PrepareAppUpdateUseCase>();
+        builder.Services.AddSingleton<LaunchPreparedAppUpdateUseCase>();
 
         builder.Services.AddSingleton<IWintunService, WintunService>();
         builder.Services.AddSingleton<IRuntimeEnvironment, DefaultRuntimeEnvironment>();
@@ -44,6 +50,8 @@ class Program
         builder.Services.AddSingleton<AmneziaDaemonRuntimeAdapter>();
         builder.Services.AddSingleton<IVpnRuntimeAdapter, HybridVpnRuntimeAdapter>();
         builder.Services.AddSingleton<IVpnDiagnosticsService, VpnDiagnosticsService>();
+        builder.Services.AddSingleton(builder.Configuration.GetSection("Updates").Get<AppUpdateOptions>() ?? new AppUpdateOptions());
+        builder.Services.AddSingleton<IAppUpdateService, JsonManifestAppUpdateService>();
 
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddSingleton<MainWindowViewModel>();

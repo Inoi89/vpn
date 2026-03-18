@@ -35,6 +35,29 @@
                             <TextBlock Text="{Binding LastOperationMessage}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
+
+                    <Border Classes="card-subtle" Padding="14">
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="label" Text="Обновление клиента" />
+                                    <TextBlock Text="{Binding UpdateStatusTitle}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Border Classes="pill" Padding="10,6" VerticalAlignment="Top">
+                                    <TextBlock Classes="label" Text="{Binding CurrentVersionText, StringFormat=v{0}}" />
+                                </Border>
+                            </Grid>
+
+                            <TextBlock Classes="muted"
+                                       Text="{Binding UpdateStatusDescription}"
+                                       TextWrapping="Wrap" />
+
+                            <Button Classes="secondary"
+                                    Content="{Binding UpdateActionText}"
+                                    Command="{Binding RunUpdateActionCommand}"
+                                    IsEnabled="{Binding CanRunUpdateAction}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="12">
@@ -82,6 +105,9 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Classes="pill" Padding="12,8" IsVisible="{Binding UpdatesEnabled}">
+                            <TextBlock Text="{Binding CurrentVersionText, StringFormat=Version {0}}" />
+                        </Border>
                         <Border Classes="pill" Padding="12,8">
                             <TextBlock Text="{Binding CurrentRuntimeLabel}" />
                         </Border>
