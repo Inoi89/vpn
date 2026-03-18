@@ -45,6 +45,23 @@ Executable:
 
 - [VpnClient.UI.exe](/c:/Users/rrese/source/repos/vpn/UI/bin/Release/net8.0/VpnClient.UI.exe)
 
+Packaged portable build:
+
+- [VpnClient-win-x64.zip](/c:/Users/rrese/source/repos/vpn/artifacts/client-publish/VpnClient-win-x64.zip)
+
+Packaged installer:
+
+- [YourVpnClient-0.1.0-local.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi)
+
+Self-contained publish profile:
+
+- [win-x64-selfcontained.pubxml](/c:/Users/rrese/source/repos/vpn/UI/Properties/PublishProfiles/win-x64-selfcontained.pubxml)
+
+Windows packaging script:
+
+- [publish-win-x64.ps1](/c:/Users/rrese/source/repos/vpn/deploy/client/publish-win-x64.ps1)
+- [build-msi.ps1](/c:/Users/rrese/source/repos/vpn/deploy/client/build-msi.ps1)
+
 UI composition root:
 
 - [Program.cs](/c:/Users/rrese/source/repos/vpn/UI/Program.cs)
@@ -99,22 +116,31 @@ Output models:
 
 Runtime stack:
 
-- primary:
+- primary autonomous backend:
+  - [BundledAmneziaRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/BundledAmneziaRuntimeAdapter.cs)
+- secondary external-backend path:
   - [AmneziaDaemonRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/AmneziaDaemonRuntimeAdapter.cs)
-- fallback:
+- legacy fallback:
   - [WindowsFirstVpnRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/WindowsFirstVpnRuntimeAdapter.cs)
+- Windows runtime asset locator:
+  - [IWindowsRuntimeAssetLocator.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/IWindowsRuntimeAssetLocator.cs)
+- runtime config staging:
+  - [IAmneziaRuntimeConfigStore.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/IAmneziaRuntimeConfigStore.cs)
 - selector:
   - [HybridVpnRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/HybridVpnRuntimeAdapter.cs)
 
 Selection rule:
 
-- if local Amnezia daemon is available, use it
-- otherwise fall back to explicit Windows runtime path
+- if bundled AmneziaWG runtime exists, use it first
+- otherwise, if local Amnezia daemon is available, use it
+- otherwise fall back to the legacy explicit Windows runtime path
 
 Why this matters:
 
-- daemon path is the closest match to upstream Amnezia runtime semantics
-- fallback path is useful, but lower fidelity
+- bundled AmneziaWG service path is now the main clean-machine runtime
+- daemon path is still useful for parity with an already installed Amnezia desktop stack
+- legacy fallback path remains useful, but lower fidelity
+- autonomous packaging now stages bundled runtime files under `runtime/wireguard` instead of assuming global PATH/system installation
 
 ## 6. Diagnostics
 
@@ -139,6 +165,8 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local -ZipPackage`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local`
 
 Relevant tests:
 
@@ -152,14 +180,16 @@ What these tests prove:
 
 - imports do not drop critical config fields
 - persisted profiles keep full normalized config
-- fallback runtime applies DNS/MTU/routes explicitly
+- bundled runtime installs and removes tunnel services through official `amneziawg.exe`
+- bundled runtime reads status/traffic through official `awg.exe show ... dump`
+- legacy fallback runtime still applies DNS/MTU/routes explicitly
 - daemon payload carries AWG/DNS/AllowedIPs fields
 - diagnostics snapshots are wired correctly
 
 What these tests do not prove:
 
-- that a real Windows machine with installed Amnezia runtime carries traffic correctly end-to-end
-- that fallback runtime is behaviorally identical to upstream Amnezia
+- that a completely clean Windows machine carries traffic correctly end-to-end using the bundled runtime
+- that the legacy fallback runtime is behaviorally identical to upstream Amnezia
 
 ## 8. Current Open Problem
 
@@ -171,9 +201,11 @@ The open problem is still the same one that matters most:
 Current hypothesis hierarchy:
 
 1. best path:
-   - use Amnezia daemon runtime locally
-2. risk path:
-   - fallback Windows runtime may still be the place where "connected but unusable" survives
+   - use bundled AmneziaWG runtime locally
+2. secondary path:
+   - use external Amnezia daemon runtime if it exists
+3. risk path:
+   - legacy Windows fallback runtime may still be the place where "connected but unusable" survives
 
 That means the next real tests should explicitly record which backend was used:
 
@@ -212,3 +244,23 @@ That matrix should tell us whether the remaining mismatch is:
 - import-side
 - runtime-side
 - or specifically fallback-runtime-side
+
+## 10. Autonomous Product Status
+
+The client now has a real clean-machine packaging path:
+
+- self-contained Windows publish profile exists
+- publish script stages signed AmneziaWG runtime binaries into `runtime/wireguard`
+- the UI manifest requests administrator elevation
+- the primary clean-machine backend no longer depends on a preinstalled Amnezia or WireGuard desktop app
+- a WiX-based per-machine MSI installer now builds successfully
+
+What is still not fully complete:
+
+- the MSI still needs live validation on a truly clean Windows machine
+- there is still no full upstream manager-service integration beyond the tunnel-service path
+- if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
+
+See:
+
+- [windows-packaging.md](/c:/Users/rrese/source/repos/vpn/docs/windows-packaging.md)

@@ -13,6 +13,9 @@ node_modules/
 wg.exe
 wintun.dll
 WintunWrapper.dll
+wireguard-service.exe
+wireguard.dll
+tunnel.dll
 
 # Local deployment artifacts
 certs/
@@ -22,4 +25,5 @@ certs/
 .research/
 artifacts/appsettings.45.json
 artifacts/control-api-publish/
+artifacts/client-publish/
 artifacts/test.current.vpn

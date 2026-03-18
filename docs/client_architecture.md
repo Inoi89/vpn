@@ -140,17 +140,30 @@ Writes are atomic through temp-file replacement.
 
 The runtime is intentionally split:
 
+- [BundledAmneziaRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/BundledAmneziaRuntimeAdapter.cs)
+  - Primary clean-machine path
+  - Uses bundled `amneziawg.exe`, `awg.exe`, and `wintun.dll`
+  - Installs tunnel services through the official AmneziaWG CLI
+  - Reads handshake and traffic through `awg.exe show ... dump`
 - [AmneziaDaemonRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/AmneziaDaemonRuntimeAdapter.cs)
-  - Primary path
+  - Secondary path
   - Talks to Amnezia daemon over `\\.\pipe\amneziavpn`
   - Builds activation JSON that includes DNS, MTU, routes, AllowedIPs, and AWG metadata
 - [WindowsFirstVpnRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/WindowsFirstVpnRuntimeAdapter.cs)
-  - Fallback path
-  - Uses `wg.exe`, `netsh`, and Wintun
+  - Legacy fallback path
+  - Uses `awg.exe`, `netsh`, and Wintun
+  - Resolves bundled native/runtime files from `runtime/wireguard` first
   - Explicitly marked as lower-fidelity
 - [HybridVpnRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/HybridVpnRuntimeAdapter.cs)
-  - Chooses daemon path first
-  - Falls back only when daemon is unavailable
+  - Chooses bundled runtime first
+  - Then daemon path
+  - Falls back only when neither higher-fidelity path is available
+
+App-local Windows runtime asset resolution is isolated in:
+
+- [IWindowsRuntimeAssetLocator.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/IWindowsRuntimeAssetLocator.cs)
+- [WintunService.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Services/WintunService.cs)
+- [IAmneziaRuntimeConfigStore.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/IAmneziaRuntimeConfigStore.cs)
 
 The named-pipe transport is isolated in:
 
@@ -202,6 +215,12 @@ Run:
 dotnet run --project UI\VpnClient.UI.csproj
 ```
 
+Self-contained Windows publish:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local -ZipPackage
+```
+
 Run tests:
 
 ```powershell
@@ -215,12 +234,15 @@ The main production risk remains runtime fidelity, not import syntax and not ser
 What is already true:
 
 - profile import preserves Amnezia metadata
-- daemon-first runtime sends DNS/MTU/AllowedIPs/AWG fields to the Amnezia daemon
-- fallback runtime is explicit and tested
+- bundled runtime now ships on official AmneziaWG Windows binaries
+- daemon runtime sends DNS/MTU/AllowedIPs/AWG fields to the Amnezia daemon
+- legacy fallback runtime is explicit and tested
 
 What is still not fully closed:
 
-- if the local machine does not have a compatible Amnezia daemon/runtime service, the client falls back to a lower-fidelity Windows path
-- that fallback can still hit the old class of bugs where handshake exists but traffic behavior diverges from upstream Amnezia
+- if the local machine does not have bundled runtime assets and no compatible Amnezia daemon/runtime service, the client falls back to a lower-fidelity Windows path
+- that legacy fallback can still hit the old class of bugs where handshake exists but traffic behavior diverges from upstream Amnezia
 
-Operationally, the daemon path is the preferred production path.
+Operationally, the bundled service path is now the preferred runtime path on clean Windows machines.
+
+Product-wise, the Windows package now moves toward an autonomous distribution with bundled runtime assets instead of depending on a separately installed VPN product.

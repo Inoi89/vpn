@@ -20,7 +20,7 @@ public sealed class WindowsFirstVpnRuntimeAdapterTests
 
         Assert.Equal(RuntimeConnectionStatus.Degraded, state.Status);
         Assert.Contains(state.Warnings, warning => warning.Contains("AWG-specific runtime keys", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(executor.Calls, call => call.FileName.Equals("wg.exe", StringComparison.OrdinalIgnoreCase) && call.Arguments.Contains("set", StringComparer.OrdinalIgnoreCase));
+        Assert.Contains(executor.Calls, call => call.FileName.Equals(@"C:\bundle\runtime\wireguard\awg.exe", StringComparison.OrdinalIgnoreCase) && call.Arguments.Contains("set", StringComparer.OrdinalIgnoreCase));
         Assert.DoesNotContain(executor.Calls, call => call.Arguments.Any(argument => argument.Contains("setconf", StringComparison.OrdinalIgnoreCase)));
         Assert.Contains(executor.Calls, call => call.FileName.Equals("netsh", StringComparison.OrdinalIgnoreCase) && call.Arguments.Contains("dns", StringComparer.OrdinalIgnoreCase));
         Assert.Equal(1, wintun.CreateCount);
@@ -145,6 +145,7 @@ public sealed class WindowsFirstVpnRuntimeAdapterTests
             wintun,
             executor,
             new FakeRuntimeEnvironment(),
+            new FakeWindowsRuntimeAssetLocator(),
             NullLogger<WindowsFirstVpnRuntimeAdapter>.Instance);
     }
 
@@ -220,6 +221,29 @@ public sealed class WindowsFirstVpnRuntimeAdapterTests
     private sealed class FakeRuntimeEnvironment : IRuntimeEnvironment
     {
         public bool IsWindows => true;
+    }
+
+    private sealed class FakeWindowsRuntimeAssetLocator : IWindowsRuntimeAssetLocator
+    {
+        public string ApplicationBaseDirectory => @"C:\bundle";
+        public string RuntimeRootDirectory => @"C:\bundle\runtime";
+        public string WireGuardRuntimeDirectory => @"C:\bundle\runtime\wireguard";
+        public string AmneziaWgExecutablePath => @"C:\bundle\runtime\wireguard\amneziawg.exe";
+        public string AwgExecutablePath => @"C:\bundle\runtime\wireguard\awg.exe";
+        public string WgExecutablePath => @"C:\bundle\runtime\wireguard\awg.exe";
+        public string WintunDllPath => @"C:\bundle\runtime\wireguard\wintun.dll";
+        public string? WireGuardServiceExecutablePath => null;
+        public string? TunnelDllPath => null;
+        public string? WireGuardDllPath => null;
+        public bool HasBundledAmneziaWgExecutable => true;
+        public bool HasBundledAwgExecutable => true;
+        public bool HasBundledWgExecutable => true;
+        public bool HasBundledWintun => true;
+
+        public IReadOnlyList<string> GetWarnings()
+        {
+            return [];
+        }
     }
 
     private sealed class RecordingRuntimeCommandExecutor(params RuntimeCommandResult[] results) : IRuntimeCommandExecutor

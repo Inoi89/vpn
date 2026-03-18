@@ -138,9 +138,13 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool CanDeleteSelectedProfile => !IsBusy && SelectedProfile is not null;
 
-    public string CurrentRuntimeLabel => ConnectionState.IsWindowsFirst
-        ? "Windows fallback runtime"
-        : "Amnezia daemon runtime";
+    public string CurrentRuntimeLabel => ConnectionState.AdapterName switch
+    {
+        "BundledAmneziaWG" => "Bundled AmneziaWG runtime",
+        "AmneziaDaemon" => "External Amnezia daemon runtime",
+        _ when ConnectionState.IsWindowsFirst => "Legacy Windows fallback runtime",
+        _ => "VPN runtime"
+    };
 
     public string CurrentFormatLabel => SelectedProfile?.SourceFormat switch
     {

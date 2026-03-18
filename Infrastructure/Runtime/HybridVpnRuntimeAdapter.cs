@@ -5,6 +5,7 @@ namespace VpnClient.Infrastructure.Runtime;
 
 public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
 {
+    private readonly BundledAmneziaRuntimeAdapter _bundledAdapter;
     private readonly AmneziaDaemonRuntimeAdapter _daemonAdapter;
     private readonly WindowsFirstVpnRuntimeAdapter _fallbackAdapter;
     private readonly IAmneziaDaemonTransport _daemonTransport;
@@ -12,13 +13,23 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
     private ConnectionState _currentState = ConnectionState.Disconnected("VpnClient");
 
     public HybridVpnRuntimeAdapter(
+        BundledAmneziaRuntimeAdapter bundledAdapter,
         AmneziaDaemonRuntimeAdapter daemonAdapter,
         WindowsFirstVpnRuntimeAdapter fallbackAdapter,
         IAmneziaDaemonTransport daemonTransport)
     {
+        _bundledAdapter = bundledAdapter;
         _daemonAdapter = daemonAdapter;
         _fallbackAdapter = fallbackAdapter;
         _daemonTransport = daemonTransport;
+
+        _bundledAdapter.StateChanged += state =>
+        {
+            if (_activeBackend == ActiveBackend.Bundled)
+            {
+                UpdateState(state);
+            }
+        };
 
         _daemonAdapter.StateChanged += state =>
         {
@@ -44,6 +55,13 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
     public async Task<ConnectionState> ConnectAsync(ImportedServerProfile profile, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
+
+        var bundledState = await _bundledAdapter.ConnectAsync(profile, cancellationToken);
+        if (bundledState.Status != RuntimeConnectionStatus.Unsupported)
+        {
+            _activeBackend = ActiveBackend.Bundled;
+            return UpdateState(bundledState);
+        }
 
         if (await _daemonTransport.IsAvailableAsync(cancellationToken))
         {
@@ -71,6 +89,7 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
     {
         return _activeBackend switch
         {
+            ActiveBackend.Bundled => UpdateState(await _bundledAdapter.DisconnectAsync(cancellationToken)),
             ActiveBackend.Daemon => UpdateState(await _daemonAdapter.DisconnectAsync(cancellationToken)),
             ActiveBackend.Fallback => UpdateState(await _fallbackAdapter.DisconnectAsync(cancellationToken)),
             _ => UpdateState(ConnectionState.Disconnected("VpnClient"))
@@ -81,6 +100,7 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
     {
         return _activeBackend switch
         {
+            ActiveBackend.Bundled => UpdateState(await _bundledAdapter.GetStatusAsync(cancellationToken)),
             ActiveBackend.Daemon => UpdateState(await _daemonAdapter.GetStatusAsync(cancellationToken)),
             ActiveBackend.Fallback => UpdateState(await _fallbackAdapter.GetStatusAsync(cancellationToken)),
             _ => UpdateState(ConnectionState.Disconnected("VpnClient"))
@@ -97,6 +117,7 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
     private enum ActiveBackend
     {
         None,
+        Bundled,
         Daemon,
         Fallback
     }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using VpnClient.Core.Interfaces;
+using VpnClient.Infrastructure.Runtime;
 
 namespace VpnClient.Infrastructure.Diagnostics;
 
@@ -8,7 +9,7 @@ public sealed class WindowsWireGuardDumpReader : IWireGuardDumpReader
     private readonly string _wgExecutablePath;
 
     public WindowsWireGuardDumpReader()
-        : this("wg.exe")
+        : this(new WindowsRuntimeAssetLocator().WgExecutablePath)
     {
     }
 

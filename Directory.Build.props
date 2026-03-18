@@ -5,4 +5,14 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <LangVersion>12.0</LangVersion>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'VpnClient.Tests'">
+    <BaseIntermediateOutputPath>obj\VpnClient.Tests\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\VpnClient.Tests\</BaseOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'VpnClient.Diagnostics.Tests'">
+    <BaseIntermediateOutputPath>obj\VpnClient.Diagnostics.Tests\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\VpnClient.Diagnostics.Tests\</BaseOutputPath>
+  </PropertyGroup>
 </Project>

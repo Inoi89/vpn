@@ -43,9 +43,11 @@ Implemented areas:
   - [AmneziaImportService.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Import/AmneziaImportService.cs)
 - local storage:
   - [JsonProfileRepository.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Persistence/JsonProfileRepository.cs)
-- daemon-first runtime:
+- bundled autonomous runtime:
+  - [BundledAmneziaRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/BundledAmneziaRuntimeAdapter.cs)
+- daemon runtime:
   - [AmneziaDaemonRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/AmneziaDaemonRuntimeAdapter.cs)
-- fallback runtime:
+- legacy fallback runtime:
   - [WindowsFirstVpnRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/WindowsFirstVpnRuntimeAdapter.cs)
 - runtime selector:
   - [HybridVpnRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/HybridVpnRuntimeAdapter.cs)
@@ -60,7 +62,7 @@ That earlier direction has been superseded.
 
 The central decision is:
 
-Use the Amnezia daemon/runtime path first whenever it exists locally.
+Use the bundled AmneziaWG tunnel-service path first whenever it is packaged with the app.
 
 Why:
 
@@ -70,8 +72,17 @@ Why:
 
 So the client now prefers:
 
-1. Amnezia daemon path
-2. fallback Windows WireGuard path only when daemon is absent
+1. bundled AmneziaWG service path
+2. Amnezia daemon path
+3. legacy Windows WireGuard fallback path only when neither of the above exists
+
+That remains the runtime selection rule inside the app.
+
+But the product direction has now widened from "works on a machine that already has VPN runtime pieces" to:
+
+- ship a self-contained Windows build
+- ship app-local runtime assets
+- stop depending on a preinstalled Amnezia/WireGuard desktop app for basic execution
 
 That is the only defensible direction if the goal is to make traffic really work, not just show handshake.
 
@@ -83,6 +94,7 @@ The desktop client is only successful if:
 - clicks connect once
 - gets a real working tunnel
 - sees handshake and traffic counters
+- can do this on a clean Windows machine from a packaged build
 
 If handshake exists but actual browsing or DNS still fails, the client is not considered correct yet.
 
@@ -104,6 +116,12 @@ dotnet test VpnClient.sln -c Release
 dotnet run --project UI\VpnClient.UI.csproj
 ```
 
+Self-contained Windows packaging:
+
+- [win-x64-selfcontained.pubxml](/c:/Users/rrese/source/repos/vpn/UI/Properties/PublishProfiles/win-x64-selfcontained.pubxml)
+- [publish-win-x64.ps1](/c:/Users/rrese/source/repos/vpn/deploy/client/publish-win-x64.ps1)
+- [windows-packaging.md](/c:/Users/rrese/source/repos/vpn/docs/windows-packaging.md)
+
 ## 6. What To Test Next
 
 The next tests should focus on the exact historical failure mode.
@@ -123,8 +141,8 @@ Priority scenarios:
 
 The important observation to capture:
 
-- does the failure reproduce only on fallback runtime
-- or does it still reproduce even on daemon runtime
+- does the failure reproduce only on legacy fallback runtime
+- or does it still reproduce even on bundled/daemon runtime
 
 That answer determines whether the remaining bug is in our client orchestration or deeper in config/runtime compatibility.
 
@@ -138,4 +156,4 @@ The remaining risk is explicit and should stay visible in every client discussio
 
 In short:
 
-The architecture is now pointed at the right problem, but real traffic validation on a Windows machine with Amnezia runtime present is still the decisive proof.
+The architecture is now pointed at the right problem, but the product is not done until the packaged Windows build carries its own runtime dependencies and survives clean-machine traffic tests.

@@ -36,7 +36,10 @@ class Program
         builder.Services.AddSingleton<IWintunService, WintunService>();
         builder.Services.AddSingleton<IRuntimeEnvironment, DefaultRuntimeEnvironment>();
         builder.Services.AddSingleton<IRuntimeCommandExecutor, ProcessRuntimeCommandExecutor>();
+        builder.Services.AddSingleton<IWindowsRuntimeAssetLocator, WindowsRuntimeAssetLocator>();
+        builder.Services.AddSingleton<IAmneziaRuntimeConfigStore, ProgramDataAmneziaRuntimeConfigStore>();
         builder.Services.AddSingleton<IAmneziaDaemonTransport, NamedPipeAmneziaDaemonTransport>();
+        builder.Services.AddSingleton<BundledAmneziaRuntimeAdapter>();
         builder.Services.AddSingleton<WindowsFirstVpnRuntimeAdapter>();
         builder.Services.AddSingleton<AmneziaDaemonRuntimeAdapter>();
         builder.Services.AddSingleton<IVpnRuntimeAdapter, HybridVpnRuntimeAdapter>();

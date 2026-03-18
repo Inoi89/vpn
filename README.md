@@ -1,6 +1,6 @@
 # VpnClient
 
-A simple WireGuard-based VPN client built with .NET 8 and Avalonia UI.
+A Windows-first AmneziaWG/WireGuard desktop client built with .NET 8 and Avalonia UI.
 
 ## Projects
 - **Core** – interfaces and models shared across the application.
@@ -19,6 +19,14 @@ dotnet test
 The UI project `VpnClient.UI` is the startup project.
 ## Runtime requirements
 
-- `wintun.dll` must be accessible by the application (place it next to the built executable or add it to `PATH`).
-- `wg.exe` is required to configure the WireGuard adapter and must be available on `PATH` or next to the executable.
-- Place your VPN configuration in `vpn.conf` next to the executable.
+For the autonomous packaged build, the app ships its own Windows runtime under `runtime/wireguard`:
+
+- `amneziawg.exe`
+- `awg.exe`
+- `wintun.dll`
+
+Use the publish script in [deploy/client/README.md](/c:/Users/rrese/source/repos/vpn/deploy/client/README.md) to build a clean-machine bundle.
+
+Installer output:
+
+- [YourVpnClient-0.1.0-local.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi)

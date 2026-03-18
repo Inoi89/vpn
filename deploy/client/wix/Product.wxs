@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+    Id="*"
+    Name="$(var.ProductName)"
+    Language="1033"
+    Version="$(var.ProductVersion)"
+    Manufacturer="$(var.Manufacturer)"
+    UpgradeCode="$(var.UpgradeCode)">
+    <Package
+      InstallerVersion="500"
+      Compressed="yes"
+      InstallScope="perMachine"
+      Platform="x64" />
+
+    <MajorUpgrade
+      AllowDowngrades="no"
+      AllowSameVersionUpgrades="yes"
+      DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Property Id="ARPNOMODIFY" Value="yes" />
+    <Property Id="DISABLEADVTSHORTCUTS" Value="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="YourVpnClient" />
+      </Directory>
+      <Directory Id="CommonProgramsFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="YourVpnClient" />
+      </Directory>
+    </Directory>
+
+    <Component Id="ApplicationShortcutComponent" Directory="ApplicationProgramsFolder" Guid="B971F637-780C-46A8-9E89-596D962C54D8">
+      <Shortcut
+        Id="ApplicationStartMenuShortcut"
+        Name="$(var.ProductName)"
+        Target="[INSTALLFOLDER]VpnClient.UI.exe"
+        WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKLM" Key="Software\$(var.Manufacturer)\$(var.ProductName)" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Feature Id="MainFeature" Title="$(var.ProductName)" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="ApplicationShortcutComponent" />
+    </Feature>
+  </Product>
+</Wix>

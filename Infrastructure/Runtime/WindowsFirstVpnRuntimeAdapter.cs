@@ -12,19 +12,24 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
     private readonly IWintunService _wintun;
     private readonly IRuntimeCommandExecutor _commandExecutor;
     private readonly IRuntimeEnvironment _environment;
+    private readonly IWindowsRuntimeAssetLocator _assetLocator;
     private readonly ILogger<WindowsFirstVpnRuntimeAdapter> _logger;
+    private readonly string _wgExecutablePath;
     private ConnectionState _currentState = ConnectionState.Disconnected(AdapterName);
 
     public WindowsFirstVpnRuntimeAdapter(
         IWintunService wintun,
         IRuntimeCommandExecutor commandExecutor,
         IRuntimeEnvironment environment,
+        IWindowsRuntimeAssetLocator assetLocator,
         ILogger<WindowsFirstVpnRuntimeAdapter> logger)
     {
         _wintun = wintun;
         _commandExecutor = commandExecutor;
         _environment = environment;
+        _assetLocator = assetLocator;
         _logger = logger;
+        _wgExecutablePath = assetLocator.WgExecutablePath;
     }
 
     public ConnectionState CurrentState => _currentState;
@@ -45,7 +50,7 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
             return _currentState;
         }
 
-        var runtimeProfile = RuntimeWireGuardProfile.FromProfile(profile);
+        var runtimeProfile = RuntimeWireGuardProfile.FromProfile(profile, _assetLocator.GetWarnings());
         if (runtimeProfile.ValidationError is not null)
         {
             return UpdateState(BuildState(
@@ -179,7 +184,7 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
             };
         }
 
-        var probe = await _commandExecutor.ExecuteAsync("wg.exe", ["show", AdapterName, "dump"], cancellationToken);
+        var probe = await _commandExecutor.ExecuteAsync(_wgExecutablePath, ["show", AdapterName, "dump"], cancellationToken);
         if (probe.ExitCode != 0)
         {
             return UpdateState(_currentState with
@@ -245,8 +250,8 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
         arguments.Add("persistent-keepalive");
         arguments.Add((profile.PersistentKeepalive ?? 25).ToString(CultureInfo.InvariantCulture));
 
-        var result = await _commandExecutor.ExecuteAsync("wg.exe", arguments, cancellationToken);
-        EnsureCommandSucceeded(result, "wg.exe set failed.");
+        var result = await _commandExecutor.ExecuteAsync(_wgExecutablePath, arguments, cancellationToken);
+        EnsureCommandSucceeded(result, $"{Path.GetFileName(_wgExecutablePath)} set failed.");
     }
 
     private async Task ConfigureAddressAsync(
@@ -505,10 +510,15 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
         IReadOnlyList<string> Warnings,
         string? ValidationError)
     {
-        public static RuntimeWireGuardProfile FromProfile(ImportedServerProfile profile)
+        public static RuntimeWireGuardProfile FromProfile(
+            ImportedServerProfile profile,
+            IEnumerable<string>? runtimeWarnings = null)
         {
             var config = profile.TunnelConfig;
-            var warnings = new List<string>();
+            var warnings = runtimeWarnings?
+                .Where(warning => !string.IsNullOrWhiteSpace(warning))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? [];
 
             if (config.AwgValues.Count > 0)
             {
@@ -575,72 +585,4 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
         }
     }
 
-    private sealed record RuntimeWireGuardDump(
-        string? Endpoint,
-        DateTimeOffset? LatestHandshakeAtUtc,
-        long ReceivedBytes,
-        long SentBytes,
-        bool IsTunnelActive,
-        IReadOnlyList<string> Warnings)
-    {
-        public static RuntimeWireGuardDump Parse(string dump, string adapterName)
-        {
-            var warnings = new List<string>();
-            if (string.IsNullOrWhiteSpace(dump))
-            {
-                return new RuntimeWireGuardDump(null, null, 0, 0, false, ["No runtime data was returned by wg.exe show dump."]);
-            }
-
-            var peerRows = dump.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(SplitColumns)
-                .Where(columns => columns.Length >= 8)
-                .ToArray();
-
-            if (peerRows.Length < 2)
-            {
-                return new RuntimeWireGuardDump(null, null, 0, 0, false, ["No peer rows were returned by wg.exe show dump."]);
-            }
-
-            var peer = peerRows[1];
-            var endpoint = peer[2];
-            var handshake = ParseHandshake(peer[4]);
-            var receivedBytes = ParseLong(peer[5]);
-            var sentBytes = ParseLong(peer[6]);
-            var active = handshake is not null || receivedBytes > 0 || sentBytes > 0;
-
-            if (string.IsNullOrWhiteSpace(endpoint))
-            {
-                warnings.Add($"Adapter '{adapterName}' returned a peer row without endpoint information.");
-            }
-
-            return new RuntimeWireGuardDump(endpoint, handshake, receivedBytes, sentBytes, active, warnings);
-        }
-
-        private static DateTimeOffset? ParseHandshake(string raw)
-        {
-            if (string.Equals(raw, "never", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
-            return long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var unixSeconds) && unixSeconds > 0
-                ? DateTimeOffset.FromUnixTimeSeconds(unixSeconds)
-                : null;
-        }
-
-        private static long ParseLong(string raw)
-        {
-            return long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : 0;
-        }
-
-        private static string[] SplitColumns(string line)
-        {
-            if (line.Contains('\t'))
-            {
-                return line.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            }
-
-            return line.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        }
-    }
 }

@@ -17,9 +17,12 @@
 
   <ItemGroup>
     <Compile Remove="**\*.cs" />
+    <Compile Remove="obj\**\*.cs" />
+    <Compile Remove="bin\**\*.cs" />
     <Compile Include="Diagnostics\**\*.cs" />
     <Compile Include="..\Infrastructure\Diagnostics\WindowsWireGuardDumpParser.cs" Link="InfrastructureDiagnostics\WindowsWireGuardDumpParser.cs" />
     <Compile Include="..\Infrastructure\Diagnostics\WindowsWireGuardDumpReader.cs" Link="InfrastructureDiagnostics\WindowsWireGuardDumpReader.cs" />
     <Compile Include="..\Infrastructure\Diagnostics\VpnDiagnosticsService.cs" Link="InfrastructureDiagnostics\VpnDiagnosticsService.cs" />
+    <Compile Include="..\Infrastructure\Runtime\IWindowsRuntimeAssetLocator.cs" Link="InfrastructureRuntime\IWindowsRuntimeAssetLocator.cs" />
   </ItemGroup>
 </Project>

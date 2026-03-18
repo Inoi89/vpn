@@ -6,7 +6,7 @@ This document describes the runtime strategy actually implemented in the client.
 
 The critical architectural decision is:
 
-Use the Amnezia daemon path first, and only fall back to a raw Windows WireGuard path when that daemon is unavailable.
+Use the bundled AmneziaWG service path first, then the external Amnezia daemon path, and only then fall back to a raw Windows WireGuard path.
 
 ## 1. Why This Exists
 
@@ -31,6 +31,23 @@ That is exactly why a plain `wg setconf` or `wg set` integration is not sufficie
 ## 2. Implemented Runtime Layers
 
 ### Primary backend
+
+[BundledAmneziaRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/BundledAmneziaRuntimeAdapter.cs)
+
+Responsibilities:
+
+- stage imported configs into a deterministic runtime config directory
+- install tunnel services through `amneziawg.exe /installtunnelservice`
+- remove tunnel services through `amneziawg.exe /uninstalltunnelservice`
+- read handshake and traffic through `awg.exe show <name> dump`
+- keep the clean-machine path on official AmneziaWG Windows binaries
+
+Supporting runtime staging:
+
+- [IAmneziaRuntimeConfigStore.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/IAmneziaRuntimeConfigStore.cs)
+- [IWindowsRuntimeAssetLocator.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/IWindowsRuntimeAssetLocator.cs)
+
+### Secondary backend
 
 [AmneziaDaemonRuntimeAdapter.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/AmneziaDaemonRuntimeAdapter.cs)
 
@@ -72,8 +89,14 @@ Responsibilities:
 - explicit MTU setup
 - explicit route programming
 - explicit `wg show dump` status parsing
+- resolve bundled runtime assets from `runtime/wireguard` before falling back to machine-wide lookup
 
 This backend is intentionally labeled as lower fidelity.
+
+Runtime asset resolution for the fallback path lives in:
+
+- [IWindowsRuntimeAssetLocator.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Runtime/IWindowsRuntimeAssetLocator.cs)
+- [WintunService.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Services/WintunService.cs)
 
 ### Selection wrapper
 
@@ -81,10 +104,12 @@ This backend is intentionally labeled as lower fidelity.
 
 Behavior:
 
-1. Probe Amnezia daemon availability
-2. Use daemon runtime when available
-3. Fall back to Windows runtime otherwise
-4. Preserve warnings when fallback mode is used
+1. Probe bundled runtime availability
+2. Use bundled AmneziaWG service runtime when available
+3. Otherwise probe external Amnezia daemon availability
+4. Use daemon runtime when available
+5. Fall back to legacy Windows runtime otherwise
+6. Preserve warnings when fallback mode is used
 
 ## 3. Runtime Semantics
 
@@ -158,16 +183,38 @@ That is the main reason this runtime is more defensible than a homegrown WireGua
 
 The remaining risk is explicit:
 
-- if the target machine has no compatible Amnezia daemon/runtime service, the client falls back to the Windows runtime path
-- that fallback is useful, but it is not guaranteed to match Amnezia behavior for every config/network combination
+- if the target machine has no bundled AmneziaWG runtime and no compatible external Amnezia daemon/runtime service, the client falls back to the legacy Windows runtime path
+- that legacy fallback is useful, but it is not guaranteed to match Amnezia behavior for every config/network combination
 
 So the production recommendation is:
 
-1. prefer daemon runtime
-2. treat fallback runtime as compatibility mode
-3. if a config shows `handshake without traffic`, reproduce on daemon path before investigating servers
+1. prefer bundled AmneziaWG runtime
+2. otherwise use daemon runtime
+3. treat the legacy fallback runtime as compatibility mode
+4. if a config shows `handshake without traffic`, reproduce on bundled or daemon path before investigating servers
 
-## 7. Verification
+## 7. Autonomous Windows Product Direction
+
+The desktop client is no longer allowed to assume that another VPN product is already installed on the machine.
+
+Current packaging direction:
+
+- self-contained .NET publish
+- bundled `amneziawg.exe`
+- bundled `awg.exe`
+- bundled `wintun.dll`
+- administrator elevation
+- stable app-local runtime layout under `runtime/wireguard`
+
+Next runtime step:
+
+- decide how much of the upstream manager-service stack to adopt in addition to the tunnel-service path
+
+Packaging details are tracked in:
+
+- [windows-packaging.md](/c:/Users/rrese/source/repos/vpn/docs/windows-packaging.md)
+
+## 8. Verification
 
 Runtime-related coverage lives in:
 
@@ -176,6 +223,8 @@ Runtime-related coverage lives in:
 
 These tests verify:
 
+- bundled runtime installs tunnel services through official CLI
+- bundled runtime reads status from `awg show dump`
 - no blind `setconf`
 - explicit DNS/route/MTU application in fallback mode
 - status parsing from `wg show dump`

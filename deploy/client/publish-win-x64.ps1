@@ -1,0 +1,90 @@
+param(
+    [string]$Configuration = "Release",
+    [string]$RuntimeIdentifier = "win-x64",
+    [string]$Version = "0.1.0-local",
+    [string]$OutputRoot = "artifacts/client-publish",
+    [switch]$ZipPackage
+)
+
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$projectPath = Join-Path $repoRoot "UI\VpnClient.UI.csproj"
+$publishDirectory = Join-Path $repoRoot (Join-Path $OutputRoot $RuntimeIdentifier)
+$runtimeSourceDirectory = Join-Path $repoRoot "third_party\windows\wireguard"
+$runtimeTargetDirectory = Join-Path $publishDirectory "runtime\wireguard"
+
+if (Test-Path $publishDirectory) {
+    Remove-Item $publishDirectory -Recurse -Force
+}
+
+New-Item -ItemType Directory -Path $publishDirectory | Out-Null
+
+dotnet publish $projectPath `
+    -c $Configuration `
+    -r $RuntimeIdentifier `
+    --self-contained true `
+    /p:PublishSingleFile=false `
+    /p:PublishTrimmed=false `
+    /p:Version=$Version `
+    -o $publishDirectory
+
+New-Item -ItemType Directory -Path $runtimeTargetDirectory -Force | Out-Null
+
+if (Test-Path $runtimeSourceDirectory) {
+    Get-ChildItem $runtimeSourceDirectory -File | ForEach-Object {
+        Copy-Item $_.FullName (Join-Path $runtimeTargetDirectory $_.Name) -Force
+    }
+}
+
+$requiredRuntimeFiles = @(
+    "amneziawg.exe",
+    "awg.exe",
+    "wintun.dll"
+)
+
+$optionalRuntimeFiles = @(
+    "wireguard-service.exe",
+    "wireguard.dll",
+    "tunnel.dll"
+)
+
+$missingRequired = @()
+foreach ($file in $requiredRuntimeFiles) {
+    if (-not (Test-Path (Join-Path $runtimeTargetDirectory $file))) {
+        $missingRequired += $file
+    }
+}
+
+$missingOptional = @()
+foreach ($file in $optionalRuntimeFiles) {
+    if (-not (Test-Path (Join-Path $runtimeTargetDirectory $file))) {
+        $missingOptional += $file
+    }
+}
+
+Write-Host ""
+Write-Host "Published client to: $publishDirectory"
+Write-Host "Bundled runtime directory: $runtimeTargetDirectory"
+
+if ($missingRequired.Count -gt 0) {
+    Write-Warning ("Missing required bundled runtime files: " + ($missingRequired -join ", "))
+    Write-Warning "The publish output will still run, but clean-machine connect will depend on system-installed WireGuard/Wintun."
+}
+else {
+    Write-Host "Required bundled runtime files present: $($requiredRuntimeFiles -join ', ')"
+}
+
+if ($missingOptional.Count -gt 0) {
+    Write-Host "Optional runtime files not bundled yet: $($missingOptional -join ', ')"
+}
+
+if ($ZipPackage) {
+    $zipPath = Join-Path $repoRoot (Join-Path $OutputRoot ("VpnClient-" + $RuntimeIdentifier + ".zip"))
+    if (Test-Path $zipPath) {
+        Remove-Item $zipPath -Force
+    }
+
+    Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $zipPath
+    Write-Host "Created zip package: $zipPath"
+}
