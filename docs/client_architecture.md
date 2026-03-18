@@ -218,7 +218,7 @@ dotnet run --project UI\VpnClient.UI.csproj
 Self-contained Windows publish:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage
 ```
 
 Run tests:

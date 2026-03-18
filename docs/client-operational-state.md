@@ -28,6 +28,7 @@ The desktop client currently supports:
 - import diagnostics
 - runtime warnings
 - MSI-based self-update checks
+- MSI-based in-place upgrade from an existing installation
 
 It intentionally does not support:
 
@@ -52,7 +53,7 @@ Packaged portable build:
 
 Packaged installer:
 
-- [YourVpnClient-0.1.0-local.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi)
+- [YourVpnClient-0.1.1.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi)
 
 Self-contained publish profile:
 
@@ -172,6 +173,7 @@ The UI surfaces:
 - current app version
 - update status
 - download/install action for a newer MSI
+- installer preference persistence for desktop shortcut creation
 
 ## 7. Verification Status
 
@@ -179,8 +181,8 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local -ZipPackage`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1`
 
 Relevant tests:
 
@@ -271,6 +273,8 @@ The client now has a real clean-machine packaging path:
 - the UI manifest requests administrator elevation
 - the primary clean-machine backend no longer depends on a preinstalled Amnezia or WireGuard desktop app
 - a WiX-based per-machine MSI installer now builds successfully
+- the MSI now exposes install-directory selection and a checked desktop-shortcut option
+- the desktop-shortcut preference is stored and reused by later MSI upgrades
 - the desktop client now has a JSON-manifest self-update path layered on top of the MSI
 
 What is still not fully complete:

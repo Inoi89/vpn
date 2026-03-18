@@ -17,7 +17,7 @@ This document is the concrete operations runbook for the desktop client update o
 Current stable layout:
 
 - `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
-- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.0-local.msi`
+- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.1.msi`
 - `https://vpn.udni.ru/vpn-client/stable/VpnClient-win-x64.zip`
 
 The client checks only the manifest URL. The manifest then points to the MSI.
@@ -60,19 +60,19 @@ From the repo root:
 1. Build portable payload:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage
 ```
 
 2. Build MSI:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local
+powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1
 ```
 
 3. Publish to origin:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.0-local -ServerPassword <root-password> -ServerHost 37.1.197.163 -Domain vpn.udni.ru -PackageBaseUrl https://vpn.udni.ru/vpn-client/stable -ReleaseNotes "Release notes here." -UploadZip
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.1 -ServerPassword <root-password> -ServerHost 37.1.197.163 -Domain vpn.udni.ru -PackageBaseUrl https://vpn.udni.ru/vpn-client/stable -ReleaseNotes "0.1.1 installer UX and updater integration." -UploadZip
 ```
 
 What that does:
@@ -94,7 +94,7 @@ After publishing:
 3. Check server-side files:
    - `ls -lh /srv/vpn-updates/vpn-client/stable`
 4. Check local client:
-   - old installed version should report `UpdateAvailable`
+   - an installed `0.1.0-local` client should report `UpdateAvailable`
    - installation should proceed through `VpnClient.Updater.exe`
 
 ## 7. Failure Modes

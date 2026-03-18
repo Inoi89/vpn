@@ -13,7 +13,7 @@ Current goal:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage
 ```
 
 Output:
@@ -33,19 +33,19 @@ Bundled updater:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local
+powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1
 ```
 
 Output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi`
 
 ## Update manifest entry point
 
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.0-local -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.0-local.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
+powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.1 -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.1.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
 ```
 
 Output:
@@ -55,7 +55,7 @@ Output:
 Direct publish helper for the current update origin:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.0-local -ServerPassword <root-password> -ReleaseNotes "Initial MSI updater pipeline." -UploadZip
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.1 -ServerPassword <root-password> -ReleaseNotes "0.1.1 installer UX and updater integration." -UploadZip
 ```
 
 Current origin target:
@@ -90,8 +90,10 @@ The MSI build now:
 - republishes the requested self-contained payload
 - harvests the publish folder with WiX
 - marks harvested components as 64-bit
-- installs the app per-machine under `Program Files`
+- installs the app per-machine under `Program Files` by default
+- lets the user choose a different install directory during setup
 - creates a Start Menu shortcut
+- offers a checked desktop shortcut option and remembers the choice for upgrades
 - bundles the external updater launcher used for self-update
 
 ## Self-update notes

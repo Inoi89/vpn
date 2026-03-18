@@ -29,4 +29,4 @@ Use the publish script in [deploy/client/README.md](/c:/Users/rrese/source/repos
 
 Installer output:
 
-- [YourVpnClient-0.1.0-local.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi)
+- [YourVpnClient-0.1.1.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi)

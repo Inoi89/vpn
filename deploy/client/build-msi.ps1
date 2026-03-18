@@ -1,7 +1,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
-    [string]$Version = "0.1.0-local",
+    [string]$Version = "0.1.1",
     [string]$PublishRoot = "artifacts/client-publish",
     [string]$OutputRoot = "artifacts/client-installer",
     [string]$ProductName = "YourVpnClient",
@@ -60,6 +60,7 @@ $workingDirectory = Join-Path $installerOutputDirectory "wix"
 $wixRoot = Join-Path $repoRoot ".tmp\wix314"
 $wixToolsDirectory = Join-Path $wixRoot "bin"
 $templatePath = Join-Path $repoRoot "deploy\client\wix\Product.wxs"
+$licensePath = Join-Path $repoRoot "deploy\client\wix\license.rtf"
 $harvestPath = Join-Path $workingDirectory "Harvest.wxs"
 $msiPath = Join-Path $installerOutputDirectory ("{0}-{1}.msi" -f $ProductName, $Version)
 $msiVersion = Convert-ToMsiVersion -InputVersion $Version
@@ -103,11 +104,13 @@ Set-Content -Path $harvestPath -Value $harvestContent -Encoding UTF8
 
 Invoke-ExternalTool -ExecutablePath (Join-Path $wixToolsDirectory "candle.exe") -Arguments @(
     "-nologo",
+    "-ext", "WixUIExtension",
     "-dPublishDir=$publishDirectory",
     "-dProductVersion=$msiVersion",
     "-dProductName=$ProductName",
     "-dManufacturer=$Manufacturer",
     "-dUpgradeCode=$UpgradeCode",
+    "-dWixLicenseRtf=$licensePath",
     "-out", (Join-Path $workingDirectory ""),
     $templatePath,
     $harvestPath
@@ -115,6 +118,7 @@ Invoke-ExternalTool -ExecutablePath (Join-Path $wixToolsDirectory "candle.exe") 
 
 Invoke-ExternalTool -ExecutablePath (Join-Path $wixToolsDirectory "light.exe") -Arguments @(
     "-nologo",
+    "-ext", "WixUIExtension",
     "-sice:ICE03",
     "-sice:ICE61",
     "-out", $msiPath,

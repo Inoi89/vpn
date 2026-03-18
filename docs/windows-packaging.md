@@ -44,7 +44,7 @@ Publish script:
 Typical command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.0-local -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage
 ```
 
 Primary output:
@@ -57,7 +57,7 @@ Installer build script:
 
 Installer output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi`
 
 Update manifest generator:
 
@@ -117,6 +117,8 @@ There are two layers of productization:
 - zip package works
 - WiX-based per-machine MSI now builds successfully
 - the installer packages bundled `amneziawg.exe`, `awg.exe`, and `wintun.dll`
+- the installer now uses a real `InstallDir` flow instead of a hidden fixed target path
+- the installer now offers a checked-by-default desktop shortcut option and persists that preference through upgrades
 - the publish output includes `VpnClient.Updater.exe`
 - the release flow can now emit a JSON update manifest for hosted MSI updates
 
@@ -142,10 +144,17 @@ These confirm that Amnezia on Windows is a real packaged application with an ins
 On a clean Windows machine:
 
 1. Install:
-   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.0-local.msi`
+   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi`
 2. Launch the installed app from Start Menu or `Program Files`
 3. Import `.vpn` or `.conf`
 4. Connect
+
+Installer behavior:
+
+- default target is still `Program Files\YourVpnClient`
+- the user can change the install folder in the MSI wizard
+- `Create a desktop shortcut` is enabled by default
+- the shortcut preference is stored and reused on future MSI upgrades
 
 If you want a portable test bundle instead of MSI:
 

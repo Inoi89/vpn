@@ -111,11 +111,11 @@ Example:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 `
-  -Version 0.1.0-local `
-  -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.0-local.msi `
+  -Version 0.1.1 `
+  -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.1.msi `
   -PackageBaseUrl https://downloads.example.com/vpn-client `
   -OutputPath artifacts\client-installer\win-x64\update-manifest.json `
-  -ReleaseNotes "Bundled updater flow."
+  -ReleaseNotes "0.1.1 installer UX and updater integration."
 ```
 
 There is also a direct upload helper for the current origin:
@@ -148,6 +148,7 @@ There are now three concrete flows in production terms.
    - the SHA-256 is verified
    - `VpnClient.Updater.exe` is launched
 6. The launcher waits for the UI process to exit, runs `msiexec`, then relaunches the app.
+7. A newer MSI with the same `UpgradeCode` upgrades an existing install in place, so `0.1.1` replaces `0.1.0-local` instead of side-by-side installation.
 
 ### 7.2 Release build flow
 
@@ -181,7 +182,7 @@ Current server:
 Current hosted files:
 
 - `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
-- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.0-local.msi`
+- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.1.msi`
 - `https://vpn.udni.ru/vpn-client/stable/VpnClient-win-x64.zip`
 
 Operational warning:
