@@ -23,7 +23,8 @@
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="DISABLEADVTSHORTCUTS" Value="1" />
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
-    <Property Id="INSTALLDESKTOPSHORTCUT" Value="1" Secure="yes">
+    <Property Id="INSTALLDESKTOPSHORTCUT" Value="1" Secure="yes" />
+    <Property Id="PREVIOUS_INSTALLDESKTOPSHORTCUT">
       <RegistrySearch
         Id="DesktopShortcutPreferenceSearch"
         Root="HKLM"
@@ -31,6 +32,11 @@
         Name="installDesktopShortcut"
         Type="raw" />
     </Property>
+    <CustomAction
+      Id="LoadDesktopShortcutPreference"
+      Property="INSTALLDESKTOPSHORTCUT"
+      Value="[PREVIOUS_INSTALLDESKTOPSHORTCUT]"
+      Execute="firstSequence" />
 
     <WixVariable Id="WixUILicenseRtf" Value="$(var.WixLicenseRtf)" />
 
@@ -80,6 +86,14 @@
   </Product>
 
   <Fragment>
+    <InstallUISequence>
+      <Custom Action="LoadDesktopShortcutPreference" After="AppSearch">PREVIOUS_INSTALLDESKTOPSHORTCUT &lt;&gt; ""</Custom>
+    </InstallUISequence>
+
+    <InstallExecuteSequence>
+      <Custom Action="LoadDesktopShortcutPreference" After="AppSearch">UILevel &lt; 5 AND PREVIOUS_INSTALLDESKTOPSHORTCUT &lt;&gt; ""</Custom>
+    </InstallExecuteSequence>
+
     <UI Id="VpnClient_InstallDir">
       <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
       <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />

@@ -284,6 +284,12 @@ What is still not fully complete:
 - if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
 - release signing and hosted manifest infrastructure still need production values
 
+Post-`0.1.1` installer note:
+
+- the repo now includes a source-level fix for MSI upgrade handling of the desktop shortcut preference
+- the fix separates the default `INSTALLDESKTOPSHORTCUT=1` value from the persisted registry lookup, so upgrades from older installs no longer lose the default desktop shortcut selection
+- this source fix is committed in the repository, but it still needs a new patch release to reach already installed `0.1.1` clients
+
 See:
 
 - [windows-packaging.md](/c:/Users/rrese/source/repos/vpn/docs/windows-packaging.md)
