@@ -2,12 +2,14 @@ using Avalonia;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using VpnClient.Application.Imports;
 using VpnClient.Application.Profiles;
 using VpnClient.Application.Updates;
 using VpnClient.Core.Interfaces;
 using VpnClient.Infrastructure.Diagnostics;
 using VpnClient.Infrastructure.Import;
+using VpnClient.Infrastructure.Logging;
 using VpnClient.Infrastructure.Persistence;
 using VpnClient.Infrastructure.Runtime;
 using VpnClient.Infrastructure.Services;
@@ -24,6 +26,8 @@ class Program
     public static void Main(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args);
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new FileLoggerProvider());
         builder.Services.AddLogging();
 
         builder.Services.AddSingleton<IImportService, AmneziaImportService>();
@@ -57,6 +61,10 @@ class Program
         builder.Services.AddSingleton<MainWindowViewModel>();
 
         var host = builder.Build();
+
+        host.Services
+            .GetRequiredService<ILogger<Program>>()
+            .LogInformation("Desktop client launch started.");
 
         Services = host.Services;
 

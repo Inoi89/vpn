@@ -184,7 +184,24 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
             };
         }
 
-        var probe = await _commandExecutor.ExecuteAsync(_wgExecutablePath, ["show", AdapterName, "dump"], cancellationToken);
+        RuntimeCommandResult probe;
+        try
+        {
+            probe = await _commandExecutor.ExecuteAsync(_wgExecutablePath, ["show", AdapterName, "dump"], cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Fallback Windows runtime status probe failed.");
+            return UpdateState(_currentState with
+            {
+                Status = RuntimeConnectionStatus.Disconnected,
+                AdapterPresent = false,
+                TunnelActive = false,
+                LastError = exception.Message,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+        }
+
         if (probe.ExitCode != 0)
         {
             return UpdateState(_currentState with
@@ -230,7 +247,17 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
             return await GetStatusAsync(cancellationToken);
         }
 
-        var probe = await _commandExecutor.ExecuteAsync(_wgExecutablePath, ["show", AdapterName, "dump"], cancellationToken);
+        RuntimeCommandResult probe;
+        try
+        {
+            probe = await _commandExecutor.ExecuteAsync(_wgExecutablePath, ["show", AdapterName, "dump"], cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogInformation(exception, "Fallback Windows runtime restore probe failed.");
+            return UpdateState(ConnectionState.Disconnected(AdapterName));
+        }
+
         if (probe.ExitCode != 0)
         {
             return UpdateState(ConnectionState.Disconnected(AdapterName));

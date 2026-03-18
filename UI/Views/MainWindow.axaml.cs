@@ -41,7 +41,7 @@ public partial class MainWindow : Window
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType("Конфиги Amnezia")
+                new FilePickerFileType("VPN-конфиги")
                 {
                     Patterns = ["*.vpn", "*.conf"]
                 }

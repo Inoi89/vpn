@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
     <PackageReference Include="xunit" Version="2.6.6" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
@@ -23,6 +24,7 @@
     <Compile Include="..\Infrastructure\Diagnostics\WindowsWireGuardDumpParser.cs" Link="InfrastructureDiagnostics\WindowsWireGuardDumpParser.cs" />
     <Compile Include="..\Infrastructure\Diagnostics\WindowsWireGuardDumpReader.cs" Link="InfrastructureDiagnostics\WindowsWireGuardDumpReader.cs" />
     <Compile Include="..\Infrastructure\Diagnostics\VpnDiagnosticsService.cs" Link="InfrastructureDiagnostics\VpnDiagnosticsService.cs" />
+    <Compile Include="..\Infrastructure\Logging\FileLogWriter.cs" Link="InfrastructureLogging\FileLogWriter.cs" />
     <Compile Include="..\Infrastructure\Runtime\IWindowsRuntimeAssetLocator.cs" Link="InfrastructureRuntime\IWindowsRuntimeAssetLocator.cs" />
   </ItemGroup>
 </Project>

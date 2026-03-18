@@ -1,6 +1,7 @@
 using VpnClient.Core.Interfaces;
 using VpnClient.Core.Models;
 using VpnClient.Core.Models.Diagnostics;
+using VpnClient.Infrastructure.Logging;
 
 namespace VpnClient.Infrastructure.Diagnostics;
 
@@ -40,6 +41,12 @@ public sealed class VpnDiagnosticsService : IVpnDiagnosticsService
             _importValidationErrors.Add(error);
             TrimToLimit(_importValidationErrors, 250);
         }
+
+        FileLogWriter.Write(
+            "diagnostics.import",
+            Microsoft.Extensions.Logging.LogLevel.Warning,
+            $"Import validation failed at {error.Stage}: {error.Message}",
+            exception);
     }
 
     public void RecordConnectionLog(string message, DiagnosticsLogLevel level = DiagnosticsLogLevel.Information, string? category = null, string? source = null, DateTimeOffset? timestampUtc = null)
@@ -119,6 +126,11 @@ public sealed class VpnDiagnosticsService : IVpnDiagnosticsService
             _connectionLogs.Add(entry);
             TrimToLimit(_connectionLogs, 500);
         }
+
+        FileLogWriter.Write(
+            string.IsNullOrWhiteSpace(entry.Source) ? "diagnostics.connection" : entry.Source!,
+            MapLogLevel(entry.Level),
+            entry.Message);
     }
 
     private static void TrimToLimit<T>(List<T> items, int limit)
@@ -164,4 +176,15 @@ public sealed class VpnDiagnosticsService : IVpnDiagnosticsService
 
         return ImportValidationStage.Unknown;
     }
+
+    private static Microsoft.Extensions.Logging.LogLevel MapLogLevel(DiagnosticsLogLevel level) => level switch
+    {
+        DiagnosticsLogLevel.Trace => Microsoft.Extensions.Logging.LogLevel.Trace,
+        DiagnosticsLogLevel.Debug => Microsoft.Extensions.Logging.LogLevel.Debug,
+        DiagnosticsLogLevel.Information => Microsoft.Extensions.Logging.LogLevel.Information,
+        DiagnosticsLogLevel.Warning => Microsoft.Extensions.Logging.LogLevel.Warning,
+        DiagnosticsLogLevel.Error => Microsoft.Extensions.Logging.LogLevel.Error,
+        DiagnosticsLogLevel.Critical => Microsoft.Extensions.Logging.LogLevel.Critical,
+        _ => Microsoft.Extensions.Logging.LogLevel.Information
+    };
 }

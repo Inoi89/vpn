@@ -7,116 +7,36 @@
         <FluentTheme />
 
         <Style Selector="Window">
-            <Setter Property="Background" Value="#0A0F18" />
-            <Setter Property="Foreground" Value="#E7EDF8" />
+            <Setter Property="Background" Value="#09090D" />
+            <Setter Property="Foreground" Value="#F4F2FF" />
         </Style>
 
-        <Style Selector="Border.sidebar">
-            <Setter Property="Background" Value="#101826" />
-            <Setter Property="BorderBrush" Value="#22304B" />
+        <Style Selector="Border.sidebar-shell">
+            <Setter Property="Background" Value="#151419" />
+            <Setter Property="BorderBrush" Value="#262331" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="CornerRadius" Value="30" />
         </Style>
 
-        <Style Selector="Border.card">
-            <Setter Property="Background" Value="#121C2D" />
-            <Setter Property="BorderBrush" Value="#22304B" />
+        <Style Selector="Border.surface-card">
+            <Setter Property="Background" Value="#18171D" />
+            <Setter Property="BorderBrush" Value="#282432" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="CornerRadius" Value="32" />
         </Style>
 
-        <Style Selector="Border.card-subtle">
-            <Setter Property="Background" Value="#0F1725" />
-            <Setter Property="BorderBrush" Value="#22304B" />
+        <Style Selector="Border.surface-muted">
+            <Setter Property="Background" Value="#131219" />
+            <Setter Property="BorderBrush" Value="#231F2C" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="CornerRadius" Value="26" />
         </Style>
 
-        <Style Selector="TextBlock.app-title">
-            <Setter Property="FontSize" Value="26" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <Style Selector="TextBlock.page-title">
-            <Setter Property="FontSize" Value="28" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <Style Selector="TextBlock.section-title">
-            <Setter Property="FontSize" Value="18" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <Style Selector="TextBlock.label">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#8C99B2" />
-        </Style>
-
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="#8C99B2" />
-        </Style>
-
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="#67D4C0" />
-            <Setter Property="Foreground" Value="#071116" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Padding" Value="18,12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="#76E3CF" />
-        </Style>
-
-        <Style Selector="Button.secondary">
-            <Setter Property="Background" Value="#18253A" />
-            <Setter Property="Foreground" Value="#E7EDF8" />
-            <Setter Property="BorderBrush" Value="#22304B" />
+        <Style Selector="Border.profile-item">
+            <Setter Property="Background" Value="#121116" />
+            <Setter Property="BorderBrush" Value="#221F2A" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Padding" Value="16,12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <Style Selector="Button.danger">
-            <Setter Property="Background" Value="#291922" />
-            <Setter Property="Foreground" Value="#FFB3C7" />
-            <Setter Property="BorderBrush" Value="#6A3045" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Padding" Value="16,12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <Style Selector="Button.connect-toggle">
-            <Setter Property="Background" Value="#7A8DFF" />
-            <Setter Property="Foreground" Value="#F8FAFF" />
-            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="22" />
-            <Setter Property="Padding" Value="20,18" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="18" />
-        </Style>
-
-        <Style Selector="Button.connect-toggle:pointerover">
-            <Setter Property="Background" Value="#90A1FF" />
-        </Style>
-
-        <Style Selector="TextBox.inline-editor">
-            <Setter Property="Background" Value="#0E1624" />
-            <Setter Property="Foreground" Value="#E7EDF8" />
-            <Setter Property="BorderBrush" Value="#22304B" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Padding" Value="14,10" />
-        </Style>
-
-        <Style Selector="Border.pill">
-            <Setter Property="Background" Value="#0E1624" />
-            <Setter Property="BorderBrush" Value="#22304B" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="999" />
         </Style>
 
         <Style Selector="ListBox.profile-list">
@@ -126,28 +46,144 @@
 
         <Style Selector="ListBox.profile-list ListBoxItem">
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Margin" Value="0,0,0,12" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
         </Style>
 
         <Style Selector="ListBox.profile-list ListBoxItem:selected Border.profile-item">
-            <Setter Property="Background" Value="#18253A" />
-            <Setter Property="BorderBrush" Value="#7A8DFF" />
+            <Setter Property="Background" Value="#191620" />
+            <Setter Property="BorderBrush" Value="#8B5DFF" />
         </Style>
 
-        <Style Selector="Border.profile-item">
-            <Setter Property="Background" Value="#0F1725" />
-            <Setter Property="BorderBrush" Value="#22304B" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="18" />
+        <Style Selector="TextBlock.brand-title">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
-        <Style Selector="Border.metric-panel">
-            <Setter Property="Background" Value="#0D1421" />
-            <Setter Property="BorderBrush" Value="#1C2840" />
+        <Style Selector="TextBlock.hero-title">
+            <Setter Property="FontSize" Value="34" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.metric-title">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="#AEA7BF" />
+        </Style>
+
+        <Style Selector="TextBlock.metric-value">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.metric-caption">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#8F889E" />
+        </Style>
+
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="#A49DB7" />
+        </Style>
+
+        <Style Selector="TextBlock.profile-name">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.profile-meta">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#90889F" />
+        </Style>
+
+        <Style Selector="Border.status-chip">
+            <Setter Property="Background" Value="#21192D" />
+            <Setter Property="BorderBrush" Value="#8B5DFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+        </Style>
+
+        <Style Selector="Border.info-chip">
+            <Setter Property="Background" Value="#111017" />
+            <Setter Property="BorderBrush" Value="#24202E" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+        </Style>
+
+        <Style Selector="Button.import-button">
+            <Setter Property="Background" Value="#9E6AFF" />
+            <Setter Property="Foreground" Value="#0D0815" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="18,14" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.import-button:pointerover">
+            <Setter Property="Background" Value="#AF7CFF" />
+        </Style>
+
+        <Style Selector="Button.ghost-button">
+            <Setter Property="Background" Value="#15131B" />
+            <Setter Property="Foreground" Value="#F4F2FF" />
+            <Setter Property="BorderBrush" Value="#2A2436" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.danger-button">
+            <Setter Property="Background" Value="#26151D" />
+            <Setter Property="Foreground" Value="#FFB6D0" />
+            <Setter Property="BorderBrush" Value="#5C3140" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.small-button">
+            <Setter Property="Background" Value="#121117" />
+            <Setter Property="Foreground" Value="#EEE9FF" />
+            <Setter Property="BorderBrush" Value="#2A2435" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.power-button">
+            <Setter Property="Background" Value="#0C0B10" />
+            <Setter Property="Foreground" Value="#B584FF" />
+            <Setter Property="BorderBrush" Value="#8B5DFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Width" Value="156" />
+            <Setter Property="Height" Value="156" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBox.rename-box">
+            <Setter Property="Background" Value="#111016" />
+            <Setter Property="Foreground" Value="#F4F2FF" />
+            <Setter Property="BorderBrush" Value="#2A2534" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16,12" />
+        </Style>
+
+        <Style Selector="ProgressBar.activity-bar">
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="100" />
+            <Setter Property="Height" Value="6" />
+            <Setter Property="Background" Value="#221D2A" />
+            <Setter Property="Foreground" Value="#9E6AFF" />
         </Style>
     </Application.Styles>
 </Application>

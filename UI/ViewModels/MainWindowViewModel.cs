@@ -33,6 +33,12 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _initialized;
     private bool _applyingSnapshot;
     private bool _refreshInFlight;
+    private double _downloadRateBytesPerSecond;
+    private double _uploadRateBytesPerSecond;
+    private long _lastReceivedBytes;
+    private long _lastSentBytes;
+    private DateTimeOffset? _lastTrafficSampleUtc;
+    private DateTimeOffset? _sessionStartedAtUtc;
 
     public MainWindowViewModel(
         ImportProfileUseCase importProfileUseCase,
@@ -62,8 +68,6 @@ public partial class MainWindowViewModel : ObservableObject
         _logger = logger;
 
         Profiles = [];
-        ConnectionLogs = [];
-        ImportValidationErrors = [];
 
         _refreshTimer = new DispatcherTimer
         {
@@ -73,10 +77,6 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public ObservableCollection<ImportedServerProfile> Profiles { get; }
-
-    public ObservableCollection<ConnectionLogEntry> ConnectionLogs { get; }
-
-    public ObservableCollection<ImportValidationError> ImportValidationErrors { get; }
 
     [ObservableProperty]
     private ImportedServerProfile? selectedProfile;
@@ -88,7 +88,7 @@ public partial class MainWindowViewModel : ObservableObject
     private string renameDraft = string.Empty;
 
     [ObservableProperty]
-    private string lastOperationMessage = "Импортируйте .vpn или .conf, чтобы добавить сервер.";
+    private string lastOperationMessage = "Добавьте конфиг и подключитесь к нужному серверу.";
 
     [ObservableProperty]
     private bool isBusy;
@@ -102,9 +102,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool HasSelectedProfile => SelectedProfile is not null;
 
-    public bool HasImportErrors => ImportValidationErrors.Count > 0;
-
     public bool UpdatesEnabled => UpdateState.IsEnabled;
+
+    public bool ShowUpdateCard => UpdateState.Status is not AppUpdateStatus.Disabled || !string.IsNullOrWhiteSpace(UpdateState.LastError);
+
+    public bool ShowWarningCard => !string.IsNullOrWhiteSpace(WarningSummaryText);
 
     public bool CanRunUpdateAction =>
         !IsBusy
@@ -115,46 +117,40 @@ public partial class MainWindowViewModel : ObservableObject
 
     public string CurrentVersionText => UpdateState.CurrentVersion;
 
-    public string UpdateStatusTitle => UpdateState.Status switch
+    public string UpdateCardTitle => UpdateState.Status switch
     {
-        AppUpdateStatus.Disabled => "Обновления отключены",
-        AppUpdateStatus.Checking => "Проверка обновлений",
-        AppUpdateStatus.UpToDate => "Обновление не требуется",
-        AppUpdateStatus.UpdateAvailable => "Доступно новое обновление",
-        AppUpdateStatus.Downloading => "Загрузка обновления",
+        AppUpdateStatus.Checking => "Проверяем обновления",
+        AppUpdateStatus.UpdateAvailable => "Доступна новая версия",
+        AppUpdateStatus.Downloading => "Загружаем обновление",
         AppUpdateStatus.ReadyToInstall => "Обновление готово",
-        AppUpdateStatus.Installing => "Установка обновления",
-        AppUpdateStatus.Failed => "Ошибка обновления",
-        _ => "Обновления приложения"
+        AppUpdateStatus.Installing => "Устанавливаем обновление",
+        AppUpdateStatus.Failed => "Обновление недоступно",
+        AppUpdateStatus.UpToDate => "Версия актуальна",
+        _ => "Обновление клиента"
     };
 
-    public string UpdateStatusDescription
+    public string UpdateCardDescription
     {
         get
         {
             if (!string.IsNullOrWhiteSpace(UpdateState.LastError))
             {
-                return UpdateState.LastError;
-            }
-
-            if (!UpdatesEnabled)
-            {
-                return "Укажите Updates:ManifestUrl в appsettings.json или через переменные окружения, чтобы включить self-update.";
+                return UpdateState.LastError!;
             }
 
             if (UpdateState.AvailableRelease is null)
             {
-                return $"Текущая версия {UpdateState.CurrentVersion}. Клиент может проверять новый MSI через update manifest.";
+                return "Приложение само проверяет свежие версии и может обновиться поверх текущей установки.";
             }
 
             return UpdateState.Status switch
             {
-                AppUpdateStatus.UpdateAvailable => $"Найдена версия {UpdateState.AvailableRelease.Version}. Можно скачать и установить обновление.",
-                AppUpdateStatus.Downloading => $"Загружается версия {UpdateState.AvailableRelease.Version}. После проверки хеша начнётся установка.",
-                AppUpdateStatus.ReadyToInstall => $"Версия {UpdateState.AvailableRelease.Version} скачана и готова к установке.",
-                AppUpdateStatus.Installing => $"Запущена установка версии {UpdateState.AvailableRelease.Version}. Приложение будет закрыто и затем перезапущено.",
-                AppUpdateStatus.UpToDate => $"У вас уже актуальная версия {UpdateState.CurrentVersion}.",
-                _ => $"Последняя доступная версия: {UpdateState.AvailableRelease.Version}."
+                AppUpdateStatus.UpdateAvailable => $"Найдена версия {UpdateState.AvailableRelease.Version}. Можно скачать и установить поверх текущей.",
+                AppUpdateStatus.Downloading => $"Загружаем версию {UpdateState.AvailableRelease.Version}. После проверки начнется установка.",
+                AppUpdateStatus.ReadyToInstall => $"Версия {UpdateState.AvailableRelease.Version} уже загружена и готова к установке.",
+                AppUpdateStatus.Installing => $"Устанавливаем версию {UpdateState.AvailableRelease.Version}. Приложение перезапустится автоматически.",
+                AppUpdateStatus.UpToDate => $"Сейчас установлена актуальная версия {UpdateState.CurrentVersion}.",
+                _ => $"Последний найденный релиз: {UpdateState.AvailableRelease.Version}."
             };
         }
     }
@@ -166,12 +162,83 @@ public partial class MainWindowViewModel : ObservableObject
         AppUpdateStatus.Checking => "Проверяем...",
         AppUpdateStatus.Downloading => "Загружаем...",
         AppUpdateStatus.Installing => "Устанавливаем...",
-        _ => "Проверить обновления"
+        _ => "Проверить обновление"
     };
 
-    public string EmptyStateTitle => "Добавьте конфигурацию";
+    public string EmptyStateTitle => "Добавьте первый сервер";
 
-    public string EmptyStateText => "Клиент хранит локальные профили и подключается к уже существующим Amnezia/WireGuard серверам. Никакой выдачи ключей внутри приложения.";
+    public string EmptyStateText => "Импортируйте .vpn или .conf, сохраните профиль локально и подключайтесь одним нажатием.";
+
+    public string ConnectionBadgeText => ConnectionState.Status switch
+    {
+        RuntimeConnectionStatus.Connected => "В сети",
+        RuntimeConnectionStatus.Connecting => "Подключение",
+        RuntimeConnectionStatus.Disconnecting => "Отключение",
+        RuntimeConnectionStatus.Degraded => "Есть связь",
+        RuntimeConnectionStatus.Failed => "Ошибка",
+        RuntimeConnectionStatus.Unsupported => "Недоступно",
+        _ => "Не подключено"
+    };
+
+    public string StatusTitle
+    {
+        get
+        {
+            if (SelectedProfile is null)
+            {
+                return "Ваш VPN";
+            }
+
+            if (ConnectionState.ProfileId == SelectedProfile.Id)
+            {
+                return ConnectionState.Status switch
+                {
+                    RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded => $"Подключено к {SelectedProfile.DisplayName}",
+                    RuntimeConnectionStatus.Connecting => $"Подключаем {SelectedProfile.DisplayName}",
+                    RuntimeConnectionStatus.Disconnecting => $"Отключаем {SelectedProfile.DisplayName}",
+                    _ => SelectedProfile.DisplayName
+                };
+            }
+
+            if (ConnectionState.ProfileId is not null
+                && ConnectionState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded
+                && !string.IsNullOrWhiteSpace(ConnectionState.ProfileName))
+            {
+                return $"Активен {ConnectionState.ProfileName}";
+            }
+
+            return SelectedProfile.DisplayName;
+        }
+    }
+
+    public string StatusDescription
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(ConnectionState.LastError))
+            {
+                return ConnectionState.LastError!;
+            }
+
+            if (SelectedProfile is null)
+            {
+                return "Выберите сервер слева или добавьте новый конфиг из файла.";
+            }
+
+            return ConnectionState.Status switch
+            {
+                RuntimeConnectionStatus.Connected => "Соединение активно. Интернет идет через защищенный туннель.",
+                RuntimeConnectionStatus.Connecting => "Поднимаем туннель и ждем первый полезный трафик.",
+                RuntimeConnectionStatus.Disconnecting => "Аккуратно завершаем текущую сессию.",
+                RuntimeConnectionStatus.Degraded => ShowWarningCard
+                    ? WarningSummaryText
+                    : "Связь есть, но приложение видит нестабильные сетевые сигналы.",
+                RuntimeConnectionStatus.Failed => "Не удалось завершить подключение. Проверьте сервер и попробуйте снова.",
+                RuntimeConnectionStatus.Unsupported => "На этом компьютере недоступен системный модуль подключения.",
+                _ => "Профиль готов. Подключение запускается одним нажатием."
+            };
+        }
+    }
 
     public string PrimaryActionText
     {
@@ -179,17 +246,17 @@ public partial class MainWindowViewModel : ObservableObject
         {
             if (IsBusy)
             {
-                return "Подождите...";
+                return "Подождите";
             }
 
             if (ConnectionState.Status == RuntimeConnectionStatus.Disconnecting)
             {
-                return "Отключение...";
+                return "Отключаем";
             }
 
             if (ConnectionState.Status == RuntimeConnectionStatus.Connecting && ConnectionState.ProfileId == SelectedProfile?.Id)
             {
-                return "Подключение...";
+                return "Подключаем";
             }
 
             if (ConnectionState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded
@@ -202,7 +269,7 @@ public partial class MainWindowViewModel : ObservableObject
                 && ConnectionState.ProfileId != SelectedProfile?.Id
                 && SelectedProfile is not null)
             {
-                return "Переподключить";
+                return "Переключить";
             }
 
             return "Подключить";
@@ -222,86 +289,63 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool CanDeleteSelectedProfile => !IsBusy && SelectedProfile is not null;
 
-    public string CurrentRuntimeLabel => ConnectionState.AdapterName switch
-    {
-        "BundledAmneziaWG" => "Bundled AmneziaWG runtime",
-        "AmneziaDaemon" => "External Amnezia daemon runtime",
-        _ when ConnectionState.IsWindowsFirst => "Legacy Windows fallback runtime",
-        _ => "VPN runtime"
-    };
+    public string SidebarSummaryText => HasProfiles
+        ? $"{Profiles.Count} {PluralizeProfiles(Profiles.Count)}"
+        : "Нет сохраненных серверов";
 
-    public string CurrentFormatLabel => SelectedProfile?.SourceFormat switch
-    {
-        TunnelConfigFormat.AmneziaVpn => ".vpn / Amnezia package",
-        TunnelConfigFormat.AmneziaAwgNative => ".conf / AmneziaWG",
-        TunnelConfigFormat.WireGuardConf => ".conf / WireGuard",
-        _ => "Нет профиля"
-    };
+    public string SelectedProfileCaption => SelectedProfile is null
+        ? "Подберите сервер и подключайтесь одним нажатием."
+        : $"Добавлен {SelectedProfile.ImportedAtUtc.ToLocalTime():dd.MM.yyyy HH:mm}";
 
-    public string StatusTitle => ConnectionState.Status switch
-    {
-        RuntimeConnectionStatus.Connected => "Подключено",
-        RuntimeConnectionStatus.Connecting => "Подключение",
-        RuntimeConnectionStatus.Disconnecting => "Отключение",
-        RuntimeConnectionStatus.Degraded => "Подключено с предупреждениями",
-        RuntimeConnectionStatus.Failed => "Ошибка подключения",
-        RuntimeConnectionStatus.Unsupported => "Режим недоступен",
-        _ => "Отключено"
-    };
+    public string EndpointText => SelectedProfile?.Endpoint ?? ConnectionState.Endpoint ?? "Не указан";
 
-    public string StatusDescription
-    {
-        get
-        {
-            if (ConnectionState.LastError is not null)
-            {
-                return ConnectionState.LastError;
-            }
+    public string EndpointHostText => ExtractHost(EndpointText) ?? "Сервер не выбран";
 
-            if (SelectedProfile is null)
-            {
-                return "Выберите профиль или импортируйте новый конфиг.";
-            }
+    public string AddressText => SelectedProfile?.Address ?? ConnectionState.Address ?? "Не указан";
 
-            return ConnectionState.Status switch
-            {
-                RuntimeConnectionStatus.Connected => "Туннель поднят. Можно работать через выбранный профиль.",
-                RuntimeConnectionStatus.Connecting => "Клиент применяет runtime-путь Amnezia и ждёт handshake/трафик.",
-                RuntimeConnectionStatus.Degraded => "Туннель активирован, но клиент видит warnings. Проверьте DNS, handshake и backend runtime.",
-                RuntimeConnectionStatus.Failed => "Подключение не завершилось. Смотрите diagnostics и import validation.",
-                RuntimeConnectionStatus.Unsupported => "На этой машине нет нужного runtime backend для подключения.",
-                _ => "Профиль импортирован и готов к подключению."
-            };
-        }
-    }
+    public string DnsText => FormatList(SelectedProfile?.DnsServers ?? ConnectionState.DnsServers, "Авто");
 
-    public string EndpointText => SelectedProfile?.Endpoint ?? "Не найден";
+    public string AllowedIpsText => FormatList(SelectedProfile?.AllowedIps ?? ConnectionState.AllowedIps, "Авто");
 
-    public string AddressText => SelectedProfile?.Address ?? "Не найден";
-
-    public string DnsText => SelectedProfile is null || SelectedProfile.DnsServers.Count == 0
-        ? "Не задан"
-        : string.Join(", ", SelectedProfile.DnsServers);
-
-    public string AllowedIpsText => SelectedProfile is null || SelectedProfile.AllowedIps.Count == 0
-        ? "Не заданы"
-        : string.Join(", ", SelectedProfile.AllowedIps);
-
-    public string MtuText => SelectedProfile?.Mtu ?? "По умолчанию";
+    public string MtuText => SelectedProfile?.Mtu ?? ConnectionState.Mtu?.ToString() ?? "Авто";
 
     public string HandshakeText => ConnectionState.LatestHandshakeAtUtc is null
-        ? "Handshake ещё не зафиксирован"
-        : ConnectionState.LatestHandshakeAtUtc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss");
+        ? "Пока нет"
+        : $"{FormatRelative(ConnectionState.LatestHandshakeAtUtc.Value)} · {ConnectionState.LatestHandshakeAtUtc.Value.ToLocalTime():dd.MM.yyyy HH:mm:ss}";
 
-    public string DownloadText => FormatBytes(ConnectionState.ReceivedBytes);
+    public string LastSeenText => ConnectionState.UpdatedAtUtc == default
+        ? "Пока нет данных"
+        : FormatRelative(ConnectionState.UpdatedAtUtc);
 
-    public string UploadText => FormatBytes(ConnectionState.SentBytes);
+    public string DownloadRateText => FormatSpeed(_downloadRateBytesPerSecond);
 
-    public string ImportErrorSummary => HasImportErrors
-        ? $"{ImportValidationErrors.Count} ошибок импорта сохранено локально"
-        : "Ошибок импорта нет";
+    public string UploadRateText => FormatSpeed(_uploadRateBytesPerSecond);
 
-    public IReadOnlyList<string> WarningItems => ConnectionState.Warnings;
+    public string DownloadTotalText => FormatBytes(ConnectionState.ReceivedBytes);
+
+    public string UploadTotalText => FormatBytes(ConnectionState.SentBytes);
+
+    public double DownloadActivityValue => NormalizeRate(_downloadRateBytesPerSecond);
+
+    public double UploadActivityValue => NormalizeRate(_uploadRateBytesPerSecond);
+
+    public string SessionDurationText => _sessionStartedAtUtc is null
+        ? "00:00:00"
+        : FormatDuration(DateTimeOffset.UtcNow - _sessionStartedAtUtc.Value);
+
+    public string SessionCaptionText => ConnectionState.Status switch
+    {
+        RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded => "Сеанс активен",
+        RuntimeConnectionStatus.Connecting => "Запускаем туннель",
+        RuntimeConnectionStatus.Disconnecting => "Завершаем сеанс",
+        _ => "Готово к запуску"
+    };
+
+    public string LastActionTitle => IsBusy ? "Выполняем действие" : "Последнее действие";
+
+    public string WarningSummaryText => ConnectionState.LastError
+        ?? ConnectionState.Warnings.FirstOrDefault()
+        ?? string.Empty;
 
     partial void OnSelectedProfileChanged(ImportedServerProfile? value)
     {
@@ -325,20 +369,30 @@ public partial class MainWindowViewModel : ObservableObject
 
         _initialized = true;
         UpdateState = _appUpdateService.CurrentState;
+
         var snapshot = await _listProfilesUseCase.ExecuteAsync();
         ApplySnapshot(snapshot, snapshot.ActiveProfileId);
 
-        var restoredState = await _runtimeAdapter.TryRestoreAsync(snapshot.Profiles);
-        if (restoredState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Connecting or RuntimeConnectionStatus.Degraded)
+        try
         {
-            var restoreTarget = restoredState.ProfileName
-                                ?? restoredState.Endpoint
-                                ?? "existing tunnel";
-            _diagnosticsService.RecordConnectionLog(
-                $"Restored runtime state for '{restoreTarget}'.",
-                DiagnosticsLogLevel.Information,
-                "runtime",
-                restoredState.AdapterName);
+            var restoredState = await _runtimeAdapter.TryRestoreAsync(snapshot.Profiles);
+            if (restoredState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Connecting or RuntimeConnectionStatus.Degraded)
+            {
+                var restoreTarget = restoredState.ProfileName
+                                    ?? restoredState.Endpoint
+                                    ?? "existing tunnel";
+
+                _diagnosticsService.RecordConnectionLog(
+                    $"Восстановлено активное подключение для '{restoreTarget}'.",
+                    DiagnosticsLogLevel.Information,
+                    "runtime",
+                    restoredState.AdapterName);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Runtime restore failed during startup.");
+            LastOperationMessage = "Приложение запущено. Не удалось восстановить прошлое подключение автоматически.";
         }
 
         await RefreshDiagnosticsAsync();
@@ -355,17 +409,29 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             IsBusy = true;
+            NotifyViewStateChanged();
+
             var result = await _importProfileUseCase.ExecuteAsync(path);
-            _diagnosticsService.RecordConnectionLog($"Импортирован профиль '{result.Profile.DisplayName}'.", DiagnosticsLogLevel.Information, "import", "UI");
-            LastOperationMessage = $"Профиль '{result.Profile.DisplayName}' добавлен.";
+            _diagnosticsService.RecordConnectionLog(
+                $"Добавлен профиль '{result.Profile.DisplayName}'.",
+                DiagnosticsLogLevel.Information,
+                "import",
+                "UI");
+
+            LastOperationMessage = $"Профиль '{result.Profile.DisplayName}' готов к подключению.";
             ApplySnapshot(result.Snapshot, result.Profile.Id);
             await RefreshDiagnosticsAsync();
         }
         catch (Exception exception)
         {
             _diagnosticsService.RecordImportValidationError(exception, path);
-            _diagnosticsService.RecordConnectionLog($"Ошибка импорта: {exception.Message}", DiagnosticsLogLevel.Error, "import", "UI");
-            LastOperationMessage = $"Ошибка импорта: {exception.Message}";
+            _diagnosticsService.RecordConnectionLog(
+                $"Не удалось импортировать конфиг: {exception.Message}",
+                DiagnosticsLogLevel.Error,
+                "import",
+                "UI");
+
+            LastOperationMessage = $"Импорт не выполнен: {exception.Message}";
             _logger.LogError(exception, "Failed to import config from {Path}", path);
             await RefreshDiagnosticsAsync();
         }
@@ -397,7 +463,7 @@ public partial class MainWindowViewModel : ObservableObject
                     UpdateState = await _launchPreparedAppUpdateUseCase.ExecuteAsync();
                     if (UpdateState.Status == AppUpdateStatus.Installing)
                     {
-                        LastOperationMessage = $"Запущена установка обновления {UpdateState.AvailableRelease?.Version}.";
+                        LastOperationMessage = $"Запущена установка версии {UpdateState.AvailableRelease?.Version}.";
                         ShutdownApplication();
                         return;
                     }
@@ -410,16 +476,16 @@ public partial class MainWindowViewModel : ObservableObject
 
             LastOperationMessage = UpdateState.Status switch
             {
-                AppUpdateStatus.UpToDate => $"У вас уже актуальная версия {UpdateState.CurrentVersion}.",
-                AppUpdateStatus.UpdateAvailable => $"Найдена версия {UpdateState.AvailableRelease?.Version}. Нажмите ещё раз, чтобы скачать и установить.",
-                AppUpdateStatus.ReadyToInstall => $"Обновление {UpdateState.AvailableRelease?.Version} готово к установке.",
-                AppUpdateStatus.Failed => $"Ошибка обновления: {UpdateState.LastError}",
-                _ => UpdateStatusDescription
+                AppUpdateStatus.UpToDate => $"Версия {UpdateState.CurrentVersion} уже актуальна.",
+                AppUpdateStatus.UpdateAvailable => $"Найдена версия {UpdateState.AvailableRelease?.Version}. Можно скачать и установить.",
+                AppUpdateStatus.ReadyToInstall => $"Версия {UpdateState.AvailableRelease?.Version} готова к установке.",
+                AppUpdateStatus.Failed => $"Не удалось обновить приложение: {UpdateState.LastError}",
+                _ => UpdateCardDescription
             };
         }
         catch (Exception exception)
         {
-            LastOperationMessage = $"Ошибка обновления: {exception.Message}";
+            LastOperationMessage = $"Не удалось запустить обновление: {exception.Message}";
             _logger.LogError(exception, "Update action failed.");
         }
         finally
@@ -442,41 +508,62 @@ public partial class MainWindowViewModel : ObservableObject
             IsBusy = true;
             NotifyViewStateChanged();
 
-            var shouldDisconnectCurrent = ConnectionState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded or RuntimeConnectionStatus.Connecting;
+            var shouldDisconnectCurrent = ConnectionState.Status is RuntimeConnectionStatus.Connected
+                or RuntimeConnectionStatus.Degraded
+                or RuntimeConnectionStatus.Connecting;
 
             if (shouldDisconnectCurrent && ConnectionState.ProfileId == SelectedProfile.Id)
             {
-                _diagnosticsService.RecordConnectionLog($"Отключение от '{SelectedProfile.DisplayName}'.", DiagnosticsLogLevel.Information, "connect", "UI");
+                _diagnosticsService.RecordConnectionLog(
+                    $"Отключаем '{SelectedProfile.DisplayName}'.",
+                    DiagnosticsLogLevel.Information,
+                    "connect",
+                    "UI");
+
                 await _runtimeAdapter.DisconnectAsync();
-                LastOperationMessage = $"Профиль '{SelectedProfile.DisplayName}' отключён.";
+                LastOperationMessage = $"Соединение с '{SelectedProfile.DisplayName}' завершено.";
                 await RefreshDiagnosticsAsync();
                 return;
             }
 
             if (shouldDisconnectCurrent && ConnectionState.ProfileId != SelectedProfile.Id)
             {
-                _diagnosticsService.RecordConnectionLog($"Переключение с '{ConnectionState.ProfileName}' на '{SelectedProfile.DisplayName}'.", DiagnosticsLogLevel.Information, "connect", "UI");
+                _diagnosticsService.RecordConnectionLog(
+                    $"Переключаемся с '{ConnectionState.ProfileName}' на '{SelectedProfile.DisplayName}'.",
+                    DiagnosticsLogLevel.Information,
+                    "connect",
+                    "UI");
+
                 await _runtimeAdapter.DisconnectAsync();
             }
             else
             {
-                _diagnosticsService.RecordConnectionLog($"Подключение к '{SelectedProfile.DisplayName}'.", DiagnosticsLogLevel.Information, "connect", "UI");
+                _diagnosticsService.RecordConnectionLog(
+                    $"Запускаем подключение к '{SelectedProfile.DisplayName}'.",
+                    DiagnosticsLogLevel.Information,
+                    "connect",
+                    "UI");
             }
 
             var state = await _runtimeAdapter.ConnectAsync(SelectedProfile);
             LastOperationMessage = state.Status switch
             {
-                RuntimeConnectionStatus.Failed => $"Подключение не удалось: {state.LastError}",
-                RuntimeConnectionStatus.Unsupported => state.LastError ?? "Нужный runtime backend недоступен.",
-                _ => $"Профиль '{SelectedProfile.DisplayName}' отправлен в runtime."
+                RuntimeConnectionStatus.Failed => $"Не удалось подключиться: {state.LastError}",
+                RuntimeConnectionStatus.Unsupported => state.LastError ?? "На этой системе недоступен системный модуль подключения.",
+                _ => $"Профиль '{SelectedProfile.DisplayName}' передан в систему."
             };
 
             await RefreshDiagnosticsAsync();
         }
         catch (Exception exception)
         {
-            _diagnosticsService.RecordConnectionLog($"Ошибка подключения: {exception.Message}", DiagnosticsLogLevel.Error, "connect", "UI");
-            LastOperationMessage = $"Ошибка подключения: {exception.Message}";
+            _diagnosticsService.RecordConnectionLog(
+                $"Ошибка подключения: {exception.Message}",
+                DiagnosticsLogLevel.Error,
+                "connect",
+                "UI");
+
+            LastOperationMessage = $"Подключение не выполнено: {exception.Message}";
             _logger.LogError(exception, "Connection toggle failed for {Profile}", SelectedProfile.DisplayName);
             await RefreshDiagnosticsAsync();
         }
@@ -504,15 +591,28 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            var snapshot = await _renameProfileUseCase.ExecuteAsync(SelectedProfile.Id, RenameDraft.Trim());
-            _diagnosticsService.RecordConnectionLog($"Профиль переименован в '{RenameDraft.Trim()}'.", DiagnosticsLogLevel.Information, "profile", "UI");
-            LastOperationMessage = "Имя профиля обновлено.";
+            NotifyViewStateChanged();
+
+            var newName = RenameDraft.Trim();
+            var snapshot = await _renameProfileUseCase.ExecuteAsync(SelectedProfile.Id, newName);
+            _diagnosticsService.RecordConnectionLog(
+                $"Профиль переименован в '{newName}'.",
+                DiagnosticsLogLevel.Information,
+                "profile",
+                "UI");
+
+            LastOperationMessage = "Название профиля обновлено.";
             ApplySnapshot(snapshot, SelectedProfile.Id);
         }
         catch (Exception exception)
         {
-            _diagnosticsService.RecordConnectionLog($"Ошибка переименования: {exception.Message}", DiagnosticsLogLevel.Error, "profile", "UI");
-            LastOperationMessage = $"Ошибка переименования: {exception.Message}";
+            _diagnosticsService.RecordConnectionLog(
+                $"Ошибка переименования: {exception.Message}",
+                DiagnosticsLogLevel.Error,
+                "profile",
+                "UI");
+
+            LastOperationMessage = $"Не удалось изменить название: {exception.Message}";
         }
         finally
         {
@@ -532,6 +632,7 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             IsBusy = true;
+            NotifyViewStateChanged();
 
             if (ConnectionState.ProfileId == SelectedProfile.Id
                 && ConnectionState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded or RuntimeConnectionStatus.Connecting)
@@ -542,15 +643,26 @@ public partial class MainWindowViewModel : ObservableObject
             var deletedProfileId = SelectedProfile.Id;
             var deletedProfileName = SelectedProfile.DisplayName;
             var snapshot = await _deleteProfileUseCase.ExecuteAsync(deletedProfileId);
-            _diagnosticsService.RecordConnectionLog($"Профиль '{deletedProfileName}' удалён.", DiagnosticsLogLevel.Warning, "profile", "UI");
-            LastOperationMessage = $"Профиль '{deletedProfileName}' удалён.";
+
+            _diagnosticsService.RecordConnectionLog(
+                $"Профиль '{deletedProfileName}' удален.",
+                DiagnosticsLogLevel.Warning,
+                "profile",
+                "UI");
+
+            LastOperationMessage = $"Профиль '{deletedProfileName}' удален.";
             ApplySnapshot(snapshot, snapshot.ActiveProfileId);
             await RefreshDiagnosticsAsync();
         }
         catch (Exception exception)
         {
-            _diagnosticsService.RecordConnectionLog($"Ошибка удаления профиля: {exception.Message}", DiagnosticsLogLevel.Error, "profile", "UI");
-            LastOperationMessage = $"Ошибка удаления: {exception.Message}";
+            _diagnosticsService.RecordConnectionLog(
+                $"Ошибка удаления профиля: {exception.Message}",
+                DiagnosticsLogLevel.Error,
+                "profile",
+                "UI");
+
+            LastOperationMessage = $"Не удалось удалить профиль: {exception.Message}";
         }
         finally
         {
@@ -569,8 +681,13 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            _diagnosticsService.RecordConnectionLog($"Ошибка выбора профиля: {exception.Message}", DiagnosticsLogLevel.Error, "profile", "UI");
-            LastOperationMessage = $"Ошибка выбора профиля: {exception.Message}";
+            _diagnosticsService.RecordConnectionLog(
+                $"Ошибка выбора профиля: {exception.Message}",
+                DiagnosticsLogLevel.Error,
+                "profile",
+                "UI");
+
+            LastOperationMessage = $"Не удалось выбрать профиль: {exception.Message}";
         }
     }
 
@@ -589,8 +706,7 @@ public partial class MainWindowViewModel : ObservableObject
 
             ConnectionState = snapshot.ConnectionState;
             UpdateState = _appUpdateService.CurrentState;
-            ReplaceCollection(ConnectionLogs, snapshot.ConnectionLogs.OrderByDescending(entry => entry.TimestampUtc));
-            ReplaceCollection(ImportValidationErrors, snapshot.ImportValidationErrors.OrderByDescending(entry => entry.TimestampUtc));
+            UpdateTrafficIndicators(previousState, snapshot.ConnectionState);
 
             if (snapshot.CurrentProfile is not null && SelectedProfile?.Id != snapshot.CurrentProfile.Id)
             {
@@ -625,12 +741,64 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    private void UpdateTrafficIndicators(ConnectionState previousState, ConnectionState nextState)
+    {
+        var now = nextState.UpdatedAtUtc == default
+            ? DateTimeOffset.UtcNow
+            : nextState.UpdatedAtUtc;
+
+        var tunnelLive = nextState.Status is RuntimeConnectionStatus.Connected
+            or RuntimeConnectionStatus.Degraded
+            or RuntimeConnectionStatus.Connecting
+            or RuntimeConnectionStatus.Disconnecting;
+
+        var profileChanged = previousState.ProfileId != nextState.ProfileId;
+
+        if (!tunnelLive)
+        {
+            _downloadRateBytesPerSecond = 0;
+            _uploadRateBytesPerSecond = 0;
+            _lastTrafficSampleUtc = null;
+            _lastReceivedBytes = nextState.ReceivedBytes;
+            _lastSentBytes = nextState.SentBytes;
+            _sessionStartedAtUtc = null;
+            return;
+        }
+
+        if (_sessionStartedAtUtc is null
+            || profileChanged
+            || previousState.Status is RuntimeConnectionStatus.Disconnected or RuntimeConnectionStatus.Failed or RuntimeConnectionStatus.Unsupported)
+        {
+            _sessionStartedAtUtc = nextState.LatestHandshakeAtUtc ?? now;
+        }
+
+        if (_lastTrafficSampleUtc is null
+            || profileChanged
+            || nextState.ReceivedBytes < _lastReceivedBytes
+            || nextState.SentBytes < _lastSentBytes)
+        {
+            _downloadRateBytesPerSecond = 0;
+            _uploadRateBytesPerSecond = 0;
+            _lastTrafficSampleUtc = now;
+            _lastReceivedBytes = nextState.ReceivedBytes;
+            _lastSentBytes = nextState.SentBytes;
+            return;
+        }
+
+        var seconds = Math.Max(0.25, (now - _lastTrafficSampleUtc.Value).TotalSeconds);
+        _downloadRateBytesPerSecond = Math.Max(0, (nextState.ReceivedBytes - _lastReceivedBytes) / seconds);
+        _uploadRateBytesPerSecond = Math.Max(0, (nextState.SentBytes - _lastSentBytes) / seconds);
+        _lastTrafficSampleUtc = now;
+        _lastReceivedBytes = nextState.ReceivedBytes;
+        _lastSentBytes = nextState.SentBytes;
+    }
+
     private void LogRuntimeTransition(ConnectionState previous, ConnectionState next)
     {
         if (previous.Status != next.Status)
         {
             _diagnosticsService.RecordConnectionLog(
-                $"Статус туннеля: {previous.Status} -> {next.Status}.",
+                $"Состояние туннеля изменилось: {previous.Status} -> {next.Status}.",
                 next.Status is RuntimeConnectionStatus.Failed or RuntimeConnectionStatus.Unsupported
                     ? DiagnosticsLogLevel.Error
                     : DiagnosticsLogLevel.Information,
@@ -641,7 +809,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (previous.LatestHandshakeAtUtc is null && next.LatestHandshakeAtUtc is not null)
         {
             _diagnosticsService.RecordConnectionLog(
-                $"Получен handshake для '{next.ProfileName}'.",
+                $"Получен первый handshake для '{next.ProfileName ?? "profile"}'.",
                 DiagnosticsLogLevel.Information,
                 "runtime",
                 next.AdapterName);
@@ -677,29 +845,42 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasNoProfiles));
         OnPropertyChanged(nameof(HasSelectedProfile));
         OnPropertyChanged(nameof(UpdatesEnabled));
+        OnPropertyChanged(nameof(ShowUpdateCard));
+        OnPropertyChanged(nameof(ShowWarningCard));
         OnPropertyChanged(nameof(CanRunUpdateAction));
         OnPropertyChanged(nameof(CurrentVersionText));
-        OnPropertyChanged(nameof(UpdateStatusTitle));
-        OnPropertyChanged(nameof(UpdateStatusDescription));
+        OnPropertyChanged(nameof(UpdateCardTitle));
+        OnPropertyChanged(nameof(UpdateCardDescription));
         OnPropertyChanged(nameof(UpdateActionText));
+        OnPropertyChanged(nameof(EmptyStateTitle));
+        OnPropertyChanged(nameof(EmptyStateText));
+        OnPropertyChanged(nameof(ConnectionBadgeText));
+        OnPropertyChanged(nameof(StatusTitle));
+        OnPropertyChanged(nameof(StatusDescription));
         OnPropertyChanged(nameof(PrimaryActionText));
         OnPropertyChanged(nameof(CanToggleConnection));
         OnPropertyChanged(nameof(CanRenameSelectedProfile));
         OnPropertyChanged(nameof(CanDeleteSelectedProfile));
-        OnPropertyChanged(nameof(CurrentRuntimeLabel));
-        OnPropertyChanged(nameof(CurrentFormatLabel));
-        OnPropertyChanged(nameof(StatusTitle));
-        OnPropertyChanged(nameof(StatusDescription));
+        OnPropertyChanged(nameof(SidebarSummaryText));
+        OnPropertyChanged(nameof(SelectedProfileCaption));
         OnPropertyChanged(nameof(EndpointText));
+        OnPropertyChanged(nameof(EndpointHostText));
         OnPropertyChanged(nameof(AddressText));
         OnPropertyChanged(nameof(DnsText));
         OnPropertyChanged(nameof(AllowedIpsText));
         OnPropertyChanged(nameof(MtuText));
         OnPropertyChanged(nameof(HandshakeText));
-        OnPropertyChanged(nameof(DownloadText));
-        OnPropertyChanged(nameof(UploadText));
-        OnPropertyChanged(nameof(ImportErrorSummary));
-        OnPropertyChanged(nameof(WarningItems));
+        OnPropertyChanged(nameof(LastSeenText));
+        OnPropertyChanged(nameof(DownloadRateText));
+        OnPropertyChanged(nameof(UploadRateText));
+        OnPropertyChanged(nameof(DownloadTotalText));
+        OnPropertyChanged(nameof(UploadTotalText));
+        OnPropertyChanged(nameof(DownloadActivityValue));
+        OnPropertyChanged(nameof(UploadActivityValue));
+        OnPropertyChanged(nameof(SessionDurationText));
+        OnPropertyChanged(nameof(SessionCaptionText));
+        OnPropertyChanged(nameof(LastActionTitle));
+        OnPropertyChanged(nameof(WarningSummaryText));
         RunUpdateActionCommand.NotifyCanExecuteChanged();
         ToggleConnectionCommand.NotifyCanExecuteChanged();
         RenameSelectedProfileCommand.NotifyCanExecuteChanged();
@@ -716,6 +897,11 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    private static string FormatList(IReadOnlyList<string> items, string fallback)
+    {
+        return items.Count == 0 ? fallback : string.Join(", ", items);
+    }
+
     private static string FormatBytes(long bytes)
     {
         string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
@@ -729,6 +915,113 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         return $"{value:0.##} {suffixes[suffixIndex]}";
+    }
+
+    private static string FormatSpeed(double bytesPerSecond)
+    {
+        if (bytesPerSecond <= 0)
+        {
+            return "0 KB/s";
+        }
+
+        string[] suffixes = ["B/s", "KB/s", "MB/s", "GB/s"];
+        var value = bytesPerSecond;
+        var suffixIndex = 0;
+
+        while (value >= 1024 && suffixIndex < suffixes.Length - 1)
+        {
+            value /= 1024;
+            suffixIndex++;
+        }
+
+        return $"{value:0.##} {suffixes[suffixIndex]}";
+    }
+
+    private static double NormalizeRate(double bytesPerSecond)
+    {
+        if (bytesPerSecond <= 0)
+        {
+            return 0;
+        }
+
+        var megabytesPerSecond = bytesPerSecond / (1024d * 1024d);
+        return Math.Clamp(megabytesPerSecond / 12d * 100d, 0d, 100d);
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration < TimeSpan.Zero)
+        {
+            duration = TimeSpan.Zero;
+        }
+
+        return $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+    }
+
+    private static string FormatRelative(DateTimeOffset timestampUtc)
+    {
+        var delta = DateTimeOffset.UtcNow - timestampUtc;
+        if (delta < TimeSpan.Zero)
+        {
+            delta = TimeSpan.Zero;
+        }
+
+        if (delta.TotalSeconds < 10)
+        {
+            return "Только что";
+        }
+
+        if (delta.TotalMinutes < 1)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(delta.TotalSeconds))} сек назад";
+        }
+
+        if (delta.TotalHours < 1)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(delta.TotalMinutes))} мин назад";
+        }
+
+        if (delta.TotalDays < 1)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(delta.TotalHours))} ч назад";
+        }
+
+        return $"{Math.Max(1, (int)Math.Floor(delta.TotalDays))} дн назад";
+    }
+
+    private static string? ExtractHost(string? endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return null;
+        }
+
+        if (endpoint.StartsWith('['))
+        {
+            var bracketIndex = endpoint.IndexOf(']');
+            return bracketIndex > 1 ? endpoint[1..bracketIndex] : endpoint;
+        }
+
+        var separatorIndex = endpoint.LastIndexOf(':');
+        return separatorIndex > 0 ? endpoint[..separatorIndex] : endpoint;
+    }
+
+    private static string PluralizeProfiles(int count)
+    {
+        var mod10 = count % 10;
+        var mod100 = count % 100;
+
+        if (mod10 == 1 && mod100 != 11)
+        {
+            return "профиль";
+        }
+
+        if (mod10 is >= 2 and <= 4 && (mod100 < 12 || mod100 > 14))
+        {
+            return "профиля";
+        }
+
+        return "профилей";
     }
 
     private static void ShutdownApplication()
