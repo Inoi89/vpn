@@ -80,6 +80,55 @@ public sealed class BundledAmneziaRuntimeAdapterTests
         Assert.Equal(0, store.PrepareCount);
     }
 
+    [Fact]
+    public async Task ConnectAsync_AttachesToExistingTunnel_WhenInstallReportsAlreadyRunning()
+    {
+        var executor = new RecordingRuntimeCommandExecutor(
+            new RuntimeCommandResult(1, string.Empty, "Tunnel already installed and running"),
+            new RuntimeCommandResult(
+                0,
+                """
+                yvc_test	private	443	off	0	0	0	off
+                server-pub	hidden	5.19.3.217:8271	10.8.1.2/32	1773782560	2404	8948	off
+                """,
+                string.Empty));
+
+        var store = new RecordingAmneziaRuntimeConfigStore();
+        var adapter = CreateAdapter(executor, store, new FakeWindowsRuntimeAssetLocator());
+
+        var state = await adapter.ConnectAsync(BuildProfile());
+
+        Assert.Equal(RuntimeConnectionStatus.Connected, state.Status);
+        Assert.True(state.TunnelActive);
+        Assert.Contains(state.Warnings, warning => warning.Contains("already installed", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(1, store.PrepareCount);
+    }
+
+    [Fact]
+    public async Task TryRestoreAsync_RehydratesExistingTunnelState_FromPreparedProfile()
+    {
+        var executor = new RecordingRuntimeCommandExecutor(
+            new RuntimeCommandResult(
+                0,
+                """
+                yvc_test	private	443	off	0	0	0	off
+                server-pub	hidden	5.19.3.217:8271	10.8.1.2/32	1773782560	2404	8948	off
+                """,
+                string.Empty));
+
+        var store = new RecordingAmneziaRuntimeConfigStore();
+        var adapter = CreateAdapter(executor, store, new FakeWindowsRuntimeAssetLocator());
+
+        var state = await adapter.TryRestoreAsync([BuildProfile()]);
+
+        Assert.Equal(RuntimeConnectionStatus.Connected, state.Status);
+        Assert.Equal("Test bundled", state.ProfileName);
+        Assert.Contains(state.Warnings, warning => warning.Contains("Restored an existing bundled AmneziaWG tunnel state", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(executor.Calls, call =>
+            call.FileName.Equals(@"C:\bundle\runtime\wireguard\awg.exe", StringComparison.OrdinalIgnoreCase)
+            && call.Arguments.SequenceEqual(["show", "yvc_test", "dump"]));
+    }
+
     private static BundledAmneziaRuntimeAdapter CreateAdapter(
         RecordingRuntimeCommandExecutor executor,
         RecordingAmneziaRuntimeConfigStore store,

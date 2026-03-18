@@ -81,7 +81,8 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
                 ["/installtunnelservice", preparedProfile.ConfigPath],
                 cancellationToken);
 
-            if (installResult.ExitCode != 0)
+            var attachedToExistingTunnel = LooksLikeAlreadyInstalledTunnel(installResult);
+            if (installResult.ExitCode != 0 && !attachedToExistingTunnel)
             {
                 return UpdateState(BuildFailureState(
                     profile,
@@ -91,10 +92,16 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
 
             _activeProfile = profile;
             _activePreparedProfile = preparedProfile;
+            var effectiveWarnings = attachedToExistingTunnel
+                ? warnings.Concat(new[]
+                {
+                    "The tunnel service was already installed. The client attached to the existing AmneziaWG runtime instance."
+                }).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                : warnings;
 
             for (var attempt = 0; attempt < 10; attempt++)
             {
-                var state = await GetStatusInternalAsync(profile, preparedProfile, warnings, cancellationToken);
+                var state = await GetStatusInternalAsync(profile, preparedProfile, effectiveWarnings, cancellationToken);
                 if (state.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded
                     || state.AdapterPresent)
                 {
@@ -104,7 +111,7 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
                 await Task.Delay(TimeSpan.FromMilliseconds(350), cancellationToken);
             }
 
-            return UpdateState(await GetStatusInternalAsync(profile, preparedProfile, warnings, cancellationToken));
+            return UpdateState(await GetStatusInternalAsync(profile, preparedProfile, effectiveWarnings, cancellationToken));
         }
         catch (Exception exception)
         {
@@ -180,6 +187,52 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
 
         var warnings = BuildWarnings(_activeProfile).ToArray();
         return UpdateState(await GetStatusInternalAsync(_activeProfile, _activePreparedProfile, warnings, cancellationToken));
+    }
+
+    public async Task<ConnectionState> TryRestoreAsync(IReadOnlyList<ImportedServerProfile> profiles, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profiles);
+
+        if (!_environment.IsWindows)
+        {
+            return UpdateState(ConnectionState.Unsupported(AdapterName, "Bundled AmneziaWG runtime is supported only on Windows."));
+        }
+
+        var runtimeAvailabilityError = GetRuntimeAvailabilityError();
+        if (runtimeAvailabilityError is not null)
+        {
+            return UpdateState(ConnectionState.Unsupported(AdapterName, runtimeAvailabilityError));
+        }
+
+        if (_activeProfile is not null && _activePreparedProfile is not null)
+        {
+            return await GetStatusAsync(cancellationToken);
+        }
+
+        foreach (var profile in profiles)
+        {
+            var preparedProfile = _configStore.Describe(profile);
+            var warnings = BuildWarnings(profile).ToArray();
+            var state = await GetStatusInternalAsync(profile, preparedProfile, warnings, cancellationToken);
+            if (!LooksLikeRestorableTunnel(state))
+            {
+                continue;
+            }
+
+            _activeProfile = profile;
+            _activePreparedProfile = preparedProfile;
+
+            return UpdateState(state with
+            {
+                Warnings = state.Warnings.Concat(new[]
+                {
+                    "Restored an existing bundled AmneziaWG tunnel state from the local tunnel service."
+                }).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+        }
+
+        return UpdateState(ConnectionState.Disconnected(AdapterName));
     }
 
     private async Task<ConnectionState> GetStatusInternalAsync(
@@ -387,6 +440,25 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
         var text = $"{result.StandardOutput}\n{result.StandardError}";
         return text.Contains("1060", StringComparison.OrdinalIgnoreCase)
                || text.Contains("does not exist", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeAlreadyInstalledTunnel(RuntimeCommandResult result)
+    {
+        var text = $"{result.StandardOutput}\n{result.StandardError}";
+        return text.Contains("already installed and running", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("tunnel already installed", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("already installed", StringComparison.OrdinalIgnoreCase)
+               || text.Contains("already exists", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeRestorableTunnel(ConnectionState state)
+    {
+        return state.AdapterPresent
+               || state.TunnelActive
+               || state.LatestHandshakeAtUtc is not null
+               || state.ReceivedBytes > 0
+               || state.SentBytes > 0
+               || state.Status == RuntimeConnectionStatus.Connecting;
     }
 
     private ConnectionState UpdateState(ConnectionState state)

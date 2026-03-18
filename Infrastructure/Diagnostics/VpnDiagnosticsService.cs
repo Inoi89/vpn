@@ -73,8 +73,11 @@ public sealed class VpnDiagnosticsService : IVpnDiagnosticsService
         var now = DateTimeOffset.UtcNow;
         var state = await _runtimeAdapter.GetStatusAsync(cancellationToken);
         var profiles = await _profileRepository.LoadAsync(cancellationToken);
-        var currentProfile = profiles.Profiles.FirstOrDefault(profile =>
-            profile.Id == state.ProfileId || profile.Id == profiles.ActiveProfileId);
+        var currentProfile = state.ProfileId is Guid profileId
+            ? profiles.Profiles.FirstOrDefault(profile => profile.Id == profileId)
+            : state.Status == RuntimeConnectionStatus.Disconnected
+                ? profiles.Profiles.FirstOrDefault(profile => profile.Id == profiles.ActiveProfileId)
+                : null;
 
         List<ImportValidationError> importErrors;
         List<ConnectionLogEntry> connectionLogs;

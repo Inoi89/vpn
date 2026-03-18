@@ -3,6 +3,7 @@ using System.Globalization;
 namespace VpnClient.Infrastructure.Runtime;
 
 public sealed record RuntimeWireGuardDump(
+    string? PeerPublicKey,
     string? Endpoint,
     DateTimeOffset? LatestHandshakeAtUtc,
     long ReceivedBytes,
@@ -15,7 +16,7 @@ public sealed record RuntimeWireGuardDump(
         var warnings = new List<string>();
         if (string.IsNullOrWhiteSpace(dump))
         {
-            return new RuntimeWireGuardDump(null, null, 0, 0, false, ["No runtime data was returned by the AWG/WireGuard CLI."]);
+            return new RuntimeWireGuardDump(null, null, null, 0, 0, false, ["No runtime data was returned by the AWG/WireGuard CLI."]);
         }
 
         var peerRows = dump.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
@@ -25,10 +26,11 @@ public sealed record RuntimeWireGuardDump(
 
         if (peerRows.Length < 2)
         {
-            return new RuntimeWireGuardDump(null, null, 0, 0, false, ["No peer rows were returned by the AWG/WireGuard CLI."]);
+            return new RuntimeWireGuardDump(null, null, null, 0, 0, false, ["No peer rows were returned by the AWG/WireGuard CLI."]);
         }
 
         var peer = peerRows[1];
+        var peerPublicKey = peer[0];
         var endpoint = peer[2];
         var handshake = ParseHandshake(peer[4]);
         var receivedBytes = ParseLong(peer[5]);
@@ -40,7 +42,7 @@ public sealed record RuntimeWireGuardDump(
             warnings.Add($"Adapter '{adapterName}' returned a peer row without endpoint information.");
         }
 
-        return new RuntimeWireGuardDump(endpoint, handshake, receivedBytes, sentBytes, active, warnings);
+        return new RuntimeWireGuardDump(peerPublicKey, endpoint, handshake, receivedBytes, sentBytes, active, warnings);
     }
 
     private static DateTimeOffset? ParseHandshake(string raw)

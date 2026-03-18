@@ -216,6 +216,74 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
         });
     }
 
+    public async Task<ConnectionState> TryRestoreAsync(IReadOnlyList<ImportedServerProfile> profiles, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profiles);
+
+        if (!_environment.IsWindows)
+        {
+            return UpdateState(ConnectionState.Unsupported(AdapterName, "Windows fallback runtime is supported only on Windows."));
+        }
+
+        if (_currentState.Status != RuntimeConnectionStatus.Disconnected)
+        {
+            return await GetStatusAsync(cancellationToken);
+        }
+
+        var probe = await _commandExecutor.ExecuteAsync(_wgExecutablePath, ["show", AdapterName, "dump"], cancellationToken);
+        if (probe.ExitCode != 0)
+        {
+            return UpdateState(ConnectionState.Disconnected(AdapterName));
+        }
+
+        var runtime = RuntimeWireGuardDump.Parse(probe.StandardOutput, AdapterName);
+        var matchedProfile = TryMatchProfile(runtime, profiles);
+        if (matchedProfile is null)
+        {
+            return UpdateState(new ConnectionState
+            {
+                Status = runtime.IsTunnelActive
+                    ? RuntimeConnectionStatus.Connected
+                    : RuntimeConnectionStatus.Degraded,
+                AdapterName = AdapterName,
+                Endpoint = runtime.Endpoint,
+                UpdatedAtUtc = DateTimeOffset.UtcNow,
+                LatestHandshakeAtUtc = runtime.LatestHandshakeAtUtc,
+                ReceivedBytes = runtime.ReceivedBytes,
+                SentBytes = runtime.SentBytes,
+                AdapterPresent = true,
+                TunnelActive = runtime.IsTunnelActive,
+                IsWindowsFirst = true,
+                UsesSetConf = false,
+                Warnings = runtime.Warnings.Concat(new[]
+                {
+                    "A fallback WireGuard tunnel is active, but it could not be mapped to a local imported profile."
+                }).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+            });
+        }
+
+        var runtimeProfile = RuntimeWireGuardProfile.FromProfile(matchedProfile, _assetLocator.GetWarnings());
+        return UpdateState(BuildState(
+            runtime.IsTunnelActive
+                ? RuntimeConnectionStatus.Connected
+                : RuntimeConnectionStatus.Degraded,
+            runtimeProfile,
+            runtimeProfile.Warnings.Concat(runtime.Warnings).Concat(new[]
+            {
+                "Restored an existing fallback tunnel state from the local adapter."
+            }).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            adapterPresent: true,
+            tunnelActive: runtime.IsTunnelActive,
+            lastError: null) with
+        {
+            Endpoint = runtime.Endpoint ?? runtimeProfile.Endpoint,
+            LatestHandshakeAtUtc = runtime.LatestHandshakeAtUtc,
+            ReceivedBytes = runtime.ReceivedBytes,
+            SentBytes = runtime.SentBytes,
+            UpdatedAtUtc = DateTimeOffset.UtcNow
+        });
+    }
+
     private async Task ConfigurePeerAsync(
         RuntimeWireGuardProfile profile,
         string privateKeyPath,
@@ -481,6 +549,32 @@ public sealed class WindowsFirstVpnRuntimeAdapter : IVpnRuntimeAdapter
         }
 
         return string.Join('.', bytes);
+    }
+
+    private static ImportedServerProfile? TryMatchProfile(RuntimeWireGuardDump runtime, IReadOnlyList<ImportedServerProfile> profiles)
+    {
+        var publicKeyMatches = profiles
+            .Where(profile => string.Equals(
+                profile.TunnelConfig.PublicKey ?? TryGet(profile.TunnelConfig.PeerValues, "PublicKey"),
+                runtime.PeerPublicKey,
+                StringComparison.Ordinal))
+            .ToArray();
+
+        if (publicKeyMatches.Length == 1)
+        {
+            return publicKeyMatches[0];
+        }
+
+        var endpointMatches = profiles
+            .Where(profile => string.Equals(profile.Endpoint, runtime.Endpoint, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        return endpointMatches.Length == 1 ? endpointMatches[0] : null;
+    }
+
+    private static string? TryGet(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) ? value : null;
     }
 
     private void TryDeleteFile(string path)

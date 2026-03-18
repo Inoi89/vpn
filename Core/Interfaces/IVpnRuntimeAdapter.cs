@@ -13,4 +13,9 @@ public interface IVpnRuntimeAdapter
     Task<ConnectionState> DisconnectAsync(CancellationToken cancellationToken = default);
 
     Task<ConnectionState> GetStatusAsync(CancellationToken cancellationToken = default);
+
+    Task<ConnectionState> TryRestoreAsync(IReadOnlyList<ImportedServerProfile> profiles, CancellationToken cancellationToken = default)
+    {
+        return GetStatusAsync(cancellationToken);
+    }
 }

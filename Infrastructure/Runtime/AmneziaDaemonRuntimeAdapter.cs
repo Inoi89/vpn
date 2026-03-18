@@ -155,6 +155,86 @@ public sealed class AmneziaDaemonRuntimeAdapter : IVpnRuntimeAdapter
         }
     }
 
+    public async Task<ConnectionState> TryRestoreAsync(IReadOnlyList<ImportedServerProfile> profiles, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profiles);
+
+        if (!_environment.IsWindows)
+        {
+            return UpdateState(ConnectionState.Unsupported(AdapterName, "Amnezia daemon runtime is supported only on Windows."));
+        }
+
+        if (!await _transport.IsAvailableAsync(cancellationToken))
+        {
+            return UpdateState(ConnectionState.Unsupported(AdapterName, "Amnezia daemon is not available. Install or run the Amnezia runtime service first."));
+        }
+
+        if (_activeProfile is not null)
+        {
+            return await GetStatusAsync(cancellationToken);
+        }
+
+        try
+        {
+            using var response = await _transport.RequestAsync(new JsonObject
+            {
+                ["type"] = "status"
+            }, cancellationToken);
+
+            var root = response.RootElement.Clone();
+            var connected = root.TryGetProperty("connected", out var connectedElement)
+                            && connectedElement.ValueKind == JsonValueKind.True;
+            if (!connected)
+            {
+                return UpdateState(ConnectionState.Disconnected(AdapterName));
+            }
+
+            var matchedProfile = TryMatchProfile(root, profiles);
+            if (matchedProfile is not null)
+            {
+                _activeProfile = matchedProfile;
+                return UpdateState(ParseStatus(root) with
+                {
+                    Warnings = BuildWarnings(matchedProfile)
+                        .Concat(new[]
+                        {
+                            "Restored an existing Amnezia daemon tunnel state from the local daemon."
+                        })
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray(),
+                    UpdatedAtUtc = DateTimeOffset.UtcNow
+                });
+            }
+
+            return UpdateState(new ConnectionState
+            {
+                Status = RuntimeConnectionStatus.Connected,
+                AdapterName = AdapterName,
+                Endpoint = BuildDaemonEndpoint(root),
+                Address = TryGetString(root, "deviceIpv4Address") ?? TryGetString(root, "deviceIpv6Address"),
+                UpdatedAtUtc = DateTimeOffset.UtcNow,
+                AdapterPresent = true,
+                TunnelActive = true,
+                IsWindowsFirst = false,
+                UsesSetConf = false,
+                Warnings = new[]
+                {
+                    "An Amnezia daemon tunnel is active, but it could not be mapped to a local imported profile."
+                }
+            });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Amnezia daemon restore probe failed.");
+            return UpdateState(ConnectionState.Disconnected(AdapterName) with
+            {
+                Status = RuntimeConnectionStatus.Degraded,
+                LastError = exception.Message,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+        }
+    }
+
     private ConnectionState ParseStatus(JsonElement status)
     {
         var connected = status.TryGetProperty("connected", out var connectedElement)
@@ -381,5 +461,97 @@ public sealed class AmneziaDaemonRuntimeAdapter : IVpnRuntimeAdapter
         }
 
         return ParseEndpoint(endpoint).Port;
+    }
+
+    private static ImportedServerProfile? TryMatchProfile(JsonElement status, IReadOnlyList<ImportedServerProfile> profiles)
+    {
+        var gateway = TryGetString(status, "serverIpv4Gateway") ?? TryGetString(status, "serverIpv6Gateway");
+        int? port = status.TryGetProperty("serverPort", out var portElement) && portElement.TryGetInt32(out var parsedPort)
+            ? parsedPort
+            : null;
+        var deviceAddress = TryGetString(status, "deviceIpv4Address") ?? TryGetString(status, "deviceIpv6Address");
+
+        var endpointMatches = profiles
+            .Where(profile => MatchesEndpoint(profile.Endpoint, gateway, port))
+            .ToArray();
+
+        if (endpointMatches.Length == 1)
+        {
+            return endpointMatches[0];
+        }
+
+        if (!string.IsNullOrWhiteSpace(deviceAddress))
+        {
+            var addressMatches = profiles
+                .Where(profile => string.Equals(
+                    ExtractPrimaryAddress(profile.Address),
+                    deviceAddress,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (addressMatches.Length == 1)
+            {
+                return addressMatches[0];
+            }
+        }
+
+        return null;
+    }
+
+    private static bool MatchesEndpoint(string? profileEndpoint, string? gateway, int? port)
+    {
+        if (string.IsNullOrWhiteSpace(profileEndpoint) || string.IsNullOrWhiteSpace(gateway))
+        {
+            return false;
+        }
+
+        try
+        {
+            var parsed = ParseEndpoint(profileEndpoint);
+            if (!string.Equals(parsed.Host, gateway, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return port is null || parsed.Port == port.Value;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string? ExtractPrimaryAddress(string? address)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return null;
+        }
+
+        var first = address.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(first))
+        {
+            return null;
+        }
+
+        var slashIndex = first.IndexOf('/');
+        return slashIndex >= 0 ? first[..slashIndex] : first;
+    }
+
+    private static string? BuildDaemonEndpoint(JsonElement status)
+    {
+        var gateway = TryGetString(status, "serverIpv4Gateway") ?? TryGetString(status, "serverIpv6Gateway");
+        if (string.IsNullOrWhiteSpace(gateway))
+        {
+            return null;
+        }
+
+        if (status.TryGetProperty("serverPort", out var portElement) && portElement.TryGetInt32(out var port))
+        {
+            return $"{gateway}:{port}";
+        }
+
+        return gateway;
     }
 }

@@ -242,6 +242,20 @@ public partial class MainWindowViewModel : ObservableObject
         _initialized = true;
         var snapshot = await _listProfilesUseCase.ExecuteAsync();
         ApplySnapshot(snapshot, snapshot.ActiveProfileId);
+
+        var restoredState = await _runtimeAdapter.TryRestoreAsync(snapshot.Profiles);
+        if (restoredState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Connecting or RuntimeConnectionStatus.Degraded)
+        {
+            var restoreTarget = restoredState.ProfileName
+                                ?? restoredState.Endpoint
+                                ?? "existing tunnel";
+            _diagnosticsService.RecordConnectionLog(
+                $"Restored runtime state for '{restoreTarget}'.",
+                DiagnosticsLogLevel.Information,
+                "runtime",
+                restoredState.AdapterName);
+        }
+
         await RefreshDiagnosticsAsync();
         _refreshTimer.Start();
     }

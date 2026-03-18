@@ -72,6 +72,27 @@ public sealed class VpnDiagnosticsServiceTests
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1710000200), snapshot.TrafficStats.LastHandshakeUtc);
     }
 
+    [Fact]
+    public async Task CaptureSnapshotAsync_DoesNotAssumeActiveProfile_WhenRuntimeStateHasNoProfileId()
+    {
+        var profile = BuildProfile();
+        var service = CreateService(
+            profile,
+            new ConnectionState
+            {
+                Status = RuntimeConnectionStatus.Connected,
+                AdapterName = "BundledAmneziaWG",
+                Endpoint = "45.136.49.191:443",
+                AdapterPresent = true,
+                TunnelActive = true,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            });
+
+        var snapshot = await service.CaptureSnapshotAsync();
+
+        Assert.Null(snapshot.CurrentProfile);
+    }
+
     private static VpnDiagnosticsService CreateService(ImportedServerProfile? profile = null, ConnectionState? state = null)
     {
         return new VpnDiagnosticsService(

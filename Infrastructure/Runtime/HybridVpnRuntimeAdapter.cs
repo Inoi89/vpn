@@ -85,6 +85,40 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
         return UpdateState(state);
     }
 
+    public async Task<ConnectionState> TryRestoreAsync(IReadOnlyList<ImportedServerProfile> profiles, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profiles);
+
+        if (_activeBackend != ActiveBackend.None)
+        {
+            return await GetStatusAsync(cancellationToken);
+        }
+
+        var bundledState = await _bundledAdapter.TryRestoreAsync(profiles, cancellationToken);
+        if (IsRestoredState(bundledState))
+        {
+            _activeBackend = ActiveBackend.Bundled;
+            return UpdateState(bundledState);
+        }
+
+        var daemonState = await _daemonAdapter.TryRestoreAsync(profiles, cancellationToken);
+        if (IsRestoredState(daemonState))
+        {
+            _activeBackend = ActiveBackend.Daemon;
+            return UpdateState(daemonState);
+        }
+
+        var fallbackState = await _fallbackAdapter.TryRestoreAsync(profiles, cancellationToken);
+        if (IsRestoredState(fallbackState))
+        {
+            _activeBackend = ActiveBackend.Fallback;
+            return UpdateState(fallbackState);
+        }
+
+        _activeBackend = ActiveBackend.None;
+        return UpdateState(ConnectionState.Disconnected("VpnClient"));
+    }
+
     public async Task<ConnectionState> DisconnectAsync(CancellationToken cancellationToken = default)
     {
         return _activeBackend switch
@@ -112,6 +146,14 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
         _currentState = state;
         StateChanged?.Invoke(state);
         return state;
+    }
+
+    private static bool IsRestoredState(ConnectionState state)
+    {
+        return state.Status != RuntimeConnectionStatus.Unsupported
+               && (state.AdapterPresent
+                   || state.TunnelActive
+                   || state.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Connecting or RuntimeConnectionStatus.Degraded);
     }
 
     private enum ActiveBackend

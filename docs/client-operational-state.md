@@ -134,6 +134,7 @@ Selection rule:
 - if bundled AmneziaWG runtime exists, use it first
 - otherwise, if local Amnezia daemon is available, use it
 - otherwise fall back to the legacy explicit Windows runtime path
+- on startup, the client now tries to restore an already running local tunnel and map it back to a stored profile
 
 Why this matters:
 
@@ -182,6 +183,7 @@ What these tests prove:
 - persisted profiles keep full normalized config
 - bundled runtime installs and removes tunnel services through official `amneziawg.exe`
 - bundled runtime reads status/traffic through official `awg.exe show ... dump`
+- bundled runtime can reattach to an already running local tunnel service after app restart
 - legacy fallback runtime still applies DNS/MTU/routes explicitly
 - daemon payload carries AWG/DNS/AllowedIPs fields
 - diagnostics snapshots are wired correctly
