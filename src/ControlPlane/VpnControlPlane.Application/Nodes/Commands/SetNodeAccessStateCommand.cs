@@ -41,8 +41,15 @@ public sealed class SetNodeAccessStateCommandHandler(
 
         await nodeAgentClient.SetAccessStateAsync(node, payload, cancellationToken);
 
-        var snapshot = await nodeAgentClient.GetSnapshotAsync(node, cancellationToken);
-        await commandDispatcher.Send(new UpsertNodeSnapshotCommand(node.Id, snapshot), cancellationToken);
+        try
+        {
+            var snapshot = await nodeAgentClient.GetSnapshotAsync(node, cancellationToken);
+            await commandDispatcher.Send(new UpsertNodeSnapshotCommand(node.Id, snapshot), cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Best effort refresh only. The background poller will reconcile the node state.
+        }
 
         var users = await dashboardReadService.GetUsersAsync(cancellationToken);
         return users.FirstOrDefault(x => x.Id == command.UserId)

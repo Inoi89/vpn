@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 16" role="img" aria-labelledby="title">
+  <title>United States</title>
+  <rect width="24" height="16" fill="#ffffff" />
+  <rect y="0" width="24" height="1.2308" fill="#b22234" />
+  <rect y="2.4616" width="24" height="1.2308" fill="#b22234" />
+  <rect y="4.9232" width="24" height="1.2308" fill="#b22234" />
+  <rect y="7.3848" width="24" height="1.2308" fill="#b22234" />
+  <rect y="9.8464" width="24" height="1.2308" fill="#b22234" />
+  <rect y="12.308" width="24" height="1.2308" fill="#b22234" />
+  <rect y="14.7696" width="24" height="1.2308" fill="#b22234" />
+  <rect width="10.4" height="8.6154" fill="#3c3b6e" />
+  <g fill="#ffffff">
+    <circle cx="1.3" cy="1.2308" r="0.35" />
+    <circle cx="3.25" cy="1.2308" r="0.35" />
+    <circle cx="5.2" cy="1.2308" r="0.35" />
+    <circle cx="7.15" cy="1.2308" r="0.35" />
+    <circle cx="9.1" cy="1.2308" r="0.35" />
+    <circle cx="2.275" cy="2.4616" r="0.35" />
+    <circle cx="4.225" cy="2.4616" r="0.35" />
+    <circle cx="6.175" cy="2.4616" r="0.35" />
+    <circle cx="8.125" cy="2.4616" r="0.35" />
+    <circle cx="1.3" cy="3.6924" r="0.35" />
+    <circle cx="3.25" cy="3.6924" r="0.35" />
+    <circle cx="5.2" cy="3.6924" r="0.35" />
+    <circle cx="7.15" cy="3.6924" r="0.35" />
+    <circle cx="9.1" cy="3.6924" r="0.35" />
+    <circle cx="2.275" cy="4.9232" r="0.35" />
+    <circle cx="4.225" cy="4.9232" r="0.35" />
+    <circle cx="6.175" cy="4.9232" r="0.35" />
+    <circle cx="8.125" cy="4.9232" r="0.35" />
+    <circle cx="1.3" cy="6.154" r="0.35" />
+    <circle cx="3.25" cy="6.154" r="0.35" />
+    <circle cx="5.2" cy="6.154" r="0.35" />
+    <circle cx="7.15" cy="6.154" r="0.35" />
+    <circle cx="9.1" cy="6.154" r="0.35" />
+    <circle cx="2.275" cy="7.3848" r="0.35" />
+    <circle cx="4.225" cy="7.3848" r="0.35" />
+    <circle cx="6.175" cy="7.3848" r="0.35" />
+    <circle cx="8.125" cy="7.3848" r="0.35" />
+  </g>
+</svg>

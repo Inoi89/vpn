@@ -97,6 +97,24 @@ input {
   height: calc(100vh - var(--header-height));
   padding: 10px 0;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(149, 161, 179, 0.34) transparent;
+}
+
+.navbar-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.navbar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.navbar-content::-webkit-scrollbar-thumb {
+  background: rgba(149, 161, 179, 0.28);
+}
+
+.navbar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(149, 161, 179, 0.42);
 }
 
 .pc-sidebar-content {
@@ -467,9 +485,34 @@ input {
 }
 
 .badge-light-secondary {
-  background: rgba(108, 117, 125, 0.14);
-  color: var(--pc-muted);
-  border-color: rgba(108, 117, 125, 0.14);
+  background: rgba(149, 161, 179, 0.12);
+  color: #d7dde7;
+  border-color: rgba(149, 161, 179, 0.16);
+}
+
+.node-link-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.node-flag-badge {
+  display: inline-flex;
+  align-items: center;
+  min-width: auto;
+  min-height: auto;
+  padding: 0;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+}
+
+.node-flag-icon {
+  display: block;
+  width: 18px;
+  height: 12px;
+  object-fit: cover;
 }
 
 .btn-light-success {

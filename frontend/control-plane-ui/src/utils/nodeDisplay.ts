@@ -1,8 +1,27 @@
 import type { NodeSummary } from '../types/dashboard'
+import deFlag from '../assets/flags/de.svg'
+import nlFlag from '../assets/flags/nl.svg'
+import usFlag from '../assets/flags/us.svg'
 
 export const PRIMARY_NODE_HOST = '5.61.37.29'
 
 const genericNodeNamePattern = /^Amnezia Node \d+$/i
+
+type NodeOperatorMetadata = {
+  provider: string
+  country: string
+  flagIcon: string
+}
+
+const nodeOperatorMetadataByHost: Record<string, NodeOperatorMetadata> = {
+  '37.1.197.163': { provider: 'Inferno', country: 'Германия', flagIcon: deFlag },
+  '38.180.137.249': { provider: 'Inferno', country: 'США', flagIcon: usFlag },
+  '45.136.49.191': { provider: 'Inferno', country: 'Нидерланды', flagIcon: nlFlag },
+  '5.61.37.29': { provider: 'Inferno', country: 'Германия', flagIcon: deFlag },
+  '5.61.40.132': { provider: 'Inferno', country: 'Германия', flagIcon: deFlag },
+  '5.61.42.21': { provider: 'Inferno', country: 'Германия', flagIcon: deFlag },
+  '185.21.10.217': { provider: 'Fornex', country: 'Нидерланды', flagIcon: nlFlag },
+}
 
 export function getNodeHost(node: Pick<NodeSummary, 'agentBaseAddress'>) {
   try {
@@ -34,6 +53,10 @@ export function getNodeDisplayName(node: Pick<NodeSummary, 'name' | 'agentIdenti
   }
 
   return trimmedName || 'Нода'
+}
+
+export function getNodeOperatorMetadata(node: Pick<NodeSummary, 'agentBaseAddress'>) {
+  return nodeOperatorMetadataByHost[getNodeHost(node)] ?? null
 }
 
 export function getNodeBadgeLabel(node: Pick<NodeSummary, 'agentBaseAddress' | 'agentIdentifier'>) {

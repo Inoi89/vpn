@@ -1,6 +1,6 @@
 import type { NodeSummary, SessionSummary, UserSummary } from '../types/dashboard'
 import { formatDateTime, formatNodeStatus, formatRelativeTime } from '../utils/format'
-import { getNodeBadgeLabel, getNodeDisplayName, isPrimaryNode } from '../utils/nodeDisplay'
+import { getNodeBadgeLabel, getNodeDisplayName, getNodeOperatorMetadata, isPrimaryNode } from '../utils/nodeDisplay'
 
 type NodeInspectorProps = {
   node: NodeSummary | null
@@ -10,6 +10,7 @@ type NodeInspectorProps = {
 }
 
 export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorProps) {
+  const operatorMetadata = node ? getNodeOperatorMetadata(node) : null
   const liveUsers = new Set(sessions.map((session) => session.userId)).size
   const healthyNodes = nodes.filter((item) => item.status === 'Healthy').length
   const activeNodes = nodes.filter((item) => item.activeSessions > 0).length
@@ -37,7 +38,8 @@ export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorPro
     ? [
         { title: 'Имя', value: getNodeDisplayName(node) },
         { title: 'Статус', value: formatNodeStatus(node.status) },
-        { title: 'Кластер', value: node.cluster },
+        { title: 'Провайдер', value: operatorMetadata?.provider ?? 'н/д' },
+        { title: 'Локация', value: operatorMetadata?.country ?? 'н/д' },
         { title: 'Адрес агента', value: node.agentBaseAddress },
         { title: 'Идентификатор', value: node.agentIdentifier },
       ]
@@ -53,6 +55,11 @@ export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorPro
       <div className="card-header">
         <div className="d-flex align-items-center gap-2 flex-wrap">
           <h5 className="mb-0">{node ? `Нода ${getNodeDisplayName(node)}` : 'Состояние контура'}</h5>
+          {operatorMetadata ? (
+            <span className="badge badge-light-secondary node-flag-badge" title={operatorMetadata.country}>
+              <img src={operatorMetadata.flagIcon} alt={operatorMetadata.country} className="node-flag-icon" />
+            </span>
+          ) : null}
           {node && isPrimaryNode(node) ? <span className="badge badge-light-primary">{getNodeBadgeLabel(node)}</span> : null}
         </div>
       </div>
@@ -70,8 +77,8 @@ export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorPro
         </div>
 
         <div className="row m-t-20">
-          {details.map((detail) => (
-            <div className="col-sm-6 col-xl-3" key={detail.title}>
+        {details.map((detail) => (
+          <div className="col-sm-6 col-xl-3" key={detail.title}>
               <div className="detail-box">
                 <span>{detail.title}</span>
                 <h6>{detail.value}</h6>

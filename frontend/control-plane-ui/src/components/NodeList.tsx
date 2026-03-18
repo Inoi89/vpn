@@ -1,6 +1,6 @@
 import type { NodeSummary } from '../types/dashboard'
 import { formatNodeStatus, formatRelativeTime } from '../utils/format'
-import { getNodeBadgeLabel, getNodeDisplayName, isPrimaryNode } from '../utils/nodeDisplay'
+import { getNodeDisplayName, getNodeOperatorMetadata, sortNodesForDisplay } from '../utils/nodeDisplay'
 
 type NodeListProps = {
   nodes: NodeSummary[]
@@ -9,6 +9,7 @@ type NodeListProps = {
 }
 
 export function NodeList({ nodes, selectedNodeId, onSelectNode }: NodeListProps) {
+  const displayNodes = sortNodesForDisplay(nodes)
   const healthyNodes = nodes.filter((node) => node.status === 'Healthy').length
   const liveSessions = nodes.reduce((total, node) => total + node.activeSessions, 0)
 
@@ -39,21 +40,31 @@ export function NodeList({ nodes, selectedNodeId, onSelectNode }: NodeListProps)
             <div className="pc-link empty-nav-item">Пока нет ни одной зарегистрированной ноды.</div>
           </li>
         ) : (
-          nodes.map((node) => {
-            const badgeLabel = getNodeBadgeLabel(node)
+          displayNodes.map((node) => {
+            const operatorMetadata = getNodeOperatorMetadata(node)
 
             return (
               <li className={`pc-item ${selectedNodeId === node.id ? 'active' : ''}`} key={node.id}>
                 <button type="button" className="pc-link" onClick={() => onSelectNode(node.id)}>
                   <div className="d-flex align-items-center justify-content-between gap-2">
                     <span className="pc-mtext">{getNodeDisplayName(node)}</span>
-                    {badgeLabel ? <span className="badge badge-light-primary">{badgeLabel}</span> : null}
+                    <div className="node-link-badges">
+                      {operatorMetadata ? (
+                        <span className="badge badge-light-secondary node-flag-badge" title={operatorMetadata.country}>
+                          <img
+                            src={operatorMetadata.flagIcon}
+                            alt={operatorMetadata.country}
+                            className="node-flag-icon"
+                          />
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <small>
                     {formatNodeStatus(node.status)} · {node.activeSessions} сессий
                   </small>
+                  {operatorMetadata ? <small>{operatorMetadata.provider} · {operatorMetadata.country}</small> : null}
                   <small>{node.enabledPeerCount} ключей включено</small>
-                  {isPrimaryNode(node) ? <small>Основная нода</small> : null}
                   <small>{formatRelativeTime(node.lastSeenAtUtc)}</small>
                 </button>
               </li>

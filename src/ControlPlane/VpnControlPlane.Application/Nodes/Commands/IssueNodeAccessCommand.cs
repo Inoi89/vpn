@@ -43,8 +43,15 @@ public sealed class IssueNodeAccessCommandHandler(
         await userRepository.AddAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var snapshot = await nodeAgentClient.GetSnapshotAsync(node, cancellationToken);
-        await commandDispatcher.Send(new UpsertNodeSnapshotCommand(node.Id, snapshot), cancellationToken);
+        try
+        {
+            var snapshot = await nodeAgentClient.GetSnapshotAsync(node, cancellationToken);
+            await commandDispatcher.Send(new UpsertNodeSnapshotCommand(node.Id, snapshot), cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Best effort refresh only. The background poller will reconcile the node state.
+        }
 
         return new IssuedNodeAccessDto(
             node.Id,
