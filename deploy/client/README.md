@@ -13,7 +13,7 @@ Current goal:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.2 -ZipPackage
 ```
 
 Output:
@@ -33,19 +33,19 @@ Bundled updater:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1
+powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.2
 ```
 
 Output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.2.msi`
 
 ## Update manifest entry point
 
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.1 -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.1.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
+powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.2 -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.2.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
 ```
 
 Output:
@@ -55,7 +55,7 @@ Output:
 Direct publish helper for the current update origin:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.1 -ServerPassword <root-password> -ReleaseNotes "0.1.1 installer UX and updater integration." -UploadZip
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.2 -ServerPassword <root-password> -ReleaseNotes "0.1.2 minimal single-screen desktop UI." -UploadZip
 ```
 
 Current origin target:

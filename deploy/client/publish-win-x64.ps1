@@ -1,7 +1,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
-    [string]$Version = "0.1.1",
+    [string]$Version = "0.1.2",
     [string]$OutputRoot = "artifacts/client-publish",
     [switch]$ZipPackage
 )

@@ -1,6 +1,6 @@
 # Client Operational State
 
-Snapshot date: `2026-03-18`
+Snapshot date: `2026-03-19`
 
 This document is the working state file for the desktop VPN client.
 It is meant to answer four practical questions quickly:
@@ -53,7 +53,7 @@ Packaged portable build:
 
 Packaged installer:
 
-- [YourVpnClient-0.1.1.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi)
+- [YourVpnClient-0.1.2.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.2.msi)
 
 Self-contained publish profile:
 
@@ -160,20 +160,17 @@ Diagnostics service:
 
 - [VpnDiagnosticsService.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Diagnostics/VpnDiagnosticsService.cs)
 
-The UI surfaces:
+The UI is intentionally minimal now.
 
-- current runtime backend
-- connect status
-- latest handshake
-- rx bytes
-- tx bytes
-- import errors
-- connection logs
-- runtime warnings
-- current app version
-- update status
-- download/install action for a newer MSI
-- installer preference persistence for desktop shortcut creation
+The visible shell surfaces only:
+
+- import when no profile exists
+- one primary connect or disconnect action
+- current connection label
+- selected server
+
+Diagnostics and connection logging no longer live in the visible window.
+They are written to the local log file near the app runtime instead.
 
 ## 7. Verification Status
 
@@ -181,8 +178,8 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.2 -ZipPackage`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.2`
 
 Relevant tests:
 
@@ -283,6 +280,13 @@ What is still not fully complete:
 - there is still no full upstream manager-service integration beyond the tunnel-service path
 - if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
 - release signing and hosted manifest infrastructure still need production values
+
+Post-`0.1.2` UI note:
+
+- the desktop window was cut down to a single-screen mobile-like flow
+- the central power button is now the only primary action the user sees
+- if no profile exists, that same action resolves to config import
+- traffic counters, update cards, warnings, and internal runtime details are no longer visible in the main screen
 
 Post-`0.1.1` installer note:
 

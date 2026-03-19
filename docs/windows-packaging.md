@@ -1,6 +1,6 @@
 # Windows Packaging
 
-Snapshot date: `2026-03-18`
+Snapshot date: `2026-03-19`
 
 This document describes the Windows packaging path for the desktop VPN client as an autonomous product.
 
@@ -47,6 +47,12 @@ Typical command:
 powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.1 -ZipPackage
 ```
 
+Current release command:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.2 -ZipPackage
+```
+
 Primary output:
 
 `artifacts/client-publish/win-x64`
@@ -57,7 +63,7 @@ Installer build script:
 
 Installer output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.2.msi`
 
 Update manifest generator:
 
@@ -144,7 +150,7 @@ These confirm that Amnezia on Windows is a real packaged application with an ins
 On a clean Windows machine:
 
 1. Install:
-   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.1.msi`
+   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.2.msi`
 2. Launch the installed app from Start Menu or `Program Files`
 3. Import `.vpn` or `.conf`
 4. Connect
