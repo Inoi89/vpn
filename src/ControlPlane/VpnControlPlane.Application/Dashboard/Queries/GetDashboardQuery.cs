@@ -12,8 +12,9 @@ public sealed class GetDashboardQueryHandler(IDashboardReadService dashboardRead
         var nodes = await dashboardReadService.GetNodesAsync(cancellationToken);
         var sessions = await dashboardReadService.GetActiveSessionsAsync(nodeId: null, cancellationToken);
         var users = await dashboardReadService.GetUsersAsync(cancellationToken);
+        var accesses = await dashboardReadService.GetAccessesAsync(nodeId: null, cancellationToken);
         var traffic = await dashboardReadService.GetTrafficPointsAsync(query.TrafficPoints, cancellationToken);
 
-        return new DashboardSnapshotDto(nodes, sessions, users, traffic);
+        return new DashboardSnapshotDto(nodes, sessions, users, accesses, traffic);
     }
 }

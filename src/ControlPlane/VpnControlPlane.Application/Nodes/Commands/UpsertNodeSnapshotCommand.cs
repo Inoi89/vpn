@@ -26,12 +26,13 @@ public sealed class UpsertNodeSnapshotCommandHandler(
         var nodes = await dashboardReadService.GetNodesAsync(cancellationToken);
         var sessions = await dashboardReadService.GetActiveSessionsAsync(command.NodeId, cancellationToken);
         var users = await dashboardReadService.GetUsersAsync(cancellationToken);
+        var accesses = await dashboardReadService.GetAccessesAsync(command.NodeId, cancellationToken);
         var traffic = await dashboardReadService.GetTrafficPointsAsync(50, cancellationToken);
 
         await realtimeNotifier.PublishSnapshotAsync(
             new NodeRealtimeEnvelope(node.Id, node.Name, command.Snapshot.CollectedAtUtc, sessions),
             cancellationToken);
 
-        return new DashboardSnapshotDto(nodes, sessions, users, traffic);
+        return new DashboardSnapshotDto(nodes, sessions, users, accesses, traffic);
     }
 }

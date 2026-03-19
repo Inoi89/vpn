@@ -25,7 +25,7 @@ public interface IUserRepository
 
 public interface IAccessRepository
 {
-    Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid userId, string publicKey, CancellationToken cancellationToken);
+    Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid accessId, Guid userId, string publicKey, CancellationToken cancellationToken);
 }
 
 public interface IDashboardReadService
@@ -35,6 +35,8 @@ public interface IDashboardReadService
     Task<IReadOnlyList<SessionDto>> GetActiveSessionsAsync(Guid? nodeId, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<AccessSummaryDto>> GetAccessesAsync(Guid? nodeId, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<TrafficPointDto>> GetTrafficPointsAsync(int take, CancellationToken cancellationToken);
 }

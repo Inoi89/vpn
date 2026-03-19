@@ -1,4 +1,4 @@
-import type { NodeSummary, SessionSummary, UserSummary } from '../types/dashboard'
+import type { AccessSummary, NodeSummary, SessionSummary, UserSummary } from '../types/dashboard'
 import { formatDateTime, formatNodeStatus, formatRelativeTime } from '../utils/format'
 import { getNodeBadgeLabel, getNodeDisplayName, getNodeOperatorMetadata, isPrimaryNode } from '../utils/nodeDisplay'
 
@@ -7,13 +7,15 @@ type NodeInspectorProps = {
   nodes: NodeSummary[]
   sessions: SessionSummary[]
   users: UserSummary[]
+  accesses: AccessSummary[]
 }
 
-export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorProps) {
+export function NodeInspector({ node, nodes, sessions, users, accesses }: NodeInspectorProps) {
   const operatorMetadata = node ? getNodeOperatorMetadata(node) : null
   const liveUsers = new Set(sessions.map((session) => session.userId)).size
   const healthyNodes = nodes.filter((item) => item.status === 'Healthy').length
   const activeNodes = nodes.filter((item) => item.activeSessions > 0).length
+  const enabledAccesses = accesses.filter((access) => access.isEnabled).length
   const latestSeen =
     nodes
       .map((item) => item.lastSeenAtUtc)
@@ -25,12 +27,12 @@ export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorPro
         { title: 'Сессии сейчас', value: String(sessions.length), note: `${liveUsers} пользователей онлайн` },
         { title: 'Последний опрос', value: formatRelativeTime(node.lastSeenAtUtc), note: formatDateTime(node.lastSeenAtUtc) },
         { title: 'Версия агента', value: node.agentVersion ?? 'н/д', note: 'Агент ноды' },
-        { title: 'Доступов включено', value: String(users.filter((user) => user.isEnabled).length), note: 'Каталог активных пользователей' },
+        { title: 'Доступов включено', value: String(enabledAccesses), note: 'Каталог активных peer-доступов' },
       ]
     : [
         { title: 'Нод подключено', value: String(nodes.length), note: `${healthyNodes} из них в норме` },
         { title: 'Сессии сейчас', value: String(sessions.length), note: `${liveUsers} пользователей онлайн` },
-        { title: 'Пользователи', value: String(users.length), note: `${users.filter((user) => user.isEnabled).length} доступов включено` },
+        { title: 'Пользователи', value: String(users.length), note: `${enabledAccesses} доступов включено` },
         { title: 'Нод с активностью', value: String(activeNodes), note: `${nodes.length - activeNodes} без туннелей` },
       ]
 
@@ -77,8 +79,8 @@ export function NodeInspector({ node, nodes, sessions, users }: NodeInspectorPro
         </div>
 
         <div className="row m-t-20">
-        {details.map((detail) => (
-          <div className="col-sm-6 col-xl-3" key={detail.title}>
+          {details.map((detail) => (
+            <div className="col-sm-6 col-xl-3" key={detail.title}>
               <div className="detail-box">
                 <span>{detail.title}</span>
                 <h6>{detail.value}</h6>

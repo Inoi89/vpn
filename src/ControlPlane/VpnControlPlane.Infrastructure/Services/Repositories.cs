@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using VpnControlPlane.Application;
 using VpnControlPlane.Application.Abstractions;
+using VpnControlPlane.Application.Nodes;
 using VpnControlPlane.Contracts.Nodes;
 using VpnControlPlane.Domain.Entities;
 using VpnControlPlane.Domain.Enums;
@@ -70,11 +71,11 @@ internal sealed class EfUserRepository(ControlPlaneDbContext dbContext) : IUserR
 
 internal sealed class EfAccessRepository(ControlPlaneDbContext dbContext) : IAccessRepository
 {
-    public async Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid userId, string publicKey, CancellationToken cancellationToken)
+    public async Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid accessId, Guid userId, string publicKey, CancellationToken cancellationToken)
     {
         var peerConfig = await dbContext.PeerConfigs
             .FirstOrDefaultAsync(
-                x => x.NodeId == nodeId && x.UserId == userId && x.PublicKey == publicKey,
+                x => x.NodeId == nodeId && x.Id == accessId && x.UserId == userId && x.PublicKey == publicKey,
                 cancellationToken);
 
         if (peerConfig is null)
@@ -279,6 +280,114 @@ internal sealed class DashboardReadService(ControlPlaneDbContext dbContext) : ID
                     enabledNodeIds,
                     lastActivityByUser.TryGetValue(x.Id, out var lastActivityAtUtc) ? lastActivityAtUtc : null);
             })
+            .ToList();
+
+        return items;
+    }
+
+    public async Task<IReadOnlyList<AccessSummaryDto>> GetAccessesAsync(Guid? nodeId, CancellationToken cancellationToken)
+    {
+        var peerConfigsQuery = dbContext.PeerConfigs
+            .AsNoTracking();
+
+        if (nodeId.HasValue)
+        {
+            peerConfigsQuery = peerConfigsQuery.Where(x => x.NodeId == nodeId.Value);
+        }
+
+        var peerConfigs = await peerConfigsQuery
+            .OrderBy(x => x.DisplayName)
+            .Select(x => new
+            {
+                x.Id,
+                x.NodeId,
+                NodeName = x.Node.Name,
+                x.UserId,
+                x.User.ExternalId,
+                UserDisplayName = x.User.DisplayName,
+                UserEmail = x.User.Email,
+                x.DisplayName,
+                x.PublicKey,
+                x.AllowedIps,
+                x.ProtocolFlavor,
+                x.IsEnabled,
+                x.LastSyncedAtUtc,
+                x.MetadataJson
+            })
+            .ToListAsync(cancellationToken);
+
+        var sessionsQuery = dbContext.Sessions
+            .AsNoTracking();
+
+        if (nodeId.HasValue)
+        {
+            sessionsQuery = sessionsQuery.Where(x => x.NodeId == nodeId.Value);
+        }
+
+        var sessions = await sessionsQuery
+            .Select(x => new
+            {
+                x.PeerConfigId,
+                x.PeerPublicKey,
+                x.Endpoint,
+                SessionState = x.State.ToString(),
+                x.LastHandshakeAtUtc,
+                x.LastObservedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var sessionsByPeerConfigId = sessions
+            .Where(x => x.PeerConfigId.HasValue)
+            .GroupBy(x => x.PeerConfigId!.Value)
+            .ToDictionary(
+                x => x.Key,
+                x => x.OrderByDescending(y => y.LastObservedAtUtc).First());
+
+        var sessionsByPublicKey = sessions
+            .GroupBy(x => x.PeerPublicKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                x => x.Key,
+                x => x.OrderByDescending(y => y.LastObservedAtUtc).First(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var items = peerConfigs
+            .Select(x =>
+            {
+                var metadata = PeerMetadataParser.Parse(x.MetadataJson);
+                var session = sessionsByPeerConfigId.TryGetValue(x.Id, out var sessionByConfigId)
+                    ? sessionByConfigId
+                    : sessionsByPublicKey.GetValueOrDefault(x.PublicKey);
+                var lastActivityAtUtc = session?.LastHandshakeAtUtc ?? session?.LastObservedAtUtc ?? metadata.IssuedAtUtc;
+                var email = x.UserEmail ?? metadata.VpnEmail ?? metadata.ProductAccountEmail;
+
+                return new AccessSummaryDto(
+                    x.Id,
+                    x.NodeId,
+                    x.UserId,
+                    x.NodeName,
+                    x.ExternalId,
+                    x.DisplayName,
+                    email,
+                    x.PublicKey,
+                    x.AllowedIps,
+                    x.ProtocolFlavor.ToString(),
+                    x.IsEnabled,
+                    x.LastSyncedAtUtc,
+                    session?.Endpoint,
+                    session?.SessionState ?? SessionState.Disconnected.ToString(),
+                    session?.LastHandshakeAtUtc,
+                    lastActivityAtUtc,
+                    metadata.ProductAccountId,
+                    metadata.ProductAccountEmail,
+                    metadata.ProductAccountDisplayName,
+                    metadata.ProductDeviceId,
+                    metadata.ProductDeviceName,
+                    metadata.ProductDevicePlatform,
+                    metadata.ProductDeviceFingerprint,
+                    metadata.ProductClientVersion);
+            })
+            .OrderByDescending(x => x.LastActivityAtUtc)
+            .ThenBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return items;

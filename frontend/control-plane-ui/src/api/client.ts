@@ -6,7 +6,7 @@ import type {
   IssueNodeAccessRequest,
   IssuedNodeAccess,
   SetNodeAccessStateRequest,
-  UserSummary,
+  AccessSummary,
 } from '../types/dashboard'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -64,15 +64,15 @@ export const apiClient = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  setNodeAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) =>
-    request<UserSummary>(`/api/nodes/${nodeId}/accesses/${userId}/state`, {
+  setNodeAccessState: (nodeId: string, accessId: string, payload: SetNodeAccessStateRequest) =>
+    request<AccessSummary>(`/api/nodes/${nodeId}/accesses/${accessId}/state`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  deleteNodeAccess: (nodeId: string, userId: string) =>
-    request<DeletedNodeAccess>(`/api/nodes/${nodeId}/accesses/${userId}`, {
+  deleteNodeAccess: (nodeId: string, accessId: string) =>
+    request<DeletedNodeAccess>(`/api/nodes/${nodeId}/accesses/${accessId}`, {
       method: 'DELETE',
     }),
-  getNodeAccessConfig: (nodeId: string, userId: string, format: AccessConfigFormat) =>
-    request<AccessConfig>(`/api/nodes/${nodeId}/accesses/${userId}/config?format=${encodeURIComponent(format)}`),
+  getNodeAccessConfig: (nodeId: string, accessId: string, format: AccessConfigFormat) =>
+    request<AccessConfig>(`/api/nodes/${nodeId}/accesses/${accessId}/config?format=${encodeURIComponent(format)}`),
 }

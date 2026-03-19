@@ -37,20 +37,20 @@ export function useDashboardData() {
   const setNodeAccessStateMutation = useMutation({
     mutationFn: ({
       nodeId,
-      userId,
+      accessId,
       payload,
     }: {
       nodeId: string
-      userId: string
+      accessId: string
       payload: SetNodeAccessStateRequest
-    }) => apiClient.setNodeAccessState(nodeId, userId, payload),
+    }) => apiClient.setNodeAccessState(nodeId, accessId, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: dashboardKey })
     },
   })
 
   const deleteNodeAccessMutation = useMutation({
-    mutationFn: ({ nodeId, userId }: { nodeId: string; userId: string }) => apiClient.deleteNodeAccess(nodeId, userId),
+    mutationFn: ({ nodeId, accessId }: { nodeId: string; accessId: string }) => apiClient.deleteNodeAccess(nodeId, accessId),
     onSuccess: (result: DeletedNodeAccess) => {
       if (issuedAccess?.userId === result.userId && issuedAccess.nodeId === result.nodeId) {
         setIssuedAccess(undefined)
@@ -91,6 +91,30 @@ export function useDashboardData() {
         ...current,
         nodes,
         sessions,
+        accesses: current.accesses.map((access) => {
+          if (access.nodeId !== message.nodeId) {
+            return access
+          }
+
+          const session = message.sessions.find((item) => item.publicKey === access.publicKey)
+          if (!session) {
+            return access.sessionState === 'Active'
+              ? {
+                  ...access,
+                  endpoint: null,
+                  sessionState: 'Disconnected',
+                }
+              : access
+          }
+
+          return {
+            ...access,
+            endpoint: session.endpoint,
+            sessionState: session.state,
+            latestHandshakeAtUtc: session.latestHandshakeAtUtc,
+            lastActivityAtUtc: session.latestHandshakeAtUtc ?? session.connectedAtUtc ?? message.observedAtUtc,
+          }
+        }),
       }
     })
   })
@@ -125,11 +149,11 @@ export function useDashboardData() {
     refresh: dashboardQuery.refetch,
     issueNodeAccess: (nodeId: string, payload: IssueNodeAccessRequest) =>
       issueNodeAccessMutation.mutateAsync({ nodeId, payload }),
-    setNodeAccessState: (nodeId: string, userId: string, payload: SetNodeAccessStateRequest) =>
-      setNodeAccessStateMutation.mutateAsync({ nodeId, userId, payload }),
-    deleteNodeAccess: (nodeId: string, userId: string) => deleteNodeAccessMutation.mutateAsync({ nodeId, userId }),
-    getNodeAccessConfig: (nodeId: string, userId: string, format: AccessConfigFormat) =>
-      apiClient.getNodeAccessConfig(nodeId, userId, format) as Promise<AccessConfig>,
+    setNodeAccessState: (nodeId: string, accessId: string, payload: SetNodeAccessStateRequest) =>
+      setNodeAccessStateMutation.mutateAsync({ nodeId, accessId, payload }),
+    deleteNodeAccess: (nodeId: string, accessId: string) => deleteNodeAccessMutation.mutateAsync({ nodeId, accessId }),
+    getNodeAccessConfig: (nodeId: string, accessId: string, format: AccessConfigFormat) =>
+      apiClient.getNodeAccessConfig(nodeId, accessId, format) as Promise<AccessConfig>,
     isSavingUser: issueNodeAccessMutation.isPending || setNodeAccessStateMutation.isPending || deleteNodeAccessMutation.isPending,
     issuedAccess,
   }

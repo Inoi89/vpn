@@ -1,12 +1,12 @@
-using System.Text.Json;
 using VpnControlPlane.Application.Abstractions;
+using VpnControlPlane.Application.Nodes;
 using VpnControlPlane.Contracts.Nodes;
 
 namespace VpnControlPlane.Application.Nodes.Commands;
 
 public sealed record GetNodeAccessConfigCommand(
     Guid NodeId,
-    Guid UserId,
+    Guid AccessId,
     string? Format) : ICommand<AccessConfigDto>;
 
 public sealed class GetNodeAccessConfigCommandHandler(
@@ -19,12 +19,10 @@ public sealed class GetNodeAccessConfigCommandHandler(
             ?? throw new InvalidOperationException($"Node '{command.NodeId}' was not found.");
 
         var peerConfig = node.PeerConfigs
-            .Where(x => x.UserId == command.UserId)
-            .OrderByDescending(x => x.UpdatedAtUtc)
-            .FirstOrDefault()
-            ?? throw new InvalidOperationException($"User '{command.UserId}' has no access bound to node '{command.NodeId}'.");
+            .FirstOrDefault(x => x.Id == command.AccessId)
+            ?? throw new InvalidOperationException($"Access '{command.AccessId}' has no binding to node '{command.NodeId}'.");
 
-        var metadata = PeerMetadataReader.Parse(peerConfig.MetadataJson);
+        var metadata = PeerMetadataParser.Parse(peerConfig.MetadataJson);
         if (string.IsNullOrWhiteSpace(metadata.ClientPrivateKey))
         {
             metadata = await TryRefreshMetadataFromAgentAsync(node, peerConfig.PublicKey, metadata, cancellationToken);
@@ -49,13 +47,13 @@ public sealed class GetNodeAccessConfigCommandHandler(
             command.Format);
 
         var result = await nodeAgentClient.GetAccessConfigAsync(node, payload, cancellationToken);
-        return new AccessConfigDto(node.Id, command.UserId, result.PublicKey, result.ClientConfigFileName, result.ClientConfig);
+        return new AccessConfigDto(node.Id, peerConfig.Id, peerConfig.UserId, result.PublicKey, result.ClientConfigFileName, result.ClientConfig);
     }
 
-    private async Task<PeerMetadata> TryRefreshMetadataFromAgentAsync(
+    private async Task<PeerMetadataSnapshot> TryRefreshMetadataFromAgentAsync(
         Domain.Entities.Node node,
         string publicKey,
-        PeerMetadata current,
+        PeerMetadataSnapshot current,
         CancellationToken cancellationToken)
     {
         try
@@ -69,10 +67,24 @@ public sealed class GetNodeAccessConfigCommandHandler(
                 return current;
             }
 
-            var refreshed = PeerMetadataReader.Parse(peerSnapshot.MetadataJson);
-            return new PeerMetadata(
-                refreshed.PresharedKey ?? current.PresharedKey,
-                refreshed.ClientPrivateKey ?? current.ClientPrivateKey);
+            var refreshed = PeerMetadataParser.Parse(peerSnapshot.MetadataJson);
+            return refreshed with
+            {
+                PresharedKey = refreshed.PresharedKey ?? current.PresharedKey,
+                ClientPrivateKey = refreshed.ClientPrivateKey ?? current.ClientPrivateKey,
+                VpnUserExternalId = refreshed.VpnUserExternalId ?? current.VpnUserExternalId,
+                VpnDisplayName = refreshed.VpnDisplayName ?? current.VpnDisplayName,
+                VpnEmail = refreshed.VpnEmail ?? current.VpnEmail,
+                IssuedAtUtc = refreshed.IssuedAtUtc ?? current.IssuedAtUtc,
+                ProductAccountId = refreshed.ProductAccountId ?? current.ProductAccountId,
+                ProductAccountEmail = refreshed.ProductAccountEmail ?? current.ProductAccountEmail,
+                ProductAccountDisplayName = refreshed.ProductAccountDisplayName ?? current.ProductAccountDisplayName,
+                ProductDeviceId = refreshed.ProductDeviceId ?? current.ProductDeviceId,
+                ProductDeviceName = refreshed.ProductDeviceName ?? current.ProductDeviceName,
+                ProductDevicePlatform = refreshed.ProductDevicePlatform ?? current.ProductDevicePlatform,
+                ProductDeviceFingerprint = refreshed.ProductDeviceFingerprint ?? current.ProductDeviceFingerprint,
+                ProductClientVersion = refreshed.ProductClientVersion ?? current.ProductClientVersion,
+            };
         }
         catch
         {
@@ -85,48 +97,5 @@ public sealed class GetNodeAccessConfigCommandHandler(
         return Uri.TryCreate(address, UriKind.Absolute, out var uri)
             ? uri.Host
             : address;
-    }
-
-    private sealed record PeerMetadata(string? PresharedKey, string? ClientPrivateKey);
-
-    private static class PeerMetadataReader
-    {
-        public static PeerMetadata Parse(string? metadataJson)
-        {
-            if (string.IsNullOrWhiteSpace(metadataJson))
-            {
-                return new PeerMetadata(null, null);
-            }
-
-            using var document = JsonDocument.Parse(metadataJson);
-            if (!document.RootElement.TryGetProperty("sources", out var sources) || sources.ValueKind != JsonValueKind.Array)
-            {
-                return new PeerMetadata(null, null);
-            }
-
-            string? presharedKey = null;
-            string? clientPrivateKey = null;
-
-            foreach (var source in sources.EnumerateArray())
-            {
-                if (presharedKey is null
-                    && source.TryGetProperty("peerProperties", out var peerProperties)
-                    && peerProperties.ValueKind == JsonValueKind.Object
-                    && peerProperties.TryGetProperty("PresharedKey", out var presharedKeyElement))
-                {
-                    presharedKey = presharedKeyElement.GetString();
-                }
-
-                if (clientPrivateKey is null
-                    && source.TryGetProperty("metadata", out var metadata)
-                    && metadata.ValueKind == JsonValueKind.Object
-                    && metadata.TryGetProperty("vpn-client-private-key", out var privateKeyElement))
-                {
-                    clientPrivateKey = privateKeyElement.GetString();
-                }
-            }
-
-            return new PeerMetadata(presharedKey, clientPrivateKey);
-        }
     }
 }

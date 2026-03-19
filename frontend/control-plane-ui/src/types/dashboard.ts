@@ -41,6 +41,33 @@ export type UserSummary = {
   lastActivityAtUtc?: string | null
 }
 
+export type AccessSummary = {
+  id: string
+  nodeId: string
+  userId: string
+  nodeName: string
+  externalId: string
+  displayName: string
+  email?: string | null
+  publicKey: string
+  allowedIps: string
+  protocol: string
+  isEnabled: boolean
+  lastSyncedAtUtc: string
+  endpoint?: string | null
+  sessionState: string
+  latestHandshakeAtUtc?: string | null
+  lastActivityAtUtc?: string | null
+  accountId?: string | null
+  accountEmail?: string | null
+  accountDisplayName?: string | null
+  deviceId?: string | null
+  deviceName?: string | null
+  devicePlatform?: string | null
+  deviceFingerprint?: string | null
+  clientVersion?: string | null
+}
+
 export type TrafficPoint = {
   capturedAtUtc: string
   userDisplayName: string
@@ -52,6 +79,7 @@ export type DashboardSnapshot = {
   nodes: NodeSummary[]
   sessions: SessionSummary[]
   users: UserSummary[]
+  accesses: AccessSummary[]
   traffic: TrafficPoint[]
 }
 
@@ -85,6 +113,7 @@ export type SetNodeAccessStateRequest = {
 
 export type DeletedNodeAccess = {
   nodeId: string
+  accessId: string
   userId: string
   publicKey: string
   userDeleted: boolean
@@ -92,6 +121,7 @@ export type DeletedNodeAccess = {
 
 export type AccessConfig = {
   nodeId: string
+  accessId: string
   userId: string
   publicKey: string
   clientConfigFileName: string

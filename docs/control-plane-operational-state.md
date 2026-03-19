@@ -51,6 +51,10 @@ Current control plane responsibilities:
 - Expose dashboard and node-management endpoints.
 - Broadcast state changes over SignalR.
 
+The operator dashboard also needs to evolve from a coarse user view to a concrete peer/access view.
+
+That is no longer optional, because the product platform will eventually allow multiple device-bound accesses under one account. Operator actions must therefore target a specific access/peer, not just a `VpnUser`.
+
 Important runtime wiring:
 
 - JWT auth protects the UI/API.
@@ -171,6 +175,32 @@ The current rollout is not homogeneous:
 
 This matters because config generation behavior has been a moving target during debugging.
 
+### 4.4 Access-Centric Read Model
+
+The control plane already stores enough raw data to expose a real access catalog:
+
+- `PeerConfig.AllowedIps` holds the issued tunnel IP or peer address range.
+- `PeerConfig.PublicKey` is the concrete access/key identity.
+- `PeerConfig.MetadataJson` preserves optional metadata parsed from Amnezia/WireGuard artifacts.
+- `Session` adds endpoint, handshake, and last activity for that same peer.
+
+This means the dashboard can now move from "one row per user" to "one row per access/peer".
+
+That is the right shape for future product work because:
+
+- one account may own multiple devices;
+- each device should map to one concrete access;
+- the operator must see issued IP, key, owner, and device identity when present.
+
+Old manually issued accesses may still lack rich metadata. For those rows the panel can still show:
+
+- display name
+- external ID
+- email if known
+- issued tunnel IP
+- public key
+- current live state
+
 ### 4.4 Naming Convention
 
 Current naming in the fleet is partially normalized:
@@ -193,6 +223,24 @@ Observed pattern before the replacement:
 - In some cases, they still failed to carry normal user traffic, or the client reported `connected` while DNS / browsing was broken.
 
 This is not a simple `peer not created` failure. The server often sees the handshake and at least some traffic.
+
+### 5.4 Product Metadata Is Still Partial
+
+The control plane can now expose access-level operational data, but it is not yet fully linked to `VpnProductPlatform`.
+
+What exists:
+
+- `VpnProductPlatform` already knows `Account`, `Device`, `Fingerprint`, `ClientVersion`, and `AccessGrant`.
+- the control plane already stores peer metadata in `PeerConfig.MetadataJson`.
+- the operator dashboard can project access-level rows from `PeerConfig` plus `Session`.
+
+What is still missing:
+
+- a live issuance path from `VpnProductPlatform` into `VpnControlPlane`
+- stable propagation of `account/device` metadata into new peer configs
+- a permanent shared identifier between `AccessGrant` and `PeerConfig`
+
+So old keys and manually issued keys will still appear with partial identity until they are reissued through the new product flow.
 
 ### 5.2 What Was Already Confirmed
 

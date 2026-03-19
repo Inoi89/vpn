@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandHandler<UpsertNodeSnapshotCommand, DashboardSnapshotDto>, UpsertNodeSnapshotCommandHandler>();
         services.AddScoped<ICommandHandler<CreateUserCommand, UserSummaryDto>, CreateUserCommandHandler>();
         services.AddScoped<ICommandHandler<IssueNodeAccessCommand, IssuedNodeAccessDto>, IssueNodeAccessCommandHandler>();
-        services.AddScoped<ICommandHandler<SetNodeAccessStateCommand, UserSummaryDto>, SetNodeAccessStateCommandHandler>();
+        services.AddScoped<ICommandHandler<SetNodeAccessStateCommand, AccessSummaryDto>, SetNodeAccessStateCommandHandler>();
         services.AddScoped<ICommandHandler<DeleteNodeAccessCommand, DeletedNodeAccessDto>, DeleteNodeAccessCommandHandler>();
         services.AddScoped<ICommandHandler<GetNodeAccessConfigCommand, AccessConfigDto>, GetNodeAccessConfigCommandHandler>();
 

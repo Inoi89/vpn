@@ -47,7 +47,9 @@ function App() {
     ? dashboard.sessions.filter((session) => session.nodeId === selectedNode.id)
     : dashboard.sessions
   const scopedUsers = selectedNode ? dashboard.users.filter((user) => user.nodeIds.includes(selectedNode.id)) : dashboard.users
-  const activeUserIds = new Set(scopedSessions.map((session) => session.userId))
+  const scopedAccesses = selectedNode
+    ? dashboard.accesses.filter((access) => access.nodeId === selectedNode.id)
+    : dashboard.accesses
   const healthyNodes = dashboard.nodes.filter((node) => node.status === 'Healthy').length
   const lastTelemetry = selectedNode
     ? selectedNode.lastSeenAtUtc
@@ -139,12 +141,17 @@ function App() {
             {selectedNode ? (
               <>
                 <div className="col-md-12">
-                  <NodeInspector node={selectedNode} nodes={dashboard.nodes} sessions={scopedSessions} users={scopedUsers} />
+                  <NodeInspector
+                    node={selectedNode}
+                    nodes={dashboard.nodes}
+                    sessions={scopedSessions}
+                    users={scopedUsers}
+                    accesses={scopedAccesses}
+                  />
                 </div>
                 <div className="col-md-12">
                   <UserManagement
-                    users={scopedUsers}
-                    activeUserIds={activeUserIds}
+                    accesses={scopedAccesses}
                     selectedNodeId={selectedNode.id}
                     selectedNodeName={selectedNodeLabel}
                     isSaving={isSavingUser}
@@ -162,7 +169,13 @@ function App() {
             ) : (
               <>
                 <div className="col-md-12">
-                  <NodeInspector node={null} nodes={dashboard.nodes} sessions={scopedSessions} users={scopedUsers} />
+                  <NodeInspector
+                    node={null}
+                    nodes={dashboard.nodes}
+                    sessions={scopedSessions}
+                    users={scopedUsers}
+                    accesses={scopedAccesses}
+                  />
                 </div>
                 <div className="col-md-12">
                   <TrafficChart traffic={dashboard.traffic} />
@@ -172,8 +185,7 @@ function App() {
                 </div>
                 <div className="col-md-12">
                   <UserManagement
-                    users={scopedUsers}
-                    activeUserIds={activeUserIds}
+                    accesses={scopedAccesses}
                     selectedNodeId={null}
                     selectedNodeName={null}
                     isSaving={isSavingUser}

@@ -65,44 +65,44 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
         return Ok(result);
     }
 
-    [HttpPost("{nodeId:guid}/accesses/{userId:guid}/state")]
-    public async Task<ActionResult<VpnControlPlane.Application.UserSummaryDto>> SetNodeAccessState(
+    [HttpPost("{nodeId:guid}/accesses/{accessId:guid}/state")]
+    public async Task<ActionResult<VpnControlPlane.Application.AccessSummaryDto>> SetNodeAccessState(
         Guid nodeId,
-        Guid userId,
+        Guid accessId,
         [FromBody] NodeAccessStateRequest request,
         CancellationToken cancellationToken)
     {
         var result = await commandDispatcher.Send(
-            new SetNodeAccessStateCommand(nodeId, userId, request.IsEnabled),
+            new SetNodeAccessStateCommand(nodeId, accessId, request.IsEnabled),
             cancellationToken);
 
         return Ok(result);
     }
 
-    [HttpDelete("{nodeId:guid}/accesses/{userId:guid}")]
+    [HttpDelete("{nodeId:guid}/accesses/{accessId:guid}")]
     public async Task<ActionResult<VpnControlPlane.Application.DeletedNodeAccessDto>> DeleteNodeAccess(
         Guid nodeId,
-        Guid userId,
+        Guid accessId,
         CancellationToken cancellationToken)
     {
         var result = await commandDispatcher.Send(
-            new DeleteNodeAccessCommand(nodeId, userId),
+            new DeleteNodeAccessCommand(nodeId, accessId),
             cancellationToken);
 
         return Ok(result);
     }
 
-    [HttpGet("{nodeId:guid}/accesses/{userId:guid}/config")]
+    [HttpGet("{nodeId:guid}/accesses/{accessId:guid}/config")]
     public async Task<ActionResult<VpnControlPlane.Application.AccessConfigDto>> GetNodeAccessConfig(
         Guid nodeId,
-        Guid userId,
+        Guid accessId,
         [FromQuery] string? format,
         CancellationToken cancellationToken)
     {
         try
         {
             var result = await commandDispatcher.Send(
-                new GetNodeAccessConfigCommand(nodeId, userId, format),
+                new GetNodeAccessConfigCommand(nodeId, accessId, format),
                 cancellationToken);
 
             return Ok(result);

@@ -38,6 +38,32 @@ public sealed record UserSummaryDto(
     IReadOnlyList<Guid> EnabledNodeIds,
     DateTimeOffset? LastActivityAtUtc);
 
+public sealed record AccessSummaryDto(
+    Guid Id,
+    Guid NodeId,
+    Guid UserId,
+    string NodeName,
+    string ExternalId,
+    string DisplayName,
+    string? Email,
+    string PublicKey,
+    string AllowedIps,
+    string Protocol,
+    bool IsEnabled,
+    DateTimeOffset LastSyncedAtUtc,
+    string? Endpoint,
+    string SessionState,
+    DateTimeOffset? LatestHandshakeAtUtc,
+    DateTimeOffset? LastActivityAtUtc,
+    string? AccountId,
+    string? AccountEmail,
+    string? AccountDisplayName,
+    string? DeviceId,
+    string? DeviceName,
+    string? DevicePlatform,
+    string? DeviceFingerprint,
+    string? ClientVersion);
+
 public sealed record IssuedNodeAccessDto(
     Guid NodeId,
     Guid UserId,
@@ -51,12 +77,14 @@ public sealed record IssuedNodeAccessDto(
 
 public sealed record DeletedNodeAccessDto(
     Guid NodeId,
+    Guid AccessId,
     Guid UserId,
     string PublicKey,
     bool UserDeleted);
 
 public sealed record AccessConfigDto(
     Guid NodeId,
+    Guid AccessId,
     Guid UserId,
     string PublicKey,
     string ClientConfigFileName,
@@ -72,6 +100,7 @@ public sealed record DashboardSnapshotDto(
     IReadOnlyList<NodeSummaryDto> Nodes,
     IReadOnlyList<SessionDto> Sessions,
     IReadOnlyList<UserSummaryDto> Users,
+    IReadOnlyList<AccessSummaryDto> Accesses,
     IReadOnlyList<TrafficPointDto> Traffic);
 
 public sealed record NodeRegistrationResult(

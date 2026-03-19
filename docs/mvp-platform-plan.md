@@ -115,6 +115,12 @@ So the anti-sharing problem must be solved through:
 - anomaly detection
 - revocation
 
+This has an operator-facing consequence:
+
+- one account can no longer be treated as one VPN key;
+- the control plane must show the concrete access/peer that belongs to a device;
+- old manually issued keys will remain partially anonymous until they are reissued or migrated.
+
 ### 3.4 Fleet Rollout Layer
 
 Right now we can manage peers on individual nodes, but we do not have:
@@ -189,6 +195,18 @@ It should own:
 - operator dashboard
 
 It should stop being the place where product identity is invented ad hoc.
+
+At the same time, it should consume product identity metadata for observability.
+
+Minimum operator-facing data per access should be:
+
+- node
+- issued tunnel IP
+- public key
+- access status
+- account email/display name when present
+- device name/platform when present
+- fingerprint or client version when present
 
 ### 4.4 Desktop Client
 
