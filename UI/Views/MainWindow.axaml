@@ -66,10 +66,19 @@
                     IsVisible="{Binding HasProfiles}"
                     Padding="16"
                     Classes="glass-card">
-                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-                    <TextBlock Classes="card-label" Text="Сервер" />
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+                    <Button Grid.Row="0"
+                            Classes="update-button"
+                            IsVisible="{Binding ShowUpdateAction}"
+                            IsEnabled="{Binding CanRunUpdateAction}"
+                            Command="{Binding RunUpdateActionCommand}"
+                            Content="{Binding UpdateActionText}" />
 
-                    <ComboBox Grid.Row="1"
+                    <TextBlock Grid.Row="1"
+                               Classes="card-label"
+                               Text="Сервер" />
+
+                    <ComboBox Grid.Row="2"
                               Classes="profile-combo"
                               ItemsSource="{Binding Profiles}"
                               SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
@@ -80,7 +89,7 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
 
-                    <TextBlock Grid.Row="2"
+                    <TextBlock Grid.Row="3"
                                Classes="muted"
                                Text="{Binding EndpointText}"
                                TextWrapping="Wrap" />

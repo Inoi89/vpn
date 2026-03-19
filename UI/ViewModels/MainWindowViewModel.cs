@@ -108,6 +108,13 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool ShowUpdateCard => UpdateState.Status is not AppUpdateStatus.Disabled || !string.IsNullOrWhiteSpace(UpdateState.LastError);
 
+    public bool ShowUpdateAction =>
+        UpdateState.Status is AppUpdateStatus.UpdateAvailable
+        or AppUpdateStatus.ReadyToInstall
+        or AppUpdateStatus.Downloading
+        or AppUpdateStatus.Installing
+        or AppUpdateStatus.Failed;
+
     public bool ShowWarningCard => !string.IsNullOrWhiteSpace(WarningSummaryText);
 
     public bool CanRunUpdateAction =>
@@ -878,6 +885,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowImportShortcut));
         OnPropertyChanged(nameof(UpdatesEnabled));
         OnPropertyChanged(nameof(ShowUpdateCard));
+        OnPropertyChanged(nameof(ShowUpdateAction));
         OnPropertyChanged(nameof(ShowWarningCard));
         OnPropertyChanged(nameof(CanRunUpdateAction));
         OnPropertyChanged(nameof(CurrentVersionText));

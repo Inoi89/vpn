@@ -50,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Co
 Current release command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.2 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.3 -ZipPackage
 ```
 
 Primary output:
@@ -63,7 +63,7 @@ Installer build script:
 
 Installer output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.2.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.3.msi`
 
 Update manifest generator:
 
@@ -150,7 +150,7 @@ These confirm that Amnezia on Windows is a real packaged application with an ins
 On a clean Windows machine:
 
 1. Install:
-   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.2.msi`
+   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.3.msi`
 2. Launch the installed app from Start Menu or `Program Files`
 3. Import `.vpn` or `.conf`
 4. Connect

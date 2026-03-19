@@ -100,6 +100,19 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
+        <Style Selector="Button.update-button">
+            <Setter Property="Background" Value="#2A1662" />
+            <Setter Property="Foreground" Value="#F9F5FF" />
+            <Setter Property="BorderBrush" Value="#4C2E96" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
         <Style Selector="ComboBox.profile-combo">
             <Setter Property="Background" Value="#25145A" />
             <Setter Property="Foreground" Value="#F9F5FF" />
