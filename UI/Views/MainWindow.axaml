@@ -7,280 +7,85 @@
         mc:Ignorable="d"
         x:Class="VpnClient.UI.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="Your VPN Client"
-        Width="1460"
-        Height="950"
-        MinWidth="1260"
-        MinHeight="860">
+        Title="VPN"
+        Width="380"
+        Height="760"
+        MinWidth="340"
+        MinHeight="620">
 
-    <Grid>
-        <Canvas IsHitTestVisible="False" ClipToBounds="True">
-            <Ellipse Width="520" Height="520" Fill="#221833" Opacity="0.55" Canvas.Left="-140" Canvas.Top="-160" />
-            <Ellipse Width="460" Height="460" Fill="#140F1C" Opacity="0.85" Canvas.Left="1080" Canvas.Top="-90" />
-            <Ellipse Width="360" Height="360" Fill="#1B1330" Opacity="0.50" Canvas.Left="640" Canvas.Top="720" />
-        </Canvas>
+    <Border Classes="phone-shell"
+            Padding="18,16,18,22">
+        <Grid RowDefinitions="Auto,*,Auto">
+            <Grid ColumnDefinitions="44,*,44" ColumnSpacing="12">
+                <Button Classes="icon-button"
+                        Content="+"
+                        IsVisible="{Binding ShowImportShortcut}"
+                        Click="OnImportConfigClick" />
 
-        <Grid ColumnDefinitions="340,*" Margin="28" ColumnSpacing="24">
-            <Border Classes="sidebar-shell" Padding="24">
-                <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="18">
-                    <Border Classes="surface-muted" Padding="18">
-                        <Grid ColumnDefinitions="60,*" ColumnSpacing="14">
-                            <Border Width="60" Height="60" CornerRadius="30" Background="#1B1426" BorderBrush="#8B5DFF" BorderThickness="1">
-                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" FontWeight="SemiBold" Text="VPN" />
-                            </Border>
+                <TextBlock Grid.Column="1"
+                           Classes="app-title"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Text="VPN" />
 
-                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                                <TextBlock Classes="brand-title" Text="Your VPN Client" />
-                                <TextBlock Classes="muted"
-                                           Text="Чистый VPN-клиент: импорт профиля, подключение, трафик и обновления."
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                <Border Grid.Column="2"
+                        Width="44"
+                        Height="44"
+                        Opacity="0" />
+            </Grid>
 
-                    <Button Grid.Row="1"
-                            Classes="import-button"
-                            Content="Добавить конфиг"
-                            Click="OnImportConfigClick" />
+            <StackPanel Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="18">
+                <TextBlock Classes="muted"
+                           MaxWidth="260"
+                           HorizontalAlignment="Center"
+                           IsVisible="{Binding HasNoProfiles}"
+                           Text="{Binding EmptyStateText}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
 
-                    <Border Grid.Row="2" Classes="surface-muted" Padding="18">
-                        <StackPanel Spacing="6">
-                            <TextBlock Classes="section-title" Text="Профили" />
-                            <TextBlock Classes="muted" Text="{Binding SidebarSummaryText}" />
-                        </StackPanel>
-                    </Border>
+                <Button Classes="ring-button"
+                        HorizontalAlignment="Center"
+                        BorderBrush="{Binding RingAccentBrush}"
+                        Foreground="{Binding RingAccentBrush}"
+                        Click="OnPrimaryActionClick">
+                    <TextBlock Classes="power-glyph" Text="⏻" />
+                </Button>
 
-                    <Grid Grid.Row="3" RowDefinitions="*,Auto" RowSpacing="16">
-                        <ListBox Classes="profile-list"
-                                 ItemsSource="{Binding Profiles}"
-                                 SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="models:ImportedServerProfile">
-                                    <Border Classes="profile-item" Padding="16">
-                                        <StackPanel Spacing="6">
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                                <TextBlock Classes="profile-name"
-                                                           Text="{Binding DisplayName}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <Border Classes="info-chip" Padding="10,6">
-                                                    <TextBlock Classes="metric-caption"
-                                                               Text="{Binding ImportedAtUtc, StringFormat='{}{0:dd.MM}'}" />
-                                                </Border>
-                                            </Grid>
+                <TextBlock Classes="status-value"
+                           HorizontalAlignment="Center"
+                           Foreground="{Binding RingAccentBrush}"
+                           Text="{Binding ConnectionLabelText}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+            </StackPanel>
 
-                                            <TextBlock Classes="profile-meta"
-                                                       Text="{Binding Endpoint}"
-                                                       TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Classes="profile-meta"
-                                                       Text="{Binding Address}"
-                                                       TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+            <Border Grid.Row="2"
+                    IsVisible="{Binding HasProfiles}"
+                    Padding="16"
+                    Classes="glass-card">
+                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                    <TextBlock Classes="card-label" Text="Сервер" />
 
-                        <Border Grid.Row="1" Classes="surface-muted" Padding="18">
-                            <StackPanel Spacing="6">
-                                <TextBlock Classes="section-title" Text="{Binding LastActionTitle}" />
-                                <TextBlock Classes="muted" Text="{Binding LastOperationMessage}" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
+                    <ComboBox Grid.Row="1"
+                              Classes="profile-combo"
+                              ItemsSource="{Binding Profiles}"
+                              SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:ImportedServerProfile">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="2"
+                               Classes="muted"
+                               Text="{Binding EndpointText}"
+                               TextWrapping="Wrap" />
                 </Grid>
             </Border>
-
-            <Grid Grid.Column="1" RowDefinitions="Auto,*" RowSpacing="24">
-                <Border Classes="surface-card" Padding="30" IsVisible="{Binding HasNoProfiles}">
-                    <Grid ColumnDefinitions="300,*" ColumnSpacing="28">
-                        <Border Width="260" Height="260" CornerRadius="130" Background="#111016" BorderBrush="#2A2434" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Grid>
-                                <Ellipse Width="200" Height="200" Fill="#0B0A10" Stroke="#8B5DFF" StrokeThickness="1" />
-                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="54" Foreground="#B98CFF" Text="⏻" />
-                            </Grid>
-                        </Border>
-
-                        <StackPanel Grid.Column="1" Spacing="18" VerticalAlignment="Center">
-                            <TextBlock Classes="hero-title" Text="{Binding EmptyStateTitle}" />
-                            <TextBlock Classes="muted" Text="{Binding EmptyStateText}" TextWrapping="Wrap" />
-                            <StackPanel Orientation="Horizontal" Spacing="14">
-                                <Button Classes="import-button"
-                                        Content="Добавить .vpn или .conf"
-                                        Click="OnImportConfigClick" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Grid Grid.Row="1" IsVisible="{Binding HasProfiles}" RowDefinitions="Auto,*" RowSpacing="24">
-                    <Border Classes="surface-card" Padding="30">
-                        <Grid ColumnDefinitions="340,*" ColumnSpacing="28">
-                            <Grid>
-                                <Border Width="304" Height="304" CornerRadius="152" Background="#121117" BorderBrush="#262131" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Grid>
-                                        <Ellipse Width="240" Height="240" Fill="#0B0A10" Stroke="#2A2433" StrokeThickness="14" />
-                                        <Border Width="112" Height="22" CornerRadius="11" Background="#A06CFF" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,28,0,0" />
-                                        <Button Classes="power-button"
-                                                Command="{Binding ToggleConnectionCommand}"
-                                                IsEnabled="{Binding CanToggleConnection}"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center">
-                                            <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                                <TextBlock HorizontalAlignment="Center" FontSize="44" Text="⏻" />
-                                                <TextBlock HorizontalAlignment="Center" FontSize="14" Text="{Binding PrimaryActionText}" />
-                                            </StackPanel>
-                                        </Button>
-                                    </Grid>
-                                </Border>
-
-                                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Spacing="4">
-                                    <TextBlock FontSize="34" FontWeight="SemiBold" Text="{Binding SessionDurationText}" />
-                                    <TextBlock Classes="muted" HorizontalAlignment="Center" Text="{Binding SessionCaptionText}" />
-                                </StackPanel>
-                            </Grid>
-
-                            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="20">
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
-                                    <Border Classes="status-chip" Padding="16,8" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding ConnectionBadgeText}" />
-                                    </Border>
-
-                                    <TextBlock Grid.Column="2"
-                                               Classes="metric-caption"
-                                               VerticalAlignment="Center"
-                                               Text="{Binding LastSeenText}" />
-                                </Grid>
-
-                                <StackPanel Grid.Row="1" Spacing="8">
-                                    <TextBlock Classes="hero-title" Text="{Binding StatusTitle}" TextWrapping="Wrap" />
-                                    <TextBlock Classes="muted" FontSize="15" Text="{Binding StatusDescription}" TextWrapping="Wrap" />
-                                </StackPanel>
-
-                                <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="18">
-                                    <Border Classes="surface-muted" Padding="20">
-                                        <StackPanel Spacing="10">
-                                            <TextBlock Classes="metric-title" Text="Скачивание" />
-                                            <TextBlock Classes="metric-value" Text="{Binding DownloadRateText}" />
-                                            <ProgressBar Classes="activity-bar" Value="{Binding DownloadActivityValue}" />
-                                            <TextBlock Classes="metric-caption" Text="{Binding DownloadTotalText, StringFormat='Всего {0}'}" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Grid.Column="1" Classes="surface-muted" Padding="20">
-                                        <StackPanel Spacing="10">
-                                            <TextBlock Classes="metric-title" Text="Отдача" />
-                                            <TextBlock Classes="metric-value" Text="{Binding UploadRateText}" />
-                                            <ProgressBar Classes="activity-bar" Value="{Binding UploadActivityValue}" />
-                                            <TextBlock Classes="metric-caption" Text="{Binding UploadTotalText, StringFormat='Всего {0}'}" />
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-
-                                <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="18">
-                                    <Border Classes="surface-muted" Padding="20">
-                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
-                                            <TextBlock Classes="section-title" Text="{Binding SelectedProfile.DisplayName}" />
-                                            <TextBlock Grid.Row="1" Classes="muted" Text="{Binding SelectedProfileCaption}" />
-                                            <TextBlock Grid.Row="2" Classes="metric-caption" Text="{Binding EndpointText}" TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="3" Classes="metric-caption" Text="{Binding AddressText}" />
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Grid.Column="1" Classes="surface-muted" Padding="20">
-                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
-                                            <TextBlock Classes="section-title" Text="Сеть" />
-                                            <TextBlock Grid.Row="1" Classes="metric-caption" Text="{Binding DnsText, StringFormat='DNS: {0}'}" TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="2" Classes="metric-caption" Text="{Binding MtuText, StringFormat='MTU: {0}'}" />
-                                            <TextBlock Grid.Row="3" Classes="metric-caption" Text="{Binding HandshakeText, StringFormat='Handshake: {0}'}" TextWrapping="Wrap" />
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-                            </Grid>
-                        </Grid>
-                    </Border>
-
-                    <Grid Grid.Row="1" ColumnDefinitions="1.05*,0.95*" ColumnSpacing="24">
-                        <Border Classes="surface-card" Padding="24">
-                            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="18">
-                                <TextBlock Classes="section-title" Text="Параметры профиля" />
-
-                                <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="18">
-                                    <Border Classes="surface-muted" Padding="18">
-                                        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                                            <TextBlock Classes="metric-title" Text="Сервер" />
-                                            <TextBlock Grid.Row="1" Text="{Binding EndpointHostText}" />
-                                            <TextBlock Grid.Row="2" Classes="metric-caption" Text="{Binding EndpointText}" TextWrapping="Wrap" />
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Grid.Column="1" Classes="surface-muted" Padding="18">
-                                        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                                            <TextBlock Classes="metric-title" Text="Маршруты" />
-                                            <TextBlock Grid.Row="1" Text="{Binding AllowedIpsText}" TextWrapping="Wrap" />
-                                            <TextBlock Grid.Row="2" Classes="metric-caption" Text="{Binding AddressText, StringFormat='Локальный адрес: {0}'}" />
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-
-                                <Border Grid.Row="2" Classes="surface-muted" Padding="20">
-                                    <StackPanel Spacing="14">
-                                        <TextBlock Classes="section-title" Text="Управление профилем" />
-                                        <TextBox Classes="rename-box" Text="{Binding RenameDraft, Mode=TwoWay}" />
-                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-                                            <Button Classes="ghost-button"
-                                                    Content="Переименовать"
-                                                    Command="{Binding RenameSelectedProfileCommand}"
-                                                    IsEnabled="{Binding CanRenameSelectedProfile}" />
-                                            <Button Grid.Column="1"
-                                                    Classes="danger-button"
-                                                    Content="Удалить"
-                                                    Command="{Binding DeleteSelectedProfileCommand}"
-                                                    IsEnabled="{Binding CanDeleteSelectedProfile}" />
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                        </Border>
-
-                        <StackPanel Grid.Column="1" Spacing="24">
-                            <Border Classes="surface-card" Padding="24" IsVisible="{Binding ShowWarningCard}">
-                                <StackPanel Spacing="10">
-                                    <TextBlock Classes="section-title" Text="Внимание" />
-                                    <TextBlock Classes="muted" Text="{Binding WarningSummaryText}" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Classes="surface-card" Padding="24" IsVisible="{Binding ShowUpdateCard}">
-                                <StackPanel Spacing="14">
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                        <StackPanel Spacing="6">
-                                            <TextBlock Classes="section-title" Text="{Binding UpdateCardTitle}" />
-                                            <TextBlock Classes="muted" Text="{Binding UpdateCardDescription}" TextWrapping="Wrap" />
-                                        </StackPanel>
-
-                                        <Border Grid.Column="1" Classes="info-chip" Padding="12,8" VerticalAlignment="Top">
-                                            <TextBlock Classes="metric-caption" Text="{Binding CurrentVersionText, StringFormat='v{0}'}" />
-                                        </Border>
-                                    </Grid>
-
-                                    <Button Classes="ghost-button"
-                                            Content="{Binding UpdateActionText}"
-                                            Command="{Binding RunUpdateActionCommand}"
-                                            IsEnabled="{Binding CanRunUpdateAction}" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Classes="surface-card" Padding="24">
-                                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
-                                    <TextBlock Classes="section-title" Text="Подключение" />
-                                    <TextBlock Grid.Row="1" Classes="metric-caption" Text="{Binding HandshakeText, StringFormat='Последний handshake: {0}'}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Row="2" Classes="metric-caption" Text="{Binding LastOperationMessage}" TextWrapping="Wrap" />
-                                </Grid>
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </Grid>
         </Grid>
-    </Grid>
+    </Border>
 </Window>

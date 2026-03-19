@@ -55,4 +55,20 @@ public partial class MainWindow : Window
             await viewModel.ImportConfigAsync(path);
         }
     }
+
+    private async void OnPrimaryActionClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.HasNoProfiles)
+        {
+            OnImportConfigClick(sender, e);
+            return;
+        }
+
+        await viewModel.ExecutePrimaryActionAsync();
+    }
 }

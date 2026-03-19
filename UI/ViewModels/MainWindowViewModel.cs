@@ -102,6 +102,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool HasSelectedProfile => SelectedProfile is not null;
 
+    public bool ShowImportShortcut => HasProfiles;
+
     public bool UpdatesEnabled => UpdateState.IsEnabled;
 
     public bool ShowUpdateCard => UpdateState.Status is not AppUpdateStatus.Disabled || !string.IsNullOrWhiteSpace(UpdateState.LastError);
@@ -167,7 +169,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public string EmptyStateTitle => "Добавьте первый сервер";
 
-    public string EmptyStateText => "Импортируйте .vpn или .conf, сохраните профиль локально и подключайтесь одним нажатием.";
+    public string EmptyStateText => "Добавьте конфиг, чтобы начать.";
 
     public string ConnectionBadgeText => ConnectionState.Status switch
     {
@@ -178,6 +180,25 @@ public partial class MainWindowViewModel : ObservableObject
         RuntimeConnectionStatus.Failed => "Ошибка",
         RuntimeConnectionStatus.Unsupported => "Недоступно",
         _ => "Не подключено"
+    };
+
+    public string ConnectionLabelText => ConnectionState.Status switch
+    {
+        RuntimeConnectionStatus.Connected => "Подключено",
+        RuntimeConnectionStatus.Connecting => "Подключение",
+        RuntimeConnectionStatus.Disconnecting => "Отключение",
+        RuntimeConnectionStatus.Degraded => "Соединение нестабильно",
+        RuntimeConnectionStatus.Failed => "Ошибка подключения",
+        RuntimeConnectionStatus.Unsupported => "Недоступно",
+        _ => HasProfiles ? "Нажмите для подключения" : "Добавьте конфиг"
+    };
+
+    public string RingAccentBrush => ConnectionState.Status switch
+    {
+        RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded => "#1FE3D5",
+        RuntimeConnectionStatus.Connecting or RuntimeConnectionStatus.Disconnecting => "#67B3FF",
+        RuntimeConnectionStatus.Failed or RuntimeConnectionStatus.Unsupported => "#F87171",
+        _ => "#8B6CF6"
     };
 
     public string StatusTitle
@@ -244,6 +265,11 @@ public partial class MainWindowViewModel : ObservableObject
     {
         get
         {
+            if (!HasProfiles)
+            {
+                return "Добавить конфиг";
+            }
+
             if (IsBusy)
             {
                 return "Подождите";
@@ -274,6 +300,11 @@ public partial class MainWindowViewModel : ObservableObject
 
             return "Подключить";
         }
+    }
+
+    public async Task ExecutePrimaryActionAsync()
+    {
+        await ToggleConnectionAsync();
     }
 
     public bool CanToggleConnection =>
@@ -844,6 +875,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasProfiles));
         OnPropertyChanged(nameof(HasNoProfiles));
         OnPropertyChanged(nameof(HasSelectedProfile));
+        OnPropertyChanged(nameof(ShowImportShortcut));
         OnPropertyChanged(nameof(UpdatesEnabled));
         OnPropertyChanged(nameof(ShowUpdateCard));
         OnPropertyChanged(nameof(ShowWarningCard));
@@ -855,6 +887,8 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(EmptyStateTitle));
         OnPropertyChanged(nameof(EmptyStateText));
         OnPropertyChanged(nameof(ConnectionBadgeText));
+        OnPropertyChanged(nameof(ConnectionLabelText));
+        OnPropertyChanged(nameof(RingAccentBrush));
         OnPropertyChanged(nameof(StatusTitle));
         OnPropertyChanged(nameof(StatusDescription));
         OnPropertyChanged(nameof(PrimaryActionText));
