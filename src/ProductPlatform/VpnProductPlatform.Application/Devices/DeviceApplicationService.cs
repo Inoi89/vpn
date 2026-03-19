@@ -23,8 +23,13 @@ public sealed class DeviceApplicationService(
 
     public async Task<DeviceResponse> RegisterAsync(Guid accountId, RegisterDeviceRequest request, CancellationToken cancellationToken)
     {
-        _ = await accountRepository.GetByIdAsync(accountId, cancellationToken)
+        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
             ?? throw new InvalidOperationException("Account was not found.");
+
+        if (account.Status != AccountStatus.Active)
+        {
+            throw new InvalidOperationException("Email verification is required before device registration.");
+        }
 
         var subscription = await subscriptionRepository.GetActiveByAccountIdAsync(accountId, clock.UtcNow, cancellationToken)
             ?? throw new InvalidOperationException("No active subscription was found for this account.");

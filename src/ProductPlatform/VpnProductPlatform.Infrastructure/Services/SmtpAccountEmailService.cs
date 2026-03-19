@@ -4,18 +4,19 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using VpnProductPlatform.Application.Abstractions;
+using VpnProductPlatform.Infrastructure.Security;
 
 namespace VpnProductPlatform.Infrastructure.Services;
 
 public sealed class SmtpAccountEmailService(
     IOptions<SmtpOptions> smtpOptions,
+    IOptions<EmailVerificationOptions> emailVerificationOptions,
     ILogger<SmtpAccountEmailService> logger) : IAccountEmailService
 {
-    public async Task SendWelcomeAsync(
+    public async Task SendVerificationAsync(
         string email,
         string displayName,
-        string? planName,
-        DateTimeOffset? subscriptionEndsAtUtc,
+        string verificationToken,
         CancellationToken cancellationToken)
     {
         var options = smtpOptions.Value;
@@ -26,7 +27,8 @@ public sealed class SmtpAccountEmailService(
 
         try
         {
-            var message = BuildWelcomeMessage(options, email, displayName, planName, subscriptionEndsAtUtc);
+            var verificationUrl = BuildVerificationUrl(emailVerificationOptions.Value.CabinetBaseUrl, verificationToken);
+            var message = BuildVerificationMessage(options, email, displayName, verificationUrl);
 
             using var client = new SmtpClient();
             await client.ConnectAsync(
@@ -48,28 +50,22 @@ public sealed class SmtpAccountEmailService(
         }
         catch (Exception exception)
         {
-            logger.LogWarning(exception, "Failed to send welcome email to {Email}.", email);
+            logger.LogWarning(exception, "Failed to send verification email to {Email}.", email);
         }
     }
 
-    private static MimeMessage BuildWelcomeMessage(
+    private static MimeMessage BuildVerificationMessage(
         SmtpOptions options,
         string email,
         string displayName,
-        string? planName,
-        DateTimeOffset? subscriptionEndsAtUtc)
+        string verificationUrl)
     {
-        var effectivePlanName = string.IsNullOrWhiteSpace(planName) ? "ваш тариф" : planName;
-        var expiresLine = subscriptionEndsAtUtc is null
-            ? "Доступ уже создан и готов к использованию."
-            : $"Текущий доступ активен до {subscriptionEndsAtUtc.Value:dd.MM.yyyy HH:mm} UTC.";
-
         var plainText = $"""
             Привет, {displayName}!
 
             Спасибо за регистрацию в EtoJeSim VPN.
-            Для аккаунта уже активирован план "{effectivePlanName}".
-            {expiresLine}
+            Чтобы активировать аккаунт, подтвердите почту по ссылке:
+            {verificationUrl}
 
             Если письмо получили не вы, просто проигнорируйте его.
             """;
@@ -79,8 +75,8 @@ public sealed class SmtpAccountEmailService(
               <body style="font-family: Segoe UI, Arial, sans-serif; color: #102033;">
                 <h2 style="margin-bottom: 12px;">Привет, {Escape(displayName)}!</h2>
                 <p>Спасибо за регистрацию в <strong>EtoJeSim VPN</strong>.</p>
-                <p>Для аккаунта уже активирован план <strong>{Escape(effectivePlanName)}</strong>.</p>
-                <p>{Escape(expiresLine)}</p>
+                <p>Чтобы активировать аккаунт, подтвердите почту по ссылке ниже.</p>
+                <p><a href="{Escape(verificationUrl)}">{Escape(verificationUrl)}</a></p>
                 <p style="color:#5d6b7c">Если письмо получили не вы, просто проигнорируйте его.</p>
               </body>
             </html>
@@ -89,7 +85,7 @@ public sealed class SmtpAccountEmailService(
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(options.FromName, options.FromEmail));
         message.To.Add(new MailboxAddress(displayName, email));
-        message.Subject = "Спасибо за регистрацию в EtoJeSim VPN";
+        message.Subject = "Подтвердите почту для EtoJeSim VPN";
         message.Body = new BodyBuilder
         {
             TextBody = plainText,
@@ -114,5 +110,14 @@ public sealed class SmtpAccountEmailService(
     private static string Escape(string value)
     {
         return System.Net.WebUtility.HtmlEncode(value);
+    }
+
+    private static string BuildVerificationUrl(string baseUrl, string verificationToken)
+    {
+        var trimmedBaseUrl = string.IsNullOrWhiteSpace(baseUrl)
+            ? "http://5.61.37.29"
+            : baseUrl.Trim().TrimEnd('/');
+        var encodedToken = Uri.EscapeDataString(verificationToken);
+        return $"{trimmedBaseUrl}/?verify={encodedToken}";
     }
 }

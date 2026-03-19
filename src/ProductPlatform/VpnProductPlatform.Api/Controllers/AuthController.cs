@@ -64,6 +64,38 @@ public sealed class AuthController(
         }
     }
 
+    [AllowAnonymous]
+    [HttpPost("verify-email")]
+    public async Task<ActionResult<VerifyEmailResponse>> VerifyEmail(
+        [FromBody] VerifyEmailRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await accountApplicationService.VerifyEmailAsync(request, cancellationToken);
+            return Ok(response);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { error = exception.Message });
+        }
+    }
+
+    [Authorize]
+    [HttpPost("resend-verification-email")]
+    public async Task<IActionResult> ResendVerificationEmail(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await accountApplicationService.ResendVerificationEmailAsync(User.GetRequiredAccountId(), cancellationToken);
+            return NoContent();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { error = exception.Message });
+        }
+    }
+
     [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)

@@ -1,6 +1,7 @@
 using VpnProductPlatform.Application.Abstractions;
 using VpnProductPlatform.Contracts;
 using VpnProductPlatform.Domain.Entities;
+using VpnProductPlatform.Domain.Enums;
 
 namespace VpnProductPlatform.Application.Accounts;
 
@@ -11,6 +12,7 @@ public sealed class AccountApplicationService(
     IPasswordHashService passwordHashService,
     ITokenIssuer tokenIssuer,
     IRefreshTokenService refreshTokenService,
+    IEmailVerificationTokenService emailVerificationTokenService,
     IAccountEmailService accountEmailService,
     IUnitOfWork unitOfWork,
     IClock clock)
@@ -37,25 +39,16 @@ public sealed class AccountApplicationService(
         var account = Account.Create(Guid.NewGuid(), email, displayName, passwordHash, clock.UtcNow);
         await accountRepository.AddAsync(account, cancellationToken);
 
-        var defaultPlan = await subscriptionRepository.GetDefaultPlanAsync(cancellationToken)
-            ?? throw new InvalidOperationException("No default subscription plan is configured.");
-
-        var trial = Subscription.CreateTrial(
-            Guid.NewGuid(),
-            account.Id,
-            defaultPlan.Id,
-            clock.UtcNow,
-            TimeSpan.FromDays(7));
-        await subscriptionRepository.AddAsync(trial, cancellationToken);
-
         var response = await CreateAuthResponseAsync(account, sessionContext, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        await accountEmailService.SendWelcomeAsync(
+
+        var verification = emailVerificationTokenService.Issue(account.Id, account.Email);
+        await accountEmailService.SendVerificationAsync(
             account.Email,
             account.DisplayName,
-            defaultPlan.Name,
-            trial.EndsAtUtc,
+            verification.Token,
             cancellationToken);
+
         return response;
     }
 
@@ -67,6 +60,11 @@ public sealed class AccountApplicationService(
         var email = NormalizeEmail(request.Email);
         var account = await accountRepository.FindByEmailAsync(email, cancellationToken)
             ?? throw new InvalidOperationException("Invalid credentials.");
+
+        if (account.Status is AccountStatus.Suspended or AccountStatus.Deleted)
+        {
+            throw new InvalidOperationException("Account is unavailable.");
+        }
 
         if (!passwordHashService.VerifyHashedPassword(email, account.PasswordHash, request.Password))
         {
@@ -90,6 +88,7 @@ public sealed class AccountApplicationService(
             account.Email,
             account.DisplayName,
             account.Status.ToString(),
+            account.Status == AccountStatus.Active,
             subscription is null
                 ? null
                 : new SubscriptionSummaryResponse(
@@ -100,6 +99,82 @@ public sealed class AccountApplicationService(
                     subscription.Plan.MaxConcurrentSessions,
                     subscription.StartsAtUtc,
                     subscription.EndsAtUtc));
+    }
+
+    public async Task<VerifyEmailResponse> VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token))
+        {
+            throw new InvalidOperationException("Verification token is required.");
+        }
+
+        if (!emailVerificationTokenService.TryValidate(request.Token.Trim(), out var payload) || payload is null)
+        {
+            throw new InvalidOperationException("Verification token is invalid or expired.");
+        }
+
+        var account = await accountRepository.GetByIdAsync(payload.AccountId, cancellationToken)
+            ?? throw new InvalidOperationException("Account was not found.");
+
+        if (!string.Equals(account.Email, payload.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Verification token is invalid.");
+        }
+
+        var alreadyVerified = account.Status == AccountStatus.Active;
+        if (!alreadyVerified)
+        {
+            account.VerifyEmail(clock.UtcNow);
+            await EnsureTrialSubscriptionAsync(account.Id, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return new VerifyEmailResponse(
+            account.Id,
+            account.Email,
+            account.Status.ToString(),
+            account.Status == AccountStatus.Active,
+            alreadyVerified
+                ? "Email is already verified."
+                : "Email verification completed.");
+    }
+
+    public async Task ResendVerificationEmailAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
+            ?? throw new InvalidOperationException("Account was not found.");
+
+        if (account.Status == AccountStatus.Active)
+        {
+            return;
+        }
+
+        var verification = emailVerificationTokenService.Issue(account.Id, account.Email);
+        await accountEmailService.SendVerificationAsync(
+            account.Email,
+            account.DisplayName,
+            verification.Token,
+            cancellationToken);
+    }
+
+    private async Task EnsureTrialSubscriptionAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        var current = await subscriptionRepository.GetActiveByAccountIdAsync(accountId, clock.UtcNow, cancellationToken);
+        if (current is not null)
+        {
+            return;
+        }
+
+        var defaultPlan = await subscriptionRepository.GetDefaultPlanAsync(cancellationToken)
+            ?? throw new InvalidOperationException("No default subscription plan is configured.");
+
+        var trial = Subscription.CreateTrial(
+            Guid.NewGuid(),
+            accountId,
+            defaultPlan.Id,
+            clock.UtcNow,
+            TimeSpan.FromDays(7));
+        await subscriptionRepository.AddAsync(trial, cancellationToken);
     }
 
     private async Task<AuthTokenResponse> CreateAuthResponseAsync(

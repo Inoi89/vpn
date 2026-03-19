@@ -8,6 +8,7 @@ import type {
   RegisterAccountRequest,
   SessionResponse,
   StoredAuth,
+  VerifyEmailRequest,
 } from './types'
 
 const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
@@ -70,6 +71,17 @@ export function createCabinetApi(context: RequestContext = {}) {
       return request<AuthResponse>('/api/auth/refresh', {
         method: 'POST',
         body: JSON.stringify(payload),
+      })
+    },
+    verifyEmail(payload: VerifyEmailRequest): Promise<void> {
+      return request<void>('/api/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+    },
+    resendVerificationEmail(): Promise<void> {
+      return request<void>('/api/auth/resend-verification-email', {
+        method: 'POST',
       })
     },
     logout(): Promise<void> {

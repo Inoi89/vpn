@@ -34,10 +34,24 @@ public interface IRefreshTokenService
 
 public interface IAccountEmailService
 {
-    Task SendWelcomeAsync(
+    Task SendVerificationAsync(
         string email,
         string displayName,
-        string? planName,
-        DateTimeOffset? subscriptionEndsAtUtc,
+        string verificationToken,
         CancellationToken cancellationToken);
+}
+
+public sealed record EmailVerificationTokenEnvelope(
+    string Token,
+    DateTimeOffset ExpiresAtUtc);
+
+public sealed record EmailVerificationPayload(
+    Guid AccountId,
+    string Email,
+    DateTimeOffset ExpiresAtUtc);
+
+public interface IEmailVerificationTokenService
+{
+    EmailVerificationTokenEnvelope Issue(Guid accountId, string email);
+    bool TryValidate(string token, out EmailVerificationPayload? payload);
 }

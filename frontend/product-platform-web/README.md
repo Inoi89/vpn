@@ -2,7 +2,19 @@
 
 Минимальный пользовательский кабинет для `VpnProductPlatform`.
 
-## Dev
+## Задача
+
+Кабинет показывает:
+
+- регистрацию и вход
+- текущий аккаунт
+- статус подписки
+- устройства
+- сессии
+- активные выданные доступы
+- email verification flow
+
+## Локальный запуск
 
 ```powershell
 cd frontend/product-platform-web
@@ -10,7 +22,7 @@ npm install
 npm run dev
 ```
 
-## Build
+## Сборка
 
 ```powershell
 cd frontend/product-platform-web
@@ -25,12 +37,14 @@ docker build -t product-platform-web .
 docker run --rm -p 8080:80 product-platform-web
 ```
 
-## API
+## Конфигурация API
 
-По умолчанию фронт берёт адрес API из `VITE_API_BASE_URL`.
+По умолчанию фронт использует тот же origin, что и страница.
+
+Если нужен отдельный API host, задай:
 
 ```powershell
-$env:VITE_API_BASE_URL = "http://localhost:7101"
+$env:VITE_API_BASE_URL = "https://api.etojesim.com"
 npm run dev
 ```
 
@@ -40,6 +54,8 @@ npm run dev
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
 - `POST /api/auth/logout`
+- `POST /api/auth/verify-email`
+- `POST /api/auth/resend-verification-email`
 - `GET /api/me`
 - `GET /api/access-grants`
 - `GET /api/devices`
@@ -48,13 +64,16 @@ npm run dev
 - `GET /api/sessions`
 - `DELETE /api/sessions/{sessionId}`
 
-## Current MVP Deployment
+## Поведение verification flow
 
-Текущий временный rollout работает так:
+Если в URL есть `?verify=<token>`, кабинет:
 
-- API origin живёт на `192.168.1.2` за nginx vhost `api.etojesim.com`
-- прямой доступ к origin ограничен `127.0.0.1` и `5.61.37.29`
-- сам кабинет поднят на `5.61.37.29:80`
-- web-host проксирует `/api/` сервер-сайдно в `http://93.100.54.80` с `Host: api.etojesim.com`
+1. вызывает `POST /api/auth/verify-email`
+2. показывает success/error banner
+3. очищает query string из адресной строки
 
-Это позволяет проверять кабинет по IP веб-хоста без прямого browser-доступа к API.
+Если аккаунт в состоянии `PendingVerification`, кабинет показывает заметный баннер с кнопкой повторной отправки письма.
+
+## Примечание
+
+Кабинет специально сделан flat и простым. Здесь нет операторского control plane и нет логики нод.

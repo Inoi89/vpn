@@ -49,13 +49,15 @@ The current skeleton already includes:
 - `AccountSession`
 - JWT login
 - account registration
-- best-effort welcome email on registration via SMTP
+- email verification by signed link
+- best-effort SMTP delivery for verification mail
 - refresh tokens with rotation
 - session list and revoke
 - authenticated logout
 - access token validation against live account session state
-- default trial subscription on registration
+- trial activation only after email verification
 - device registration with plan-based device limit
+- device registration blocked until email verification
 - device revoke
 - PostgreSQL persistence through EF Core
 
@@ -64,6 +66,8 @@ The current skeleton already includes:
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
+- `POST /api/auth/verify-email`
+- `POST /api/auth/resend-verification-email`
 - `POST /api/auth/logout`
 - `GET /api/me`
 - `GET /api/devices`
@@ -78,7 +82,7 @@ The current skeleton already includes:
 
 ## Current Product Assumption
 
-For bootstrap purposes, registration automatically grants a trial subscription based on the default active plan seeded into the database.
+For bootstrap purposes, registration creates a `PendingVerification` account first. After the user confirms the mailbox, the platform activates the default trial subscription from the seeded plan.
 
 This is intentionally temporary.
 

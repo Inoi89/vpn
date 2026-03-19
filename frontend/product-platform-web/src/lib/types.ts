@@ -13,6 +13,10 @@ export type RefreshTokenRequest = {
   refreshToken: string
 }
 
+export type VerifyEmailRequest = {
+  token: string
+}
+
 export type SubscriptionSummary = {
   subscriptionId: string
   planName: string

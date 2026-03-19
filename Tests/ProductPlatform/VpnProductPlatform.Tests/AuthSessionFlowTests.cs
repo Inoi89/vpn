@@ -9,7 +9,7 @@ namespace VpnProductPlatform.Tests;
 public sealed class AuthSessionFlowTests
 {
     [Fact]
-    public async Task Register_CreatesSessionAndReturnsRefreshToken()
+    public async Task Register_CreatesPendingAccountSession_AndSendsVerification()
     {
         var fixture = TestFixture.Create();
 
@@ -22,9 +22,27 @@ public sealed class AuthSessionFlowTests
         Assert.NotEqual(Guid.Empty, response.SessionId);
         Assert.StartsWith(response.SessionId.ToString("N"), response.RefreshToken);
         Assert.Single(fixture.AccountSessions.Items);
-        Assert.Single(fixture.Subscriptions.Subscriptions);
+        Assert.Empty(fixture.Subscriptions.Subscriptions);
         Assert.Single(fixture.AccountEmails.Sent);
         Assert.Equal("alex@example.com", fixture.AccountEmails.Sent[0].Email);
+        Assert.StartsWith("verify-", fixture.AccountEmails.Sent[0].VerificationToken);
+    }
+
+    [Fact]
+    public async Task VerifyEmail_ActivatesAccount_AndCreatesTrialSubscription()
+    {
+        var fixture = TestFixture.Create();
+        var auth = await fixture.Accounts.RegisterAsync(
+            new RegisterAccountRequest("alex@example.com", "super-secret", "Alex"),
+            new AuthSessionContext("1.1.1.1", "TestAgent/1.0"),
+            CancellationToken.None);
+
+        var token = fixture.VerificationTokens.LastIssuedToken!;
+        var result = await fixture.Accounts.VerifyEmailAsync(new VerifyEmailRequest(token), CancellationToken.None);
+
+        Assert.True(result.IsEmailVerified);
+        Assert.Equal("Active", result.Status);
+        Assert.Single(fixture.Subscriptions.Subscriptions);
     }
 
     [Fact]
@@ -101,13 +119,15 @@ public sealed class AuthSessionFlowTests
             SessionApplicationService sessions,
             InMemoryAccountSessionRepository accountSessions,
             InMemorySubscriptionRepository subscriptions,
-            FakeAccountEmailService accountEmails)
+            FakeAccountEmailService accountEmails,
+            FakeEmailVerificationTokenService verificationTokens)
         {
             Accounts = accounts;
             Sessions = sessions;
             AccountSessions = accountSessions;
             Subscriptions = subscriptions;
             AccountEmails = accountEmails;
+            VerificationTokens = verificationTokens;
         }
 
         public AccountApplicationService Accounts { get; }
@@ -115,6 +135,7 @@ public sealed class AuthSessionFlowTests
         public InMemoryAccountSessionRepository AccountSessions { get; }
         public InMemorySubscriptionRepository Subscriptions { get; }
         public FakeAccountEmailService AccountEmails { get; }
+        public FakeEmailVerificationTokenService VerificationTokens { get; }
 
         public static TestFixture Create()
         {
@@ -125,6 +146,7 @@ public sealed class AuthSessionFlowTests
             var passwordHasher = new FakePasswordHashService();
             var tokenIssuer = new FakeTokenIssuer();
             var refreshTokens = new FakeRefreshTokenService(clock);
+            var verificationTokens = new FakeEmailVerificationTokenService(clock);
             var accountEmails = new FakeAccountEmailService();
             var unitOfWork = new FakeUnitOfWork();
 
@@ -136,6 +158,7 @@ public sealed class AuthSessionFlowTests
                     passwordHasher,
                     tokenIssuer,
                     refreshTokens,
+                    verificationTokens,
                     accountEmails,
                     unitOfWork,
                     clock),
@@ -148,23 +171,51 @@ public sealed class AuthSessionFlowTests
                     clock),
                 sessions,
                 subscriptions,
-                accountEmails);
+                accountEmails,
+                verificationTokens);
         }
     }
 
     private sealed class FakeAccountEmailService : IAccountEmailService
     {
-        public List<(string Email, string DisplayName, string? PlanName, DateTimeOffset? SubscriptionEndsAtUtc)> Sent { get; } = [];
+        public List<(string Email, string DisplayName, string VerificationToken)> Sent { get; } = [];
 
-        public Task SendWelcomeAsync(
+        public Task SendVerificationAsync(
             string email,
             string displayName,
-            string? planName,
-            DateTimeOffset? subscriptionEndsAtUtc,
+            string verificationToken,
             CancellationToken cancellationToken)
         {
-            Sent.Add((email, displayName, planName, subscriptionEndsAtUtc));
+            Sent.Add((email, displayName, verificationToken));
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeEmailVerificationTokenService(FakeClock clock) : IEmailVerificationTokenService
+    {
+        private int _sequence;
+
+        public string? LastIssuedToken { get; private set; }
+
+        public EmailVerificationTokenEnvelope Issue(Guid accountId, string email)
+        {
+            var token = $"verify-{++_sequence}-{accountId:N}";
+            LastIssuedToken = token;
+            return new EmailVerificationTokenEnvelope(token, clock.UtcNow.AddHours(24));
+        }
+
+        public bool TryValidate(string token, out EmailVerificationPayload? payload)
+        {
+            payload = null;
+
+            var parts = token.Split('-', 3, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 3 || parts[0] != "verify" || !Guid.TryParseExact(parts[2], "N", out var accountId))
+            {
+                return false;
+            }
+
+            payload = new EmailVerificationPayload(accountId, "alex@example.com", clock.UtcNow.AddHours(24));
+            return true;
         }
     }
 

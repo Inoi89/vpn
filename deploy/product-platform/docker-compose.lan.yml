@@ -39,6 +39,11 @@ services:
       Smtp__Password: ${PRODUCT_PLATFORM_SMTP_PASSWORD:-}
       Smtp__FromEmail: ${PRODUCT_PLATFORM_SMTP_FROM_EMAIL:-no-reply@etojesim.com}
       Smtp__FromName: ${PRODUCT_PLATFORM_SMTP_FROM_NAME:-EtoJeSim VPN}
+      EmailVerification__Issuer: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_ISSUER:-VpnProductPlatform}
+      EmailVerification__Audience: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_AUDIENCE:-VpnProductPlatform.EmailVerification}
+      EmailVerification__SigningKey: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_SIGNING_KEY:-}
+      EmailVerification__LifetimeHours: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_LIFETIME_HOURS:-24}
+      EmailVerification__CabinetBaseUrl: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_CABINET_BASE_URL:-http://5.61.37.29}
       Cors__AllowedOrigins__0: http://5.61.37.29
       Cors__AllowedOrigins__1: https://5.61.37.29
       Cors__AllowedOrigins__2: http://localhost:5173

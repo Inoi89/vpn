@@ -40,6 +40,17 @@ public static class DependencyInjection
         };
         services.AddSingleton<IOptions<JwtOptions>>(Options.Create(jwtOptions));
 
+        var emailVerificationSection = configuration.GetSection(EmailVerificationOptions.SectionName);
+        var emailVerificationOptions = new EmailVerificationOptions
+        {
+            Issuer = emailVerificationSection["Issuer"] ?? "VpnProductPlatform",
+            Audience = emailVerificationSection["Audience"] ?? "VpnProductPlatform.EmailVerification",
+            SigningKey = string.IsNullOrWhiteSpace(emailVerificationSection["SigningKey"]) ? jwtOptions.SigningKey : emailVerificationSection["SigningKey"]!,
+            LifetimeHours = int.TryParse(emailVerificationSection["LifetimeHours"], out var verificationLifetimeHours) ? verificationLifetimeHours : 24,
+            CabinetBaseUrl = emailVerificationSection["CabinetBaseUrl"] ?? "http://5.61.37.29"
+        };
+        services.AddSingleton<IOptions<EmailVerificationOptions>>(Options.Create(emailVerificationOptions));
+
         services.AddDbContext<ProductPlatformDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("ProductPlatform")));
 
@@ -53,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHashService, PasswordHashService>();
         services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddScoped<IEmailVerificationTokenService, EmailVerificationTokenService>();
         services.AddScoped<IAccountEmailService, SmtpAccountEmailService>();
         services.AddScoped<ProductPlatformDbSeeder>();
 

@@ -52,6 +52,11 @@ Copy [`.env.example`](./.env.example) to `.env` and set:
 - `PRODUCT_PLATFORM_SMTP_PASSWORD`
 - `PRODUCT_PLATFORM_SMTP_FROM_EMAIL`
 - `PRODUCT_PLATFORM_SMTP_FROM_NAME`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_ISSUER`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_AUDIENCE`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_SIGNING_KEY`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_LIFETIME_HOURS`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_CABINET_BASE_URL`
 
 ## Notes
 
@@ -59,4 +64,4 @@ Copy [`.env.example`](./.env.example) to `.env` and set:
 - Add a new `sites-available` file and symlink it into `sites-enabled`.
 - Keep the product platform stack isolated from the existing control-plane stack.
 - The live `api.etojesim.com` origin on `192.168.1.2` is already restricted to `5.61.37.29` and `127.0.0.1`.
-- Registration welcome mail is best-effort: account creation should not fail if SMTP is temporarily unavailable.
+- Registration verification mail is best-effort: account creation should not fail if SMTP is temporarily unavailable.

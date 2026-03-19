@@ -50,7 +50,7 @@ The current API bootstrap uses `EnsureCreated` on startup for the initial schema
 
 ## SMTP
 
-Registration now supports a best-effort welcome email through the `Smtp` configuration section.
+Registration now sends a best-effort verification email through the `Smtp` configuration section.
 
 Required deploy variables:
 
@@ -62,8 +62,23 @@ Required deploy variables:
 - `PRODUCT_PLATFORM_SMTP_PASSWORD`
 - `PRODUCT_PLATFORM_SMTP_FROM_EMAIL`
 - `PRODUCT_PLATFORM_SMTP_FROM_NAME`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_ISSUER`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_AUDIENCE`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_SIGNING_KEY`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_LIFETIME_HOURS`
+- `PRODUCT_PLATFORM_EMAIL_VERIFICATION_CABINET_BASE_URL`
 
 If SMTP is disabled or temporarily unavailable, registration still succeeds and the API only logs the send failure.
+
+Current live state:
+
+- SMTP is configured on `192.168.1.2` with `smtp.timeweb.ru:465`
+- verification mail is sent from `vpn@udni.ru`
+- live smoke confirmed:
+  - resend produces a fresh verification email
+  - the email contains a link to `http://5.61.37.29/?verify=...`
+  - `POST /api/auth/verify-email` returns the account to `Active`
+  - pending accounts are blocked from device registration
 
 ## Frontend Deployment
 

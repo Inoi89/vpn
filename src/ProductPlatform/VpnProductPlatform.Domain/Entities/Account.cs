@@ -55,7 +55,7 @@ public sealed class Account : AuditableEntity
         string passwordHash,
         DateTimeOffset now)
     {
-        return new Account(id, email, displayName, passwordHash, AccountStatus.Active, now);
+        return new Account(id, email, displayName, passwordHash, AccountStatus.PendingVerification, now);
     }
 
     public void RecordLogin(DateTimeOffset now)
@@ -79,6 +79,17 @@ public sealed class Account : AuditableEntity
     public void ChangeStatus(AccountStatus status, DateTimeOffset now)
     {
         Status = status;
+        MarkUpdated(now);
+    }
+
+    public void VerifyEmail(DateTimeOffset now)
+    {
+        if (Status == AccountStatus.Active)
+        {
+            return;
+        }
+
+        Status = AccountStatus.Active;
         MarkUpdated(now);
     }
 

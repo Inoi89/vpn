@@ -26,4 +26,14 @@ public sealed record MeResponse(
     string Email,
     string DisplayName,
     string Status,
+    bool IsEmailVerified,
     SubscriptionSummaryResponse? Subscription);
+
+public sealed record VerifyEmailRequest(string Token);
+
+public sealed record VerifyEmailResponse(
+    Guid AccountId,
+    string Email,
+    string Status,
+    bool IsEmailVerified,
+    string Message);

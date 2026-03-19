@@ -1,14 +1,29 @@
 import { useEffect, useState } from 'react'
 import { createCabinetApi, toStoredAuth } from './lib/api'
 import { loadStoredAuth, saveStoredAuth } from './lib/storage'
-import type { AuthResponse, CabinetProfile, StoredAuth } from './lib/types'
+import type {
+  AccessGrantResponse,
+  AuthResponse,
+  DeviceResponse,
+  MeResponse,
+  SessionResponse,
+  StoredAuth,
+} from './lib/types'
 
 type ScreenState =
   | { status: 'loading' }
   | { status: 'anonymous' }
-  | { status: 'authenticated'; auth: StoredAuth; profile: CabinetProfile }
+  | { status: 'authenticated'; auth: StoredAuth; me: MeResponse; sessions: SessionResponse[]; devices: DeviceResponse[]; accessGrants: AccessGrantResponse[] }
 
 type AuthMode = 'login' | 'register'
+
+type BannerTone = 'success' | 'error' | 'info'
+
+type Banner = {
+  tone: BannerTone
+  title: string
+  text: string
+}
 
 const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
   dateStyle: 'medium',
@@ -18,19 +33,22 @@ const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
 export default function App() {
   const [screen, setScreen] = useState<ScreenState>({ status: 'loading' })
   const [mode, setMode] = useState<AuthMode>('login')
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [actionInfo, setActionInfo] = useState<string | null>(null)
-  const [email, setEmail] = useState('owner@example.com')
-  const [password, setPassword] = useState('supersecret')
-  const [displayName, setDisplayName] = useState('Owner')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [banner, setBanner] = useState<Banner | null>(null)
+  const [verifyBanner, setVerifyBanner] = useState<Banner | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isResendingVerification, setIsResendingVerification] = useState(false)
 
   useEffect(() => {
     void bootstrap()
+    void handleVerifyQuery()
   }, [])
 
   async function bootstrap() {
     const stored = loadStoredAuth()
+
     if (!stored) {
       setScreen({ status: 'anonymous' })
       return
@@ -38,21 +56,67 @@ export default function App() {
 
     try {
       const profile = await loadProfile(stored)
-      setScreen({ status: 'authenticated', auth: stored, profile })
+      setScreen({ status: 'authenticated', auth: stored, ...profile })
+      return
     } catch {
-      try {
-        const refreshed = await refreshAuth(stored)
-        const profile = await loadProfile(refreshed)
-        saveStoredAuth(refreshed)
-        setScreen({ status: 'authenticated', auth: refreshed, profile })
-      } catch {
-        saveStoredAuth(null)
-        setScreen({ status: 'anonymous' })
-      }
+      // Try a refresh token before forcing a logout.
+    }
+
+    try {
+      const refreshed = await refreshAuth(stored)
+      saveStoredAuth(refreshed)
+      const profile = await loadProfile(refreshed)
+      setScreen({ status: 'authenticated', auth: refreshed, ...profile })
+    } catch {
+      saveStoredAuth(null)
+      setScreen({ status: 'anonymous' })
     }
   }
 
-  async function loadProfile(auth: StoredAuth): Promise<CabinetProfile> {
+  async function handleVerifyQuery() {
+    const token = new URLSearchParams(window.location.search).get('verify')
+    if (!token) {
+      return
+    }
+
+    clearVerifyQuery()
+    setVerifyBanner({
+      tone: 'info',
+      title: 'Подтверждение почты',
+      text: 'Проверяем ссылку подтверждения...',
+    })
+
+    try {
+      const api = createCabinetApi()
+      await api.verifyEmail({ token })
+
+      setVerifyBanner({
+        tone: 'success',
+        title: 'Почта подтверждена',
+        text: 'Email успешно подтверждён. Если вы уже были в кабинете, данные обновятся автоматически.',
+      })
+
+      const stored = loadStoredAuth()
+      if (!stored) {
+        return
+      }
+
+      try {
+        const profile = await loadProfile(stored)
+        setScreen({ status: 'authenticated', auth: stored, ...profile })
+      } catch {
+        // Keep current view. The token was accepted; refresh can happen later.
+      }
+    } catch (error) {
+      setVerifyBanner({
+        tone: 'error',
+        title: 'Не удалось подтвердить почту',
+        text: getErrorMessage(error),
+      })
+    }
+  }
+
+  async function loadProfile(auth: StoredAuth) {
     const api = createCabinetApi({ accessToken: auth.accessToken })
     const [me, sessions, devices, accessGrants] = await Promise.all([
       api.me(),
@@ -71,11 +135,10 @@ export default function App() {
   }
 
   async function handleSubmit() {
-    setAuthError(null)
-    setActionError(null)
-    setActionInfo(null)
+    setBanner(null)
 
     const api = createCabinetApi()
+    setIsSubmitting(true)
 
     try {
       const response: AuthResponse =
@@ -86,10 +149,20 @@ export default function App() {
       const stored = toStoredAuth(response)
       saveStoredAuth(stored)
       const profile = await loadProfile(stored)
-      setScreen({ status: 'authenticated', auth: stored, profile })
-      setActionInfo(mode === 'login' ? 'Вход выполнен.' : 'Аккаунт создан.')
+      setScreen({ status: 'authenticated', auth: stored, ...profile })
+      setBanner({
+        tone: 'success',
+        title: mode === 'login' ? 'Вход выполнен' : 'Аккаунт создан',
+        text: mode === 'login' ? 'Сессия кабинета обновлена.' : 'Аккаунт создан и сохранён в кабинете.',
+      })
     } catch (error) {
-      setAuthError(getErrorMessage(error))
+      setBanner({
+        tone: 'error',
+        title: 'Не удалось выполнить действие',
+        text: getErrorMessage(error),
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -98,7 +171,7 @@ export default function App() {
       return
     }
 
-    setActionError(null)
+    setBanner(null)
     const api = createCabinetApi({ accessToken: screen.auth.accessToken })
 
     try {
@@ -109,7 +182,11 @@ export default function App() {
 
     saveStoredAuth(null)
     setScreen({ status: 'anonymous' })
-    setActionInfo('Сессия завершена.')
+    setBanner({
+      tone: 'success',
+      title: 'Сессия завершена',
+      text: 'Локальные данные кабинета очищены.',
+    })
   }
 
   async function handleRefresh() {
@@ -117,14 +194,49 @@ export default function App() {
       return
     }
 
-    setActionError(null)
+    setBanner(null)
 
     try {
       const profile = await loadProfile(screen.auth)
-      setScreen({ ...screen, profile })
-      setActionInfo('Данные обновлены.')
+      setScreen({ ...screen, ...profile })
+      setBanner({
+        tone: 'success',
+        title: 'Данные обновлены',
+        text: 'Кабинет получил свежий снимок аккаунта.',
+      })
     } catch (error) {
-      setActionError(getErrorMessage(error))
+      setBanner({
+        tone: 'error',
+        title: 'Не удалось обновить данные',
+        text: getErrorMessage(error),
+      })
+    }
+  }
+
+  async function handleResendVerificationEmail() {
+    if (screen.status !== 'authenticated') {
+      return
+    }
+
+    setBanner(null)
+    setIsResendingVerification(true)
+
+    try {
+      const api = createCabinetApi({ accessToken: screen.auth.accessToken })
+      await api.resendVerificationEmail()
+      setBanner({
+        tone: 'success',
+        title: 'Письмо отправлено',
+        text: 'Проверьте почту и перейдите по ссылке подтверждения.',
+      })
+    } catch (error) {
+      setBanner({
+        tone: 'error',
+        title: 'Не удалось отправить письмо',
+        text: getErrorMessage(error),
+      })
+    } finally {
+      setIsResendingVerification(false)
     }
   }
 
@@ -133,16 +245,24 @@ export default function App() {
       return
     }
 
-    const api = createCabinetApi({ accessToken: screen.auth.accessToken })
-    setActionError(null)
+    setBanner(null)
 
     try {
+      const api = createCabinetApi({ accessToken: screen.auth.accessToken })
       await api.revokeDevice(deviceId)
       const profile = await loadProfile(screen.auth)
-      setScreen({ ...screen, profile })
-      setActionInfo('Устройство отозвано.')
+      setScreen({ ...screen, ...profile })
+      setBanner({
+        tone: 'success',
+        title: 'Устройство отозвано',
+        text: 'Доступ устройства удалён.',
+      })
     } catch (error) {
-      setActionError(getErrorMessage(error))
+      setBanner({
+        tone: 'error',
+        title: 'Не удалось отозвать устройство',
+        text: getErrorMessage(error),
+      })
     }
   }
 
@@ -151,37 +271,35 @@ export default function App() {
       return
     }
 
-    const api = createCabinetApi({ accessToken: screen.auth.accessToken })
-    setActionError(null)
+    setBanner(null)
 
     try {
+      const api = createCabinetApi({ accessToken: screen.auth.accessToken })
       await api.revokeSession(sessionId)
       const profile = await loadProfile(screen.auth)
-      setScreen({ ...screen, profile })
-      setActionInfo('Сессия отозвана.')
+      setScreen({ ...screen, ...profile })
+      setBanner({
+        tone: 'success',
+        title: 'Сессия отозвана',
+        text: 'Сессия пользователя завершена.',
+      })
     } catch (error) {
-      setActionError(getErrorMessage(error))
+      setBanner({
+        tone: 'error',
+        title: 'Не удалось отозвать сессию',
+        text: getErrorMessage(error),
+      })
     }
   }
 
-  const activeDevices =
-    screen.status === 'authenticated'
-      ? screen.profile.devices.filter((device) => device.status.toLowerCase() === 'active')
-      : []
-  const activeSessions =
-    screen.status === 'authenticated'
-      ? screen.profile.sessions.filter((session) => session.status.toLowerCase() === 'active')
-      : []
-  const activeAccessGrants =
-    screen.status === 'authenticated'
-      ? screen.profile.accessGrants.filter((grant) => grant.status.toLowerCase() === 'active')
-      : []
+  const isPendingVerification =
+    screen.status === 'authenticated' && normalizeStatus(screen.me.status) === 'pendingverification'
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <div>
-          <div className="eyebrow">VPN кабинет</div>
+          <div className="eyebrow">VpnProductPlatform</div>
           <h1>Личный кабинет</h1>
         </div>
         <div className="topbar-actions">
@@ -198,6 +316,9 @@ export default function App() {
         </div>
       </header>
 
+      {verifyBanner ? <BannerView banner={verifyBanner} /> : null}
+      {banner ? <BannerView banner={banner} /> : null}
+
       {screen.status === 'loading' ? (
         <section className="surface loading-surface">
           <p>Загрузка кабинета...</p>
@@ -206,14 +327,14 @@ export default function App() {
         <section className="auth-layout">
           <div className="hero-panel surface">
             <div className="eyebrow">Пользовательский слой</div>
-            <h2>Аккаунт, устройства, активный ключ и недавние входы без операторского шума.</h2>
+            <h2>Аккаунт, устройства и активный доступ без лишнего шума.</h2>
             <p>
-              Здесь только то, что реально нужно пользователю: регистрация, вход, просмотр своего доступа,
-              устройств и активных сессий.
+              Здесь только то, что реально нужно пользователю: регистрация, вход, подтверждение почты, просмотр
+              своей подписки, устройств и активных сессий.
             </p>
             <div className="note-box">
-              Сам VPN и конфигурация нод остаются во внутреннем control plane. Этот кабинет отвечает только за
-              аккаунт, устройство и пользовательский доступ.
+              VPN-узлы и операторский control plane остаются отдельным внутренним контуром. Этот кабинет отвечает
+              только за аккаунт, устройства и пользовательский доступ.
             </div>
           </div>
 
@@ -253,62 +374,79 @@ export default function App() {
               />
             </label>
 
-            {authError ? <div className="status-banner error">{authError}</div> : null}
-            {actionInfo ? <div className="status-banner success">{actionInfo}</div> : null}
-
-            <button className="primary-button" type="button" onClick={() => void handleSubmit()}>
-              {mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+            <button className="primary-button" type="button" onClick={() => void handleSubmit()} disabled={isSubmitting}>
+              {isSubmitting ? 'Подождите...' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
             </button>
           </div>
         </section>
       ) : (
         <section className="dashboard-grid">
+          {isPendingVerification ? (
+            <section className="surface notice-banner warning full-width">
+              <div>
+                <div className="eyebrow">Требуется подтверждение</div>
+                <h2>Почта ещё не подтверждена</h2>
+                <p>
+                  Доступ к подписке и устройствам уже есть, но для завершения регистрации нужно подтвердить email.
+                  Если письмо не дошло, можно отправить его ещё раз.
+                </p>
+              </div>
+              <button
+                className="primary-button compact"
+                type="button"
+                onClick={() => void handleResendVerificationEmail()}
+                disabled={isResendingVerification}
+              >
+                {isResendingVerification ? 'Отправка...' : 'Отправить письмо ещё раз'}
+              </button>
+            </section>
+          ) : null}
+
           <div className="surface summary-panel">
             <div className="summary-head">
               <div>
                 <div className="eyebrow">Аккаунт</div>
-                <h2>{screen.profile.me.displayName}</h2>
+                <h2>{screen.me.displayName}</h2>
               </div>
-              <span className="badge">{screen.profile.me.status}</span>
+              <span className="badge">{screen.me.status}</span>
             </div>
 
             <div className="summary-list">
               <div>
                 <span>Почта</span>
-                <strong>{screen.profile.me.email}</strong>
+                <strong>{screen.me.email}</strong>
               </div>
               <div>
                 <span>Активных устройств</span>
-                <strong>{activeDevices.length}</strong>
+                <strong>{activeDevices(screen.devices).length}</strong>
               </div>
               <div>
                 <span>Активных сессий</span>
-                <strong>{activeSessions.length}</strong>
+                <strong>{activeSessions(screen.sessions).length}</strong>
               </div>
               <div>
                 <span>Всего устройств</span>
-                <strong>{screen.profile.devices.length}</strong>
+                <strong>{screen.devices.length}</strong>
               </div>
               <div>
                 <span>Активных ключей</span>
-                <strong>{activeAccessGrants.length}</strong>
+                <strong>{activeAccessGrants(screen.accessGrants).length}</strong>
               </div>
             </div>
           </div>
 
           <div className="surface entitlement-panel">
             <div className="eyebrow">Подписка</div>
-            {screen.profile.me.subscription ? (
+            {screen.me.subscription ? (
               <div className="entitlement-card">
-                <h3>{screen.profile.me.subscription.planName}</h3>
+                <h3>{screen.me.subscription.planName}</h3>
                 <p>
-                  Статус: {screen.profile.me.subscription.status}. Лимит устройств:{' '}
-                  {screen.profile.me.subscription.maxDevices}. Лимит одновременных сессий:{' '}
-                  {screen.profile.me.subscription.maxConcurrentSessions}.
+                  Статус: {screen.me.subscription.status}. Лимит устройств: {screen.me.subscription.maxDevices}. Лимит
+                  одновременных сессий: {screen.me.subscription.maxConcurrentSessions}.
                 </p>
                 <div className="muted-row">
-                  <span>{formatDateTime(screen.profile.me.subscription.startsAtUtc)}</span>
-                  <span>{formatDateTime(screen.profile.me.subscription.endsAtUtc)}</span>
+                  <span>{formatDateTime(screen.me.subscription.startsAtUtc)}</span>
+                  <span>{formatDateTime(screen.me.subscription.endsAtUtc)}</span>
                 </div>
               </div>
             ) : (
@@ -322,7 +460,7 @@ export default function App() {
                 <div className="eyebrow">VPN доступы</div>
                 <h3>Активные и выданные ключи</h3>
               </div>
-              <span className="badge subtle">{screen.profile.accessGrants.length}</span>
+              <span className="badge subtle">{screen.accessGrants.length}</span>
             </div>
 
             <table className="table">
@@ -336,14 +474,14 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {screen.profile.accessGrants.map((grant) => (
+                {screen.accessGrants.map((grant) => (
                   <tr key={grant.accessGrantId}>
                     <td>
                       <strong>{grant.deviceName}</strong>
                     </td>
                     <td>{grant.configFormat}</td>
                     <td>
-                      <span className={grant.status.toLowerCase() === 'active' ? 'pill success' : 'pill muted'}>
+                      <span className={normalizeStatus(grant.status) === 'active' ? 'pill success' : 'pill muted'}>
                         {grant.status}
                       </span>
                     </td>
@@ -351,7 +489,7 @@ export default function App() {
                     <td className="mono-cell">{trimPublicKey(grant.peerPublicKey)}</td>
                   </tr>
                 ))}
-                {screen.profile.accessGrants.length === 0 ? (
+                {screen.accessGrants.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="empty-cell">
                       Пока нет выданных VPN-доступов.
@@ -368,7 +506,7 @@ export default function App() {
                 <div className="eyebrow">Устройства</div>
                 <h3>Установки с доступом</h3>
               </div>
-              <span className="badge subtle">{screen.profile.devices.length}</span>
+              <span className="badge subtle">{screen.devices.length}</span>
             </div>
 
             <table className="table">
@@ -382,7 +520,7 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {screen.profile.devices.map((device) => (
+                {screen.devices.map((device) => (
                   <tr key={device.deviceId}>
                     <td>
                       <strong>{device.deviceName}</strong>
@@ -390,7 +528,7 @@ export default function App() {
                     </td>
                     <td>{device.platform}</td>
                     <td>
-                      <span className={device.status.toLowerCase() === 'active' ? 'pill success' : 'pill danger'}>
+                      <span className={normalizeStatus(device.status) === 'active' ? 'pill success' : 'pill danger'}>
                         {device.status}
                       </span>
                     </td>
@@ -402,7 +540,7 @@ export default function App() {
                     </td>
                   </tr>
                 ))}
-                {screen.profile.devices.length === 0 ? (
+                {screen.devices.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="empty-cell">
                       Пока нет зарегистрированных устройств.
@@ -419,7 +557,7 @@ export default function App() {
                 <div className="eyebrow">Сессии</div>
                 <h3>Текущие и недавние входы</h3>
               </div>
-              <span className="badge subtle">{screen.profile.sessions.length}</span>
+              <span className="badge subtle">{screen.sessions.length}</span>
             </div>
 
             <table className="table">
@@ -434,12 +572,12 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {screen.profile.sessions.map((session) => (
+                {screen.sessions.map((session) => (
                   <tr key={session.sessionId}>
                     <td>
                       <span
                         className={
-                          session.isCurrent ? 'pill current' : session.status.toLowerCase() === 'active' ? 'pill success' : 'pill muted'
+                          session.isCurrent ? 'pill current' : normalizeStatus(session.status) === 'active' ? 'pill success' : 'pill muted'
                         }
                       >
                         {session.isCurrent ? 'Текущая' : session.status}
@@ -460,7 +598,7 @@ export default function App() {
                     </td>
                   </tr>
                 ))}
-                {screen.profile.sessions.length === 0 ? (
+                {screen.sessions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="empty-cell">
                       Пока нет активных сессий.
@@ -470,13 +608,38 @@ export default function App() {
               </tbody>
             </table>
           </div>
-
-          {actionError ? <div className="status-banner error full-width">{actionError}</div> : null}
-          {actionInfo ? <div className="status-banner success full-width">{actionInfo}</div> : null}
         </section>
       )}
     </div>
   )
+}
+
+function BannerView({ banner }: { banner: Banner }) {
+  return (
+    <section className={`surface notice-banner ${banner.tone}`}>
+      <div>
+        <div className="eyebrow">{banner.title}</div>
+        <p>{banner.text}</p>
+      </div>
+    </section>
+  )
+}
+
+function clearVerifyQuery() {
+  const nextUrl = `${window.location.pathname}${window.location.hash}`
+  window.history.replaceState({}, document.title, nextUrl)
+}
+
+function activeDevices(devices: DeviceResponse[]): DeviceResponse[] {
+  return devices.filter((device) => normalizeStatus(device.status) === 'active')
+}
+
+function activeSessions(sessions: SessionResponse[]): SessionResponse[] {
+  return sessions.filter((session) => normalizeStatus(session.status) === 'active')
+}
+
+function activeAccessGrants(accessGrants: AccessGrantResponse[]): AccessGrantResponse[] {
+  return accessGrants.filter((grant) => normalizeStatus(grant.status) === 'active')
 }
 
 function getErrorMessage(error: unknown): string {
@@ -489,6 +652,10 @@ function getErrorMessage(error: unknown): string {
 
 function formatDateTime(value: string): string {
   return dateFormatter.format(new Date(value))
+}
+
+function normalizeStatus(value: string): string {
+  return value.toLowerCase().replace(/[^a-zа-я0-9]/gi, '')
 }
 
 function trimUserAgent(value?: string | null): string {
