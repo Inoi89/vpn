@@ -13,7 +13,7 @@ Current goal:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7 -ZipPackage
 ```
 
 Output:
@@ -33,19 +33,19 @@ Bundled updater:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6
+powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7
 ```
 
 Output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.6.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.7.msi`
 
 ## Update manifest entry point
 
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.6 -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.6.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
+powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.7 -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.7.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
 ```
 
 Output:
@@ -55,7 +55,7 @@ Output:
 Direct publish helper for the current update origin:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.6 -ServerPassword <root-password> -ReleaseNotes "0.1.6 prefers the local Amnezia daemon when present to avoid mixed runtime paths." -UploadZip
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.7 -ServerPassword <root-password> -ReleaseNotes "0.1.7 adds a real tray menu, visible icons, single-instance activation, and moves update actions into the header/tray shell." -UploadZip
 ```
 
 Current origin target:
@@ -95,6 +95,9 @@ The MSI build now:
 - creates a Start Menu shortcut
 - offers a checked desktop shortcut option and remembers the choice for upgrades
 - bundles the external updater launcher used for self-update
+- embeds the shield icon into the packaged executable and shell
+- exposes update actions through the tray menu and the header alert button
+- keeps only one running instance and restores the existing window from tray on relaunch
 
 ## Self-update notes
 

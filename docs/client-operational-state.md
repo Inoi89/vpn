@@ -29,6 +29,8 @@ The desktop client currently supports:
 - runtime warnings
 - MSI-based self-update checks
 - MSI-based in-place upgrade from an existing installation
+- tray-based connect/disconnect/update/restore actions
+- single-instance activation and restore from a second launch
 
 It intentionally does not support:
 
@@ -57,7 +59,7 @@ Packaged portable build:
 
 Packaged installer:
 
-- [YourVpnClient-0.1.6.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.6.msi)
+- [YourVpnClient-0.1.7.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.7.msi)
 
 Self-contained publish profile:
 
@@ -186,8 +188,8 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6 -ZipPackage`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7 -ZipPackage`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7`
 
 Relevant tests:
 
@@ -289,7 +291,7 @@ What is still not fully complete:
 - if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
 - release signing and hosted manifest infrastructure still need production values
 
-Post-`0.1.6` release note:
+Post-`0.1.7` release note:
 
 - the desktop window was cut down to a single-screen mobile-like flow
 - the central power button is now the only primary action the user sees
@@ -302,6 +304,11 @@ Post-`0.1.6` release note:
 - staged tunnel names are now human-readable instead of `yvc_<guid>` gibberish
 - closing the window now hides the client to tray, and a real tray exit disconnects the active tunnel before shutdown
 - when an official local Amnezia daemon is already available, the hybrid runtime now prefers it over the bundled backend instead of mixing two runtime paths on the same machine
+- the tray icon now uses a real embedded shield asset instead of an invisible process icon fallback
+- the tray menu now exposes `Подключить/Отключить VPN`, `Развернуть`, `Обновить`, and `Закрыть`
+- update action is now surfaced from the header alert button and the tray menu instead of the server card
+- the desktop window and packaged executable now embed the same shield icon
+- the client now enforces a single running instance and raises the existing window from tray when launched again
 
 Post-`0.1.1` installer note:
 

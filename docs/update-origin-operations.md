@@ -17,7 +17,7 @@ This document is the concrete operations runbook for the desktop client update o
 Current stable layout:
 
 - `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
-- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.6.msi`
+- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.7.msi`
 - `https://vpn.udni.ru/vpn-client/stable/VpnClient-win-x64.zip`
 
 The client checks only the manifest URL. The manifest then points to the MSI.
@@ -60,19 +60,19 @@ From the repo root:
 1. Build portable payload:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7 -ZipPackage
 ```
 
 2. Build MSI:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6
+powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7
 ```
 
 3. Publish to origin:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.6 -ServerPassword <root-password> -ServerHost 37.1.197.163 -Domain vpn.udni.ru -PackageBaseUrl https://vpn.udni.ru/vpn-client/stable -ReleaseNotes "0.1.6 prefers the local Amnezia daemon when present to avoid mixed runtime paths." -UploadZip
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.7 -ServerPassword <root-password> -ServerHost 37.1.197.163 -Domain vpn.udni.ru -PackageBaseUrl https://vpn.udni.ru/vpn-client/stable -ReleaseNotes "0.1.7 adds a real tray menu, visible icons, single-instance activation, and moves update actions into the header/tray shell." -UploadZip
 ```
 
 What that does:
@@ -94,8 +94,14 @@ After publishing:
 3. Check server-side files:
    - `ls -lh /srv/vpn-updates/vpn-client/stable`
 4. Check local client:
-   - an installed `0.1.0-local` client should report `UpdateAvailable`
+   - an installed older client should report `UpdateAvailable`
    - installation should proceed through `VpnClient.Updater.exe`
+
+## 7. Operator Access
+
+- preferred operational path is SSH key auth to `37.1.197.163`
+- local operator keys stay outside the repo and are not committed
+- password-based upload remains available only as fallback for `publish-update-origin.ps1`
 
 ## 7. Failure Modes
 

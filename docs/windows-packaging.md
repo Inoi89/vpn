@@ -44,13 +44,13 @@ Publish script:
 Typical command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7 -ZipPackage
 ```
 
 Current release command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7 -ZipPackage
 ```
 
 Primary output:
@@ -63,7 +63,7 @@ Installer build script:
 
 Installer output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.6.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.7.msi`
 
 Update manifest generator:
 
@@ -127,6 +127,9 @@ There are two layers of productization:
 - the installer now offers a checked-by-default desktop shortcut option and persists that preference through upgrades
 - the publish output includes `VpnClient.Updater.exe`
 - the release flow can now emit a JSON update manifest for hosted MSI updates
+- the packaged executable now embeds a real shield icon
+- the desktop shell now exposes update actions through the header and tray
+- the client now enforces single-instance startup and restores the existing window from tray on relaunch
 
 ### Next milestone
 
@@ -150,7 +153,7 @@ These confirm that Amnezia on Windows is a real packaged application with an ins
 On a clean Windows machine:
 
 1. Install:
-   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.6.msi`
+   - `artifacts/client-installer/win-x64/YourVpnClient-0.1.7.msi`
 2. Launch the installed app from Start Menu or `Program Files`
 3. Import `.vpn` or `.conf`
 4. Connect

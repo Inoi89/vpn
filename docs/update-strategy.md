@@ -111,11 +111,11 @@ Example:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 `
-  -Version 0.1.6 `
-  -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.6.msi `
+  -Version 0.1.7 `
+  -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.7.msi `
   -PackageBaseUrl https://downloads.example.com/vpn-client `
   -OutputPath artifacts\client-installer\win-x64\update-manifest.json `
-  -ReleaseNotes "0.1.6 prefers the local Amnezia daemon when present to avoid mixed runtime paths."
+  -ReleaseNotes "0.1.7 adds a real tray menu, visible icons, single-instance activation, and moves update actions into the header/tray shell."
 ```
 
 There is also a direct upload helper for the current origin:
@@ -148,7 +148,7 @@ There are now three concrete flows in production terms.
    - the SHA-256 is verified
    - `VpnClient.Updater.exe` is launched
 6. The launcher waits for the UI process to exit, runs `msiexec`, then relaunches the app.
-7. A newer MSI with the same `UpgradeCode` upgrades an existing install in place, so `0.1.1` replaces `0.1.0-local` instead of side-by-side installation.
+7. A newer MSI with the same `UpgradeCode` upgrades an existing install in place instead of side-by-side installation.
 
 ### 7.2 Release build flow
 
@@ -182,8 +182,13 @@ Current server:
 Current hosted files:
 
 - `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
-- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.6.msi`
+- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.7.msi`
 - `https://vpn.udni.ru/vpn-client/stable/VpnClient-win-x64.zip`
+
+Current user-facing update entry points:
+
+- header alert button in the desktop shell
+- tray menu action `Обновить`
 
 Operational warning:
 

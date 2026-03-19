@@ -76,6 +76,14 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
+        <Style Selector="Button.alert-button">
+            <Setter Property="Background" Value="#3C155A" />
+            <Setter Property="Foreground" Value="#1FE3D5" />
+            <Setter Property="BorderBrush" Value="#6B3FB7" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
         <Style Selector="Button.cta-button">
             <Setter Property="Background" Value="#1FE3D5" />
             <Setter Property="Foreground" Value="#0D1030" />

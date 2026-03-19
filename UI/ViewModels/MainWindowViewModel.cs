@@ -124,6 +124,8 @@ public partial class MainWindowViewModel : ObservableObject
         && UpdateState.Status is not AppUpdateStatus.Downloading
         && UpdateState.Status is not AppUpdateStatus.Installing;
 
+    public bool CanTrayUpdate => UpdatesEnabled && CanRunUpdateAction;
+
     public string CurrentVersionText => UpdateState.CurrentVersion;
 
     public string UpdateCardTitle => UpdateState.Status switch
@@ -312,6 +314,103 @@ public partial class MainWindowViewModel : ObservableObject
     public async Task ExecutePrimaryActionAsync()
     {
         await ToggleConnectionAsync();
+    }
+
+    public bool HasLiveConnection => ConnectionState.Status is RuntimeConnectionStatus.Connected
+        or RuntimeConnectionStatus.Degraded
+        or RuntimeConnectionStatus.Connecting;
+
+    public bool CanTrayToggle =>
+        !IsBusy
+        && (HasLiveConnection || SelectedProfile is not null)
+        && ConnectionState.Status is not RuntimeConnectionStatus.Disconnecting;
+
+    public string TrayToggleText => HasLiveConnection ? "Отключить VPN" : "Подключить VPN";
+
+    public string TrayUpdateText => UpdateState.Status switch
+    {
+        AppUpdateStatus.UpdateAvailable => $"Обновить до {UpdateState.AvailableRelease?.Version}",
+        AppUpdateStatus.ReadyToInstall => $"Установить {UpdateState.AvailableRelease?.Version}",
+        AppUpdateStatus.Checking => "Проверяем обновление",
+        AppUpdateStatus.Downloading => "Загружаем обновление",
+        AppUpdateStatus.Installing => "Устанавливаем обновление",
+        _ => "Проверить обновление"
+    };
+
+    public string TrayToolTipText
+    {
+        get
+        {
+            if (ConnectionState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded)
+            {
+                var target = ConnectionState.ProfileName ?? SelectedProfile?.DisplayName ?? "VPN";
+                return $"Your VPN Client • Подключено: {target}";
+            }
+
+            if (ConnectionState.Status == RuntimeConnectionStatus.Connecting)
+            {
+                var target = SelectedProfile?.DisplayName ?? ConnectionState.ProfileName ?? "VPN";
+                return $"Your VPN Client • Подключаем {target}";
+            }
+
+            return HasProfiles
+                ? $"Your VPN Client • Выбран {SelectedProfile?.DisplayName ?? "сервер"}"
+                : "Your VPN Client • Добавьте конфиг";
+        }
+    }
+
+    public async Task ExecuteTrayToggleAsync()
+    {
+        if (!CanTrayToggle)
+        {
+            return;
+        }
+
+        if (HasLiveConnection)
+        {
+            try
+            {
+                IsBusy = true;
+                NotifyViewStateChanged();
+
+                var activeProfileName = ConnectionState.ProfileName ?? SelectedProfile?.DisplayName ?? "VPN";
+                _diagnosticsService.RecordConnectionLog(
+                    $"Отключаем '{activeProfileName}' из трея.",
+                    DiagnosticsLogLevel.Information,
+                    "connect",
+                    "UI");
+
+                await _runtimeAdapter.DisconnectAsync();
+                LastOperationMessage = $"Соединение с '{activeProfileName}' завершено.";
+                await RefreshDiagnosticsAsync();
+            }
+            catch (Exception exception)
+            {
+                _diagnosticsService.RecordConnectionLog(
+                    $"Ошибка отключения из трея: {exception.Message}",
+                    DiagnosticsLogLevel.Error,
+                    "connect",
+                    "UI");
+
+                LastOperationMessage = $"Не удалось отключить VPN: {exception.Message}";
+                _logger.LogError(exception, "Tray disconnect failed.");
+                await RefreshDiagnosticsAsync();
+            }
+            finally
+            {
+                IsBusy = false;
+                NotifyViewStateChanged();
+            }
+
+            return;
+        }
+
+        await ToggleConnectionAsync();
+    }
+
+    public async Task ExecuteUpdateActionAsync()
+    {
+        await RunUpdateActionAsync();
     }
 
     public bool CanToggleConnection =>
@@ -908,6 +1007,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowUpdateAction));
         OnPropertyChanged(nameof(ShowWarningCard));
         OnPropertyChanged(nameof(CanRunUpdateAction));
+        OnPropertyChanged(nameof(CanTrayUpdate));
         OnPropertyChanged(nameof(CurrentVersionText));
         OnPropertyChanged(nameof(UpdateCardTitle));
         OnPropertyChanged(nameof(UpdateCardDescription));
@@ -920,6 +1020,11 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(StatusTitle));
         OnPropertyChanged(nameof(StatusDescription));
         OnPropertyChanged(nameof(PrimaryActionText));
+        OnPropertyChanged(nameof(HasLiveConnection));
+        OnPropertyChanged(nameof(CanTrayToggle));
+        OnPropertyChanged(nameof(TrayToggleText));
+        OnPropertyChanged(nameof(TrayUpdateText));
+        OnPropertyChanged(nameof(TrayToolTipText));
         OnPropertyChanged(nameof(CanToggleConnection));
         OnPropertyChanged(nameof(CanRenameSelectedProfile));
         OnPropertyChanged(nameof(CanDeleteSelectedProfile));
