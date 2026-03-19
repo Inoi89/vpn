@@ -72,8 +72,9 @@ public sealed class AmneziaImportService : IImportService
         var root = document.RootElement;
         var rawConfig = ExtractTunnelConfig(root)
             ?? throw new InvalidOperationException("The imported .vpn file does not contain a usable tunnel config.");
+        var materializedConfig = AmneziaVpnConfigMaterializer.Materialize(root, rawConfig);
 
-        var tunnelConfig = ParseTunnelConfig(NormalizeLineEndings(rawConfig).Trim(), TunnelConfigFormat.AmneziaVpn);
+        var tunnelConfig = ParseTunnelConfig(NormalizeLineEndings(materializedConfig).Trim(), TunnelConfigFormat.AmneziaVpn);
         var displayName = ExtractDisplayName(root)
             ?? Path.GetFileNameWithoutExtension(fileName);
 

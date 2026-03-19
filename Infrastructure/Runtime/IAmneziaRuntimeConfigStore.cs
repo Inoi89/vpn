@@ -1,4 +1,5 @@
 using VpnClient.Core.Models;
+using VpnClient.Infrastructure.Import;
 
 namespace VpnClient.Infrastructure.Runtime;
 
@@ -43,7 +44,7 @@ public sealed class ProgramDataAmneziaRuntimeConfigStore : IAmneziaRuntimeConfig
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        var tunnelName = $"yvc_{profile.Id:N}"[..16];
+        var tunnelName = BuildTunnelName(profile);
         var configPath = Path.Combine(_configDirectory, $"{tunnelName}.conf");
         return new PreparedTunnelProfile(profile.Id, profile.DisplayName, tunnelName, configPath);
     }
@@ -54,7 +55,7 @@ public sealed class ProgramDataAmneziaRuntimeConfigStore : IAmneziaRuntimeConfig
 
         Directory.CreateDirectory(_configDirectory);
 
-        var rawConfig = NormalizeConfig(profile.TunnelConfig.RawConfig);
+        var rawConfig = NormalizeConfig(BuildRuntimeConfig(profile));
         await File.WriteAllTextAsync(preparedProfile.ConfigPath, rawConfig, cancellationToken);
         return preparedProfile;
     }
@@ -79,5 +80,44 @@ public sealed class ProgramDataAmneziaRuntimeConfigStore : IAmneziaRuntimeConfig
             .Trim();
 
         return normalized + Environment.NewLine;
+    }
+
+    private static string BuildRuntimeConfig(ImportedServerProfile profile)
+    {
+        if (profile.SourceFormat == TunnelConfigFormat.AmneziaVpn
+            && !string.IsNullOrWhiteSpace(profile.RawPackageJson))
+        {
+            return AmneziaVpnConfigMaterializer.Materialize(profile.RawPackageJson, profile.TunnelConfig.RawConfig);
+        }
+
+        return profile.TunnelConfig.RawConfig;
+    }
+
+    private static string BuildTunnelName(ImportedServerProfile profile)
+    {
+        var slug = new string(profile.DisplayName
+            .Trim()
+            .ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '_')
+            .ToArray());
+
+        while (slug.Contains("__", StringComparison.Ordinal))
+        {
+            slug = slug.Replace("__", "_", StringComparison.Ordinal);
+        }
+
+        slug = slug.Trim('_');
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            slug = "server";
+        }
+
+        if (slug.Length > 18)
+        {
+            slug = slug[..18].TrimEnd('_');
+        }
+
+        var suffix = profile.Id.ToString("N")[..6];
+        return $"vpn_{slug}_{suffix}";
     }
 }

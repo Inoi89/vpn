@@ -117,6 +117,48 @@ public sealed class ImportServiceTests
         Assert.Equal("283091219", imported.TunnelConfig.AwgValues["H4"]);
     }
 
+    [Fact]
+    public async Task ImportAsync_ParsesVpnPackageAndMaterializesRuntimeValues()
+    {
+        var tempDirectory = CreateTempDirectory();
+        var path = Path.Combine(tempDirectory, "amnezia-placeholders.vpn");
+        const string rawConfig =
+            """
+            [Interface]
+            Address = 10.8.1.15/32
+            DNS = $PRIMARY_DNS, $SECONDARY_DNS
+            PrivateKey = secret
+            Jc = 2
+            Jmin = 10
+            Jmax = 50
+            S1 = 94
+            S2 = 146
+            H1 = 1
+            H2 = 2
+            H3 = 3
+            H4 = 4
+
+            [Peer]
+            PublicKey = server
+            PresharedKey = psk
+            AllowedIPs = 0.0.0.0/0, ::/0
+            Endpoint = 37.1.197.163:45393
+            PersistentKeepalive = 25
+            """;
+
+        await File.WriteAllTextAsync(path, BuildVpnFileWithPlaceholders(rawConfig, "Placeholder server", "1.1.1.1", "1.0.0.1", "1376"));
+
+        var imported = await _service.ImportAsync(path);
+
+        Assert.Equal(TunnelConfigFormat.AmneziaVpn, imported.SourceFormat);
+        Assert.Equal(new[] { "1.1.1.1", "1.0.0.1" }, imported.TunnelConfig.DnsServers);
+        Assert.Equal("1376", imported.TunnelConfig.Mtu);
+        Assert.Contains("DNS = 1.1.1.1, 1.0.0.1", imported.TunnelConfig.RawConfig);
+        Assert.Contains("MTU = 1376", imported.TunnelConfig.RawConfig);
+        Assert.DoesNotContain("$PRIMARY_DNS", imported.TunnelConfig.RawConfig);
+        Assert.DoesNotContain("$SECONDARY_DNS", imported.TunnelConfig.RawConfig);
+    }
+
     private static string CreateTempDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), "vpn-client-import-tests", Guid.NewGuid().ToString("N"));
@@ -137,6 +179,51 @@ public sealed class ImportServiceTests
                     {
                         last_config = JsonSerializer.Serialize(new
                         {
+                            config = rawConfig
+                        })
+                    }
+                }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(package);
+        var jsonBytes = Encoding.UTF8.GetBytes(json);
+
+        using var compressed = new MemoryStream();
+        using (var zlib = new ZLibStream(compressed, CompressionLevel.SmallestSize, leaveOpen: true))
+        {
+            zlib.Write(jsonBytes, 0, jsonBytes.Length);
+        }
+
+        var compressedBytes = compressed.ToArray();
+        var payload = new byte[4 + compressedBytes.Length];
+        BinaryPrimitives.WriteUInt32BigEndian(payload.AsSpan(0, 4), (uint)jsonBytes.Length);
+        Buffer.BlockCopy(compressedBytes, 0, payload, 4, compressedBytes.Length);
+
+        var base64 = Convert.ToBase64String(payload)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+
+        return $"vpn://{base64}";
+    }
+
+    private static string BuildVpnFileWithPlaceholders(string rawConfig, string displayName, string primaryDns, string secondaryDns, string mtu)
+    {
+        var package = new
+        {
+            display_name = displayName,
+            dns1 = primaryDns,
+            dns2 = secondaryDns,
+            containers = new[]
+            {
+                new
+                {
+                    awg = new
+                    {
+                        last_config = JsonSerializer.Serialize(new
+                        {
+                            mtu,
                             config = rawConfig
                         })
                     }

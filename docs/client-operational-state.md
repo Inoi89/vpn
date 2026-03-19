@@ -57,7 +57,7 @@ Packaged portable build:
 
 Packaged installer:
 
-- [YourVpnClient-0.1.4.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.4.msi)
+- [YourVpnClient-0.1.5.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.5.msi)
 
 Self-contained publish profile:
 
@@ -186,8 +186,8 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.4 -ZipPackage`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.4`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.5 -ZipPackage`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.5`
 
 Relevant tests:
 
@@ -289,7 +289,7 @@ What is still not fully complete:
 - if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
 - release signing and hosted manifest infrastructure still need production values
 
-Post-`0.1.4` release note:
+Post-`0.1.5` release note:
 
 - the desktop window was cut down to a single-screen mobile-like flow
 - the central power button is now the only primary action the user sees
@@ -297,6 +297,10 @@ Post-`0.1.4` release note:
 - traffic counters, update cards, warnings, and internal runtime details are no longer visible in the main screen
 - a single lightweight `Обновить` action is now shown inside the server card only when a newer release is actually available
 - the MSI desktop shortcut target now uses the user desktop folder instead of the previous desktop-directory resolution path
+- `.vpn` imports now materialize the real DNS and MTU values from the package instead of passing `$PRIMARY_DNS` and `$SECONDARY_DNS` placeholders into the bundled runtime
+- already imported `.vpn` profiles are rematerialized again at connect time, so users do not need to reimport old packages to pick up the fix
+- staged tunnel names are now human-readable instead of `yvc_<guid>` gibberish
+- closing the window now hides the client to tray, and a real tray exit disconnects the active tunnel before shutdown
 
 Post-`0.1.1` installer note:
 

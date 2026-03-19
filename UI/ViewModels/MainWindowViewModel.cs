@@ -442,6 +442,26 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    public async Task DisconnectOnApplicationExitAsync()
+    {
+        _refreshTimer.Stop();
+
+        if (_runtimeAdapter.CurrentState.Status is RuntimeConnectionStatus.Disconnected
+            or RuntimeConnectionStatus.Unsupported)
+        {
+            return;
+        }
+
+        try
+        {
+            await _runtimeAdapter.DisconnectAsync();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Failed to disconnect the active tunnel during application shutdown.");
+        }
+    }
+
     public async Task ImportConfigAsync(string path)
     {
         try

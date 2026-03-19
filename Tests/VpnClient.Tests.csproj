@@ -19,9 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="ProductPlatform\**\*.cs" />
     <Compile Remove="VpnControlPlane.Application.Tests\**\*.cs" />
     <Compile Remove="Diagnostics\**\*.cs" />
-    <Compile Remove="obj\**\*.cs" />
-    <Compile Remove="bin\**\*.cs" />
+    <Compile Remove="**\obj\**\*.cs" />
+    <Compile Remove="**\bin\**\*.cs" />
   </ItemGroup>
 </Project>

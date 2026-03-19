@@ -111,11 +111,11 @@ Example:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 `
-  -Version 0.1.4 `
-  -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.4.msi `
+  -Version 0.1.5 `
+  -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.5.msi `
   -PackageBaseUrl https://downloads.example.com/vpn-client `
   -OutputPath artifacts\client-installer\win-x64\update-manifest.json `
-  -ReleaseNotes "0.1.4 desktop shortcut fix and minimal update action."
+  -ReleaseNotes "0.1.5 fixes Amnezia .vpn materialization, friendly tunnel names, and tray exit cleanup."
 ```
 
 There is also a direct upload helper for the current origin:
@@ -182,7 +182,7 @@ Current server:
 Current hosted files:
 
 - `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
-- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.4.msi`
+- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.5.msi`
 - `https://vpn.udni.ru/vpn-client/stable/VpnClient-win-x64.zip`
 
 Operational warning:
