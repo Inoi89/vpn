@@ -18,6 +18,9 @@ The desktop client currently supports:
 - import `.conf`
 - product account login
 - local account session restore
+- local device identity generation
+- managed device enrollment
+- managed access issuance and local profile save
 - local profile storage
 - profile rename
 - profile delete
@@ -40,8 +43,6 @@ It intentionally does not support:
 - node list
 - control plane API work
 - user management on servers
-- subscription validation
-- device enrollment
 - self-service billing
 
 ## 2. Main Entry Points
@@ -196,6 +197,10 @@ The current shell is now split into two UX paths:
   - product account icon in the header
   - login form and external registration path to the personal cabinet
   - local account session restore across app restarts
+  - stable local device fingerprint
+  - direct device registration in `Product Platform`
+  - direct managed access issuance from `Product Platform`
+  - returned `.vpn` payload imported and saved locally without manual file handling
 
 Important product rule:
 
@@ -211,6 +216,7 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
+- managed-profile repository upsert for the same account/device
 - `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7 -ZipPackage`
 - `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.7`
 
@@ -239,6 +245,7 @@ What these tests do not prove:
 
 - that a completely clean Windows machine carries traffic correctly end-to-end using the bundled runtime
 - that the legacy fallback runtime is behaviorally identical to upstream Amnezia
+- that the desktop UI managed-enrollment flow has been exercised end-to-end by a human on a packaged build
 
 ## 8. Current Open Problem
 
@@ -332,6 +339,12 @@ Post-`0.1.7` release note:
 - update action is now surfaced from the header alert button and the tray menu instead of the server card
 - the desktop window and packaged executable now embed the same shield icon
 - the client now enforces a single running instance and raises the existing window from tray when launched again
+
+Managed-enrollment development note:
+
+- `Product Platform` now restores an existing active grant for the same account/device instead of creating duplicates
+- the desktop client now imports the returned managed config directly from memory, without asking the user to save a file first
+- local profile persistence now upserts managed profiles by `accountId + deviceId`, so repeated enrollment refreshes do not create duplicate local profiles
 
 Post-`0.1.1` installer note:
 

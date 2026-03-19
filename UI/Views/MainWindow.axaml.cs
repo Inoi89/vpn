@@ -63,7 +63,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (viewModel.HasNoProfiles)
+        if (viewModel.HasNoProfiles && !viewModel.IsAuthenticated)
         {
             OnImportConfigClick(sender, e);
             return;

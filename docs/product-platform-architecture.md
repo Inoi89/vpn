@@ -61,6 +61,7 @@ The current skeleton already includes:
 - device revoke
 - control-plane-backed list of issuable VPN nodes
 - device-bound VPN access issuance through the control plane
+- idempotent config restore for an existing active device grant
 - control-plane metadata propagation into peer metadata
 - PostgreSQL persistence through EF Core
 
@@ -87,6 +88,7 @@ The current skeleton already includes:
 
 - select a healthy node from the control plane
 - issue a device-bound access for an active device
+- restore the already issued config for the same account/device on repeat enrollment
 - persist `controlPlaneAccessId`, `peerPublicKey`, and `allowedIps`
 - return the generated `.vpn` or `.conf` payload to the caller
 
@@ -126,7 +128,7 @@ dotnet run --project src/ProductPlatform/VpnProductPlatform.Api/VpnProductPlatfo
 The next implementation steps should be:
 
 1. add revoke/rotate flow from `Product Platform` back into `Control Plane`
-2. let the desktop client authenticate and request device enrollment directly
+2. add cabinet endpoints and UI for active access grants and managed devices
 3. add billing provider abstraction and webhook handling
 4. harden refresh-token persistence and cleanup jobs
 5. add audit trail and operator tooling around device revoke and entitlement changes

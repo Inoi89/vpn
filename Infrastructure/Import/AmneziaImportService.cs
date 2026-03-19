@@ -23,15 +23,37 @@ public sealed class AmneziaImportService : IImportService
 
         var rawSource = await File.ReadAllTextAsync(fullPath, cancellationToken);
         var fileName = Path.GetFileName(fullPath);
-        var extension = Path.GetExtension(fullPath);
-        var trimmed = rawSource.Trim();
+        return await ImportFromContentAsync(fileName, rawSource, fullPath, cancellationToken);
+    }
 
-        if (string.Equals(extension, ".vpn", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("vpn://", StringComparison.OrdinalIgnoreCase))
+    public Task<ImportedTunnelConfig> ImportFromContentAsync(
+        string fileName,
+        string rawSource,
+        string? sourcePath = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
         {
-            return ImportVpn(fullPath, fileName, rawSource);
+            throw new ArgumentException("File name is required.", nameof(fileName));
         }
 
-        return ImportNative(fullPath, fileName, rawSource);
+        if (string.IsNullOrWhiteSpace(rawSource))
+        {
+            throw new InvalidOperationException("Configuration content is empty.");
+        }
+
+        var normalizedFileName = fileName.Trim();
+        var normalizedSourcePath = string.IsNullOrWhiteSpace(sourcePath)
+            ? $"memory://{normalizedFileName}"
+            : sourcePath.Trim();
+        var extension = Path.GetExtension(normalizedFileName);
+        var trimmed = rawSource.Trim();
+
+        ImportedTunnelConfig imported = string.Equals(extension, ".vpn", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("vpn://", StringComparison.OrdinalIgnoreCase)
+            ? ImportVpn(normalizedSourcePath, normalizedFileName, rawSource)
+            : ImportNative(normalizedSourcePath, normalizedFileName, rawSource);
+
+        return Task.FromResult(imported);
     }
 
     private static ImportedTunnelConfig ImportNative(string sourcePath, string fileName, string rawSource)

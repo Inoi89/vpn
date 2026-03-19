@@ -5,6 +5,8 @@ public interface IControlPlaneProvisioningClient
     Task<IReadOnlyList<ControlPlaneNodeEnvelope>> ListNodesAsync(CancellationToken cancellationToken);
 
     Task<ControlPlaneIssuedAccessEnvelope> IssueAccessAsync(ControlPlaneIssueAccessRequest request, CancellationToken cancellationToken);
+
+    Task<ControlPlaneAccessConfigEnvelope> GetAccessConfigAsync(Guid nodeId, Guid accessId, string configFormat, CancellationToken cancellationToken);
 }
 
 public sealed record ControlPlaneNodeEnvelope(
@@ -32,6 +34,13 @@ public sealed record ControlPlaneIssuedAccessEnvelope(
     string AllowedIps,
     string ClientConfigFileName,
     string ClientConfig);
+
+public sealed record ControlPlaneAccessConfigEnvelope(
+    Guid NodeId,
+    Guid AccessId,
+    string Format,
+    string FileName,
+    string Config);
 
 public sealed record ControlPlaneProductMetadata(
     Guid AccountId,

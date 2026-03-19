@@ -7,7 +7,8 @@ public sealed record ImportedServerProfile(
     string DisplayName,
     ImportedTunnelConfig ImportedConfig,
     DateTimeOffset ImportedAtUtc,
-    DateTimeOffset UpdatedAtUtc)
+    DateTimeOffset UpdatedAtUtc,
+    ManagedProfileBinding? ManagedProfile = null)
 {
     [JsonIgnore]
     public TunnelConfig TunnelConfig => ImportedConfig.TunnelConfig;
@@ -50,4 +51,7 @@ public sealed record ImportedServerProfile(
 
     [JsonIgnore]
     public bool HasAwgMetadata => ImportedConfig.TunnelConfig.AwgValues.Count > 0;
+
+    [JsonIgnore]
+    public bool IsManagedProfile => ManagedProfile is not null;
 }

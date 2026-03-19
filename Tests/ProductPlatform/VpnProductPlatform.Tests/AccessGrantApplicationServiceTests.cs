@@ -44,18 +44,20 @@ public sealed class AccessGrantApplicationServiceTests
     }
 
     [Fact]
-    public async Task IssueAsync_RejectsSecondActiveGrantForSameDevice()
+    public async Task IssueAsync_ReturnsExistingGrantConfig_ForSameDevice()
     {
         var fixture = Fixture.Create();
-        fixture.CreateActiveGrant();
+        var grant = fixture.CreateActiveGrant();
 
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            fixture.Service.IssueAsync(
-                fixture.Account.Id,
-                new IssueAccessGrantRequest(fixture.Device.Id, fixture.Node.NodeId, "amnezia-vpn"),
-                CancellationToken.None));
+        var result = await fixture.Service.IssueAsync(
+            fixture.Account.Id,
+            new IssueAccessGrantRequest(fixture.Device.Id, fixture.Node.NodeId, "amnezia-vpn"),
+            CancellationToken.None);
 
-        Assert.Equal("An active VPN access already exists for this device.", error.Message);
+        Assert.Equal(grant.Id, result.AccessGrantId);
+        Assert.Equal(grant.ControlPlaneAccessId, result.ControlPlaneAccessId);
+        Assert.Equal("restored.vpn", result.ClientConfigFileName);
+        Assert.Contains("Address = 10.8.1.8/32", result.ClientConfig, StringComparison.Ordinal);
     }
 
     private sealed class Fixture
@@ -298,6 +300,17 @@ public sealed class AccessGrantApplicationServiceTests
                     "10.8.1.9/32",
                     "device.vpn",
                     "[Interface]\nAddress = 10.8.1.9/32"));
+        }
+
+        public Task<ControlPlaneAccessConfigEnvelope> GetAccessConfigAsync(Guid nodeId, Guid accessId, string configFormat, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(
+                new ControlPlaneAccessConfigEnvelope(
+                    nodeId,
+                    accessId,
+                    configFormat,
+                    "restored.vpn",
+                    "[Interface]\nAddress = 10.8.1.8/32"));
         }
     }
 

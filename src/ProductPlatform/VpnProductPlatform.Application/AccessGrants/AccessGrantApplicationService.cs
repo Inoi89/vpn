@@ -69,7 +69,38 @@ public sealed class AccessGrantApplicationService(
         var existingGrant = await accessGrantRepository.GetActiveByDeviceIdAsync(accountId, request.DeviceId, cancellationToken);
         if (existingGrant is not null)
         {
-            throw new InvalidOperationException("An active VPN access already exists for this device.");
+            if (!existingGrant.NodeId.HasValue || !existingGrant.ControlPlaneAccessId.HasValue)
+            {
+                throw new InvalidOperationException("An active VPN access exists for this device, but its config cannot be restored.");
+            }
+
+            var restoredFormat = string.IsNullOrWhiteSpace(request.ConfigFormat)
+                ? existingGrant.ConfigFormat
+                : request.ConfigFormat.Trim();
+            var restoredConfig = await controlPlaneProvisioningClient.GetAccessConfigAsync(
+                existingGrant.NodeId.Value,
+                existingGrant.ControlPlaneAccessId.Value,
+                restoredFormat,
+                cancellationToken);
+
+            device.Touch(device.DeviceName, device.Platform, device.ClientVersion, clock.UtcNow);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return new IssuedAccessGrantResponse(
+                existingGrant.Id,
+                device.Id,
+                device.DeviceName,
+                existingGrant.NodeId.Value,
+                existingGrant.ControlPlaneAccessId,
+                existingGrant.PeerPublicKey,
+                existingGrant.AllowedIps,
+                restoredFormat,
+                existingGrant.Status.ToString(),
+                existingGrant.IssuedAtUtc,
+                existingGrant.ExpiresAtUtc,
+                existingGrant.RevokedAtUtc,
+                restoredConfig.FileName,
+                restoredConfig.Config);
         }
 
         var availableNodes = await ListIssuableNodesAsync(cancellationToken);

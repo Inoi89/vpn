@@ -403,10 +403,16 @@ Current implementation state:
 - `Account`, `Device`, `Subscription`, and `AccessGrant` are already in place.
 - email verification and device registration already work.
 - `Product Platform` can now call `Control Plane` to issue a device-bound access on a healthy node.
+- `Product Platform` can now restore an existing device-bound access for the same account/device instead of blindly issuing a duplicate.
 - the desktop client now has the first `legacy + managed` shell split:
   - legacy imported configs continue to connect without auth
   - new users can enter account login or registration from the client shell
-- the remaining gap is teaching the desktop client to consume enrollment and issuance directly after login instead of stopping at account auth.
+- the desktop client can now:
+  - restore local account session
+  - register its device identity
+  - request managed access
+  - save the returned config locally as a managed profile
+- the remaining gap is no longer enrollment itself, but policy hardening around revoke, rotate, billing, and operator visibility of the managed lifecycle.
 
 ### 6.3 Reconnect
 
@@ -553,6 +559,13 @@ Result:
 - every installation gets its own access
 - key sharing becomes observable and limitable
 
+Current status:
+
+- account/device/access-grant model is already live
+- control-plane issuance is already wired
+- desktop can already consume this path
+- the next missing enforcement work is revoke/rotate and plan-policy hardening
+
 ### Phase 3: Personal Cabinet and Billing
 
 Build:
@@ -652,6 +665,7 @@ The next concrete implementation step should be:
 1. teach the desktop client to authenticate and request device enrollment
 2. add revoke and rotate flow from `Product Platform` into `Control Plane`
 3. expose the issued device-bound access cleanly in the personal cabinet
-4. only after that move to billing provider integration
+4. add explicit `legacy / managed` visibility in operator tooling and the cabinet
+5. only after that move to billing provider integration
 
 This order gives the fastest path to a real MVP instead of a collection of infrastructure tools.

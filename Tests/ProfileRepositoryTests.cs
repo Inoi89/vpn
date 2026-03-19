@@ -120,6 +120,74 @@ public sealed class ProfileRepositoryTests
         Assert.Equal(second.Id, snapshot.Profiles.First().Id);
     }
 
+    [Fact]
+    public async Task AddAsync_ReplacesExistingManagedProfile_ForSameAccountDevice()
+    {
+        var tempDirectory = CreateTempDirectory();
+        var statePath = Path.Combine(tempDirectory, "profiles.json");
+        var repository = new JsonProfileRepository(statePath);
+
+        var accountId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var deviceId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
+        var first = new ImportedServerProfile(
+            Guid.Parse("55555555-5555-5555-5555-555555555555"),
+            "Managed A",
+            CreateImportedTunnelConfig(
+                "Managed A",
+                "managed-a.vpn",
+                @"managed://grant-a",
+                TunnelConfigFormat.AmneziaVpn,
+                "5.61.37.29:443",
+                "10.8.1.12/32",
+                ["8.8.8.8", "8.8.4.4"]),
+            DateTimeOffset.Parse("2026-03-19T09:00:00Z"),
+            DateTimeOffset.Parse("2026-03-19T09:00:00Z"),
+            new ManagedProfileBinding(
+                accountId,
+                "alex@example.com",
+                deviceId,
+                Guid.Parse("11111111-2222-3333-4444-555555555555"),
+                Guid.Parse("66666666-7777-8888-9999-aaaaaaaaaaaa"),
+                Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff"),
+                "amnezia-vpn"));
+
+        var second = new ImportedServerProfile(
+            Guid.Parse("66666666-6666-6666-6666-666666666666"),
+            "Managed B",
+            CreateImportedTunnelConfig(
+                "Managed B",
+                "managed-b.vpn",
+                @"managed://grant-b",
+                TunnelConfigFormat.AmneziaVpn,
+                "5.61.40.132:443",
+                "10.8.1.13/32",
+                ["1.1.1.1", "1.0.0.1"]),
+            DateTimeOffset.Parse("2026-03-19T10:00:00Z"),
+            DateTimeOffset.Parse("2026-03-19T10:00:00Z"),
+            new ManagedProfileBinding(
+                accountId,
+                "alex@example.com",
+                deviceId,
+                Guid.Parse("99999999-8888-7777-6666-555555555555"),
+                Guid.Parse("44444444-3333-2222-1111-000000000000"),
+                Guid.Parse("12121212-3434-5656-7878-909090909090"),
+                "amnezia-vpn"));
+
+        var afterFirstAdd = await repository.AddAsync(first);
+        var preservedLocalId = afterFirstAdd.Profiles.Single().Id;
+
+        var afterSecondAdd = await repository.AddAsync(second);
+
+        var stored = Assert.Single(afterSecondAdd.Profiles);
+        Assert.Equal(preservedLocalId, stored.Id);
+        Assert.Equal("Managed B", stored.DisplayName);
+        Assert.Equal("10.8.1.13/32", stored.Address);
+        Assert.NotNull(stored.ManagedProfile);
+        Assert.Equal(second.ManagedProfile!.AccessGrantId, stored.ManagedProfile!.AccessGrantId);
+        Assert.Equal(preservedLocalId, afterSecondAdd.ActiveProfileId);
+    }
+
     private static string CreateTempDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), "vpn-client-profiles-tests", Guid.NewGuid().ToString("N"));

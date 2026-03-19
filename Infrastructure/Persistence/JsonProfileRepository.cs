@@ -64,8 +64,29 @@ public sealed class JsonProfileRepository : IProfileRepository
             }
 
             var storedProfile = NormalizeProfile(profile);
-            var updatedProfiles = state.Profiles.Append(storedProfile).ToList();
-            var activeProfileId = state.ActiveProfileId ?? storedProfile.Id;
+            var existingManagedIndex = FindManagedProfileIndex(state.Profiles, storedProfile.ManagedProfile);
+            List<ImportedServerProfile> updatedProfiles;
+            Guid? activeProfileId;
+
+            if (existingManagedIndex >= 0)
+            {
+                var existingProfile = state.Profiles[existingManagedIndex];
+                var replacement = storedProfile with
+                {
+                    Id = existingProfile.Id,
+                    ImportedAtUtc = existingProfile.ImportedAtUtc,
+                    UpdatedAtUtc = storedProfile.UpdatedAtUtc == default ? DateTimeOffset.UtcNow : storedProfile.UpdatedAtUtc
+                };
+
+                updatedProfiles = state.Profiles.ToList();
+                updatedProfiles[existingManagedIndex] = replacement;
+                activeProfileId = state.ActiveProfileId ?? replacement.Id;
+            }
+            else
+            {
+                updatedProfiles = state.Profiles.Append(storedProfile).ToList();
+                activeProfileId = state.ActiveProfileId ?? storedProfile.Id;
+            }
 
             var updated = new ProfileCollectionState(activeProfileId, updatedProfiles);
             await WriteStateAsync(updated, cancellationToken);
@@ -263,6 +284,31 @@ public sealed class JsonProfileRepository : IProfileRepository
             ImportedConfig = importedConfig,
             UpdatedAtUtc = profile.UpdatedAtUtc == default ? profile.ImportedAtUtc : profile.UpdatedAtUtc
         };
+    }
+
+    private static int FindManagedProfileIndex(IReadOnlyList<ImportedServerProfile> profiles, ManagedProfileBinding? binding)
+    {
+        if (binding is null)
+        {
+            return -1;
+        }
+
+        for (var index = 0; index < profiles.Count; index++)
+        {
+            var existing = profiles[index].ManagedProfile;
+            if (existing is null)
+            {
+                continue;
+            }
+
+            if (existing.AccountId == binding.AccountId
+                && existing.DeviceId == binding.DeviceId)
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     private static TunnelConfig NormalizeTunnelConfig(TunnelConfig config)

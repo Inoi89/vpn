@@ -18,6 +18,7 @@ namespace VpnClient.UI.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ImportProfileUseCase _importProfileUseCase;
+    private readonly AddProfileUseCase _addProfileUseCase;
     private readonly ListProfilesUseCase _listProfilesUseCase;
     private readonly RenameProfileUseCase _renameProfileUseCase;
     private readonly DeleteProfileUseCase _deleteProfileUseCase;
@@ -28,6 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly LaunchPreparedAppUpdateUseCase _launchPreparedAppUpdateUseCase;
     private readonly IVpnRuntimeAdapter _runtimeAdapter;
     private readonly IVpnDiagnosticsService _diagnosticsService;
+    private readonly IProductPlatformEnrollmentService _productPlatformEnrollmentService;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly DispatcherTimer _refreshTimer;
 
@@ -43,6 +45,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel(
         ImportProfileUseCase importProfileUseCase,
+        AddProfileUseCase addProfileUseCase,
         ListProfilesUseCase listProfilesUseCase,
         RenameProfileUseCase renameProfileUseCase,
         DeleteProfileUseCase deleteProfileUseCase,
@@ -53,11 +56,13 @@ public partial class MainWindowViewModel : ObservableObject
         LaunchPreparedAppUpdateUseCase launchPreparedAppUpdateUseCase,
         IVpnRuntimeAdapter runtimeAdapter,
         IVpnDiagnosticsService diagnosticsService,
+        IProductPlatformEnrollmentService productPlatformEnrollmentService,
         IProductPlatformAuthService productPlatformAuthService,
         ProductPlatformOptions productPlatformOptions,
         ILogger<MainWindowViewModel> logger)
     {
         _importProfileUseCase = importProfileUseCase;
+        _addProfileUseCase = addProfileUseCase;
         _listProfilesUseCase = listProfilesUseCase;
         _renameProfileUseCase = renameProfileUseCase;
         _deleteProfileUseCase = deleteProfileUseCase;
@@ -68,6 +73,7 @@ public partial class MainWindowViewModel : ObservableObject
         _launchPreparedAppUpdateUseCase = launchPreparedAppUpdateUseCase;
         _runtimeAdapter = runtimeAdapter;
         _diagnosticsService = diagnosticsService;
+        _productPlatformEnrollmentService = productPlatformEnrollmentService;
         _productPlatformAuthService = productPlatformAuthService;
         _productPlatformOptions = productPlatformOptions;
         _logger = logger;
@@ -181,9 +187,11 @@ public partial class MainWindowViewModel : ObservableObject
         _ => "Проверить обновление"
     };
 
-    public string EmptyStateTitle => "Добавьте первый сервер";
+    public string EmptyStateTitle => IsAuthenticated ? "Получите доступ" : "Добавьте первый сервер";
 
-    public string EmptyStateText => "Добавьте конфиг, чтобы начать.";
+    public string EmptyStateText => IsAuthenticated
+        ? "Нажмите центральную кнопку: клиент сам запросит управляемый доступ и сохранит его локально."
+        : "Добавьте конфиг, чтобы начать.";
 
     public string ConnectionBadgeText => ConnectionState.Status switch
     {
@@ -281,7 +289,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             if (!HasProfiles)
             {
-                return "Добавить конфиг";
+                return IsAuthenticated ? "Подключить" : "Добавить конфиг";
             }
 
             if (IsBusy)
@@ -318,6 +326,16 @@ public partial class MainWindowViewModel : ObservableObject
 
     public async Task ExecutePrimaryActionAsync()
     {
+        if (!HasProfiles)
+        {
+            if (IsAuthenticated)
+            {
+                await EnrollManagedProfileAsync();
+            }
+
+            return;
+        }
+
         await ToggleConnectionAsync();
     }
 
@@ -596,6 +614,45 @@ public partial class MainWindowViewModel : ObservableObject
 
             LastOperationMessage = $"Импорт не выполнен: {exception.Message}";
             _logger.LogError(exception, "Failed to import config from {Path}", path);
+            await RefreshDiagnosticsAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyViewStateChanged();
+        }
+    }
+
+    public async Task EnrollManagedProfileAsync()
+    {
+        try
+        {
+            IsBusy = true;
+            NotifyViewStateChanged();
+
+            var profile = await _productPlatformEnrollmentService.EnsureManagedProfileAsync();
+            var snapshot = await _addProfileUseCase.ExecuteAsync(profile);
+
+            _diagnosticsService.RecordConnectionLog(
+                $"Получен управляемый доступ '{profile.DisplayName}'.",
+                DiagnosticsLogLevel.Information,
+                "enrollment",
+                "UI");
+
+            LastOperationMessage = $"Управляемый доступ '{profile.DisplayName}' сохранён.";
+            ApplySnapshot(snapshot, profile.Id);
+            await RefreshDiagnosticsAsync();
+        }
+        catch (Exception exception)
+        {
+            _diagnosticsService.RecordConnectionLog(
+                $"Не удалось получить управляемый доступ: {exception.Message}",
+                DiagnosticsLogLevel.Error,
+                "enrollment",
+                "UI");
+
+            LastOperationMessage = $"Не удалось получить управляемый доступ: {exception.Message}";
+            _logger.LogError(exception, "Managed enrollment failed.");
             await RefreshDiagnosticsAsync();
         }
         finally

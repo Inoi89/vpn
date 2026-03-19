@@ -69,6 +69,8 @@ class Program
             builder.Services.AddSingleton<IVpnDiagnosticsService, VpnDiagnosticsService>();
             builder.Services.AddSingleton(builder.Configuration.GetSection("ProductPlatform").Get<ProductPlatformOptions>() ?? new ProductPlatformOptions());
             builder.Services.AddSingleton<IProductPlatformAuthService, JsonProductPlatformAuthService>();
+            builder.Services.AddSingleton<ILocalDeviceIdentityService, JsonLocalDeviceIdentityService>();
+            builder.Services.AddSingleton<IProductPlatformEnrollmentService, ProductPlatformEnrollmentService>();
             builder.Services.AddSingleton(builder.Configuration.GetSection("Updates").Get<AppUpdateOptions>() ?? new AppUpdateOptions());
             builder.Services.AddSingleton<IAppUpdateService, JsonManifestAppUpdateService>();
 

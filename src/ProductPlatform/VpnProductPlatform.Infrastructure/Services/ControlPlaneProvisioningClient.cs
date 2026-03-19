@@ -71,6 +71,27 @@ internal sealed class ControlPlaneProvisioningClient(
             payloadResponse.ClientConfig);
     }
 
+    public async Task<ControlPlaneAccessConfigEnvelope> GetAccessConfigAsync(Guid nodeId, Guid accessId, string configFormat, CancellationToken cancellationToken)
+    {
+        var encodedFormat = Uri.EscapeDataString(configFormat);
+        using var request = CreateRequest(HttpMethod.Get, $"/api/nodes/{nodeId:D}/accesses/{accessId:D}/config?format={encodedFormat}");
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(await BuildErrorMessageAsync("load control plane access config", response, cancellationToken));
+        }
+
+        var payloadResponse = await response.Content.ReadFromJsonAsync<ControlPlaneAccessConfigDto>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("Control plane returned an empty access config response.");
+
+        return new ControlPlaneAccessConfigEnvelope(
+            payloadResponse.NodeId,
+            payloadResponse.AccessId,
+            configFormat,
+            payloadResponse.ClientConfigFileName,
+            payloadResponse.ClientConfig);
+    }
+
     private HttpRequestMessage CreateRequest(HttpMethod method, string path)
     {
         if (string.IsNullOrWhiteSpace(_options.BaseUrl))
@@ -158,6 +179,14 @@ internal sealed class ControlPlaneProvisioningClient(
         string? Email,
         string PublicKey,
         string AllowedIps,
+        string ClientConfigFileName,
+        string ClientConfig);
+
+    private sealed record ControlPlaneAccessConfigDto(
+        Guid NodeId,
+        Guid AccessId,
+        Guid UserId,
+        string PublicKey,
         string ClientConfigFileName,
         string ClientConfig);
 
