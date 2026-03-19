@@ -53,7 +53,7 @@ Packaged portable build:
 
 Packaged installer:
 
-- [YourVpnClient-0.1.3.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.3.msi)
+- [YourVpnClient-0.1.4.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.4.msi)
 
 Self-contained publish profile:
 
@@ -178,8 +178,8 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.3 -ZipPackage`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.3`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.4 -ZipPackage`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.4`
 
 Relevant tests:
 
@@ -281,13 +281,14 @@ What is still not fully complete:
 - if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
 - release signing and hosted manifest infrastructure still need production values
 
-Post-`0.1.3` UI note:
+Post-`0.1.4` release note:
 
 - the desktop window was cut down to a single-screen mobile-like flow
 - the central power button is now the only primary action the user sees
 - if no profile exists, that same action resolves to config import
 - traffic counters, update cards, warnings, and internal runtime details are no longer visible in the main screen
 - a single lightweight `Обновить` action is now shown inside the server card only when a newer release is actually available
+- the MSI desktop shortcut target now uses the user desktop folder instead of the previous desktop-directory resolution path
 
 Post-`0.1.1` installer note:
 

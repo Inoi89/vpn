@@ -17,7 +17,7 @@ This document is the concrete operations runbook for the desktop client update o
 Current stable layout:
 
 - `https://vpn.udni.ru/vpn-client/stable/update-manifest.json`
-- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.3.msi`
+- `https://vpn.udni.ru/vpn-client/stable/YourVpnClient-0.1.4.msi`
 - `https://vpn.udni.ru/vpn-client/stable/VpnClient-win-x64.zip`
 
 The client checks only the manifest URL. The manifest then points to the MSI.
@@ -60,19 +60,19 @@ From the repo root:
 1. Build portable payload:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.3 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.4 -ZipPackage
 ```
 
 2. Build MSI:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.3
+powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.4
 ```
 
 3. Publish to origin:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.3 -ServerPassword <root-password> -ServerHost 37.1.197.163 -Domain vpn.udni.ru -PackageBaseUrl https://vpn.udni.ru/vpn-client/stable -ReleaseNotes "0.1.3 minimal update action in desktop UI." -UploadZip
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.4 -ServerPassword <root-password> -ServerHost 37.1.197.163 -Domain vpn.udni.ru -PackageBaseUrl https://vpn.udni.ru/vpn-client/stable -ReleaseNotes "0.1.4 desktop shortcut fix and minimal update action." -UploadZip
 ```
 
 What that does:
