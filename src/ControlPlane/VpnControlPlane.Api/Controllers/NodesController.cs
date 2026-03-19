@@ -99,11 +99,18 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
         [FromQuery] string? format,
         CancellationToken cancellationToken)
     {
-        var result = await commandDispatcher.Send(
-            new GetNodeAccessConfigCommand(nodeId, userId, format),
-            cancellationToken);
+        try
+        {
+            var result = await commandDispatcher.Send(
+                new GetNodeAccessConfigCommand(nodeId, userId, format),
+                cancellationToken);
 
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Conflict(new { error = exception.Message });
+        }
     }
 }
 

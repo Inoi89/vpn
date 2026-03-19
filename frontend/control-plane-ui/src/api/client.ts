@@ -26,10 +26,33 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    throw new Error(`Request failed for ${path} with status ${response.status}`)
+    throw new Error(await buildRequestErrorMessage(path, response))
   }
 
   return response.json() as Promise<T>
+}
+
+async function buildRequestErrorMessage(path: string, response: Response): Promise<string> {
+  const fallbackMessage = `Request failed for ${path} with status ${response.status}`
+  const contentType = response.headers.get('Content-Type') ?? ''
+
+  try {
+    if (contentType.includes('application/json')) {
+      const payload = (await response.json()) as {
+        error?: string
+        detail?: string
+        title?: string
+        message?: string
+      }
+
+      return payload.error ?? payload.detail ?? payload.message ?? payload.title ?? fallbackMessage
+    }
+
+    const text = (await response.text()).trim()
+    return text || fallbackMessage
+  } catch {
+    return fallbackMessage
+  }
 }
 
 export const apiClient = {

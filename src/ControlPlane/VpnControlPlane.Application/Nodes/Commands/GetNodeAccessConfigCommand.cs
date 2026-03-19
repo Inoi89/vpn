@@ -27,7 +27,13 @@ public sealed class GetNodeAccessConfigCommandHandler(
         var metadata = PeerMetadataReader.Parse(peerConfig.MetadataJson);
         if (string.IsNullOrWhiteSpace(metadata.ClientPrivateKey))
         {
-            throw new InvalidOperationException("Client config is unavailable for this access because its private key was not stored.");
+            metadata = await TryRefreshMetadataFromAgentAsync(node, peerConfig.PublicKey, metadata, cancellationToken);
+        }
+
+        if (string.IsNullOrWhiteSpace(metadata.ClientPrivateKey))
+        {
+            throw new InvalidOperationException(
+                "Конфиг для этого доступа недоступен: приватный ключ не был сохранён. Для старых ключей нужно перевыпустить доступ.");
         }
 
         var payload = new GetAccessConfigRequest(
@@ -44,6 +50,34 @@ public sealed class GetNodeAccessConfigCommandHandler(
 
         var result = await nodeAgentClient.GetAccessConfigAsync(node, payload, cancellationToken);
         return new AccessConfigDto(node.Id, command.UserId, result.PublicKey, result.ClientConfigFileName, result.ClientConfig);
+    }
+
+    private async Task<PeerMetadata> TryRefreshMetadataFromAgentAsync(
+        Domain.Entities.Node node,
+        string publicKey,
+        PeerMetadata current,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var snapshot = await nodeAgentClient.GetSnapshotAsync(node, cancellationToken);
+            var peerSnapshot = snapshot.PeerConfigs
+                .FirstOrDefault(x => string.Equals(x.PublicKey, publicKey, StringComparison.OrdinalIgnoreCase));
+
+            if (peerSnapshot is null)
+            {
+                return current;
+            }
+
+            var refreshed = PeerMetadataReader.Parse(peerSnapshot.MetadataJson);
+            return new PeerMetadata(
+                refreshed.PresharedKey ?? current.PresharedKey,
+                refreshed.ClientPrivateKey ?? current.ClientPrivateKey);
+        }
+        catch
+        {
+            return current;
+        }
     }
 
     private static string GetEndpointHost(string address)
