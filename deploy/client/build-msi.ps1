@@ -1,7 +1,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
-    [string]$Version = "0.1.5",
+    [string]$Version = "0.1.6",
     [string]$PublishRoot = "artifacts/client-publish",
     [string]$OutputRoot = "artifacts/client-installer",
     [string]$ProductName = "YourVpnClient",

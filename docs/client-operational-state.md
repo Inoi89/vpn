@@ -57,7 +57,7 @@ Packaged portable build:
 
 Packaged installer:
 
-- [YourVpnClient-0.1.5.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.5.msi)
+- [YourVpnClient-0.1.6.msi](/c:/Users/rrese/source/repos/vpn/artifacts/client-installer/win-x64/YourVpnClient-0.1.6.msi)
 
 Self-contained publish profile:
 
@@ -150,15 +150,15 @@ Runtime stack:
 
 Selection rule:
 
-- if bundled AmneziaWG runtime exists, use it first
-- otherwise, if local Amnezia daemon is available, use it
+- if a local Amnezia daemon is already available, use it first
+- otherwise, if bundled AmneziaWG runtime exists, use it
 - otherwise fall back to the legacy explicit Windows runtime path
 - on startup, the client now tries to restore an already running local tunnel and map it back to a stored profile
 
 Why this matters:
 
-- bundled AmneziaWG service path is now the main clean-machine runtime
-- daemon path is still useful for parity with an already installed Amnezia desktop stack
+- daemon path is now preferred on machines where official Amnezia is already installed
+- bundled AmneziaWG service path remains the main clean-machine runtime
 - legacy fallback path remains useful, but lower fidelity
 - autonomous packaging now stages bundled runtime files under `runtime/wireguard` instead of assuming global PATH/system installation
 
@@ -186,8 +186,8 @@ Verified locally:
 
 - `dotnet build VpnClient.sln -c Release`
 - `dotnet test VpnClient.sln -c Release`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.5 -ZipPackage`
-- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.5`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6 -ZipPackage`
+- `powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6`
 
 Relevant tests:
 
@@ -289,7 +289,7 @@ What is still not fully complete:
 - if `runtime/wireguard` is empty, clean-machine connect still depends on external installs
 - release signing and hosted manifest infrastructure still need production values
 
-Post-`0.1.5` release note:
+Post-`0.1.6` release note:
 
 - the desktop window was cut down to a single-screen mobile-like flow
 - the central power button is now the only primary action the user sees
@@ -301,6 +301,7 @@ Post-`0.1.5` release note:
 - already imported `.vpn` profiles are rematerialized again at connect time, so users do not need to reimport old packages to pick up the fix
 - staged tunnel names are now human-readable instead of `yvc_<guid>` gibberish
 - closing the window now hides the client to tray, and a real tray exit disconnects the active tunnel before shutdown
+- when an official local Amnezia daemon is already available, the hybrid runtime now prefers it over the bundled backend instead of mixing two runtime paths on the same machine
 
 Post-`0.1.1` installer note:
 

@@ -56,17 +56,17 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
     {
         ArgumentNullException.ThrowIfNull(profile);
 
+        if (await _daemonTransport.IsAvailableAsync(cancellationToken))
+        {
+            _activeBackend = ActiveBackend.Daemon;
+            return UpdateState(await _daemonAdapter.ConnectAsync(profile, cancellationToken));
+        }
+
         var bundledState = await _bundledAdapter.ConnectAsync(profile, cancellationToken);
         if (bundledState.Status != RuntimeConnectionStatus.Unsupported)
         {
             _activeBackend = ActiveBackend.Bundled;
             return UpdateState(bundledState);
-        }
-
-        if (await _daemonTransport.IsAvailableAsync(cancellationToken))
-        {
-            _activeBackend = ActiveBackend.Daemon;
-            return UpdateState(await _daemonAdapter.ConnectAsync(profile, cancellationToken));
         }
 
         _activeBackend = ActiveBackend.Fallback;
@@ -94,18 +94,21 @@ public sealed class HybridVpnRuntimeAdapter : IVpnRuntimeAdapter
             return await GetStatusAsync(cancellationToken);
         }
 
+        if (await _daemonTransport.IsAvailableAsync(cancellationToken))
+        {
+            var daemonState = await _daemonAdapter.TryRestoreAsync(profiles, cancellationToken);
+            if (IsRestoredState(daemonState))
+            {
+                _activeBackend = ActiveBackend.Daemon;
+                return UpdateState(daemonState);
+            }
+        }
+
         var bundledState = await _bundledAdapter.TryRestoreAsync(profiles, cancellationToken);
         if (IsRestoredState(bundledState))
         {
             _activeBackend = ActiveBackend.Bundled;
             return UpdateState(bundledState);
-        }
-
-        var daemonState = await _daemonAdapter.TryRestoreAsync(profiles, cancellationToken);
-        if (IsRestoredState(daemonState))
-        {
-            _activeBackend = ActiveBackend.Daemon;
-            return UpdateState(daemonState);
         }
 
         var fallbackState = await _fallbackAdapter.TryRestoreAsync(profiles, cancellationToken);

@@ -13,7 +13,7 @@ Current goal:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.5 -ZipPackage
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-win-x64.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6 -ZipPackage
 ```
 
 Output:
@@ -33,19 +33,19 @@ Bundled updater:
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.5
+powershell -ExecutionPolicy Bypass -File .\deploy\client\build-msi.ps1 -Configuration Release -RuntimeIdentifier win-x64 -Version 0.1.6
 ```
 
 Output:
 
-`artifacts/client-installer/win-x64/YourVpnClient-0.1.5.msi`
+`artifacts/client-installer/win-x64/YourVpnClient-0.1.6.msi`
 
 ## Update manifest entry point
 
 Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.5 -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.5.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
+powershell -ExecutionPolicy Bypass -File .\deploy\client\generate-update-manifest.ps1 -Version 0.1.6 -PackagePath artifacts\client-installer\win-x64\YourVpnClient-0.1.6.msi -PackageBaseUrl https://downloads.example.com/vpn-client -OutputPath artifacts\client-installer\win-x64\update-manifest.json
 ```
 
 Output:
@@ -55,7 +55,7 @@ Output:
 Direct publish helper for the current update origin:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.5 -ServerPassword <root-password> -ReleaseNotes "0.1.5 fixes Amnezia .vpn materialization, friendly tunnel names, and tray exit cleanup." -UploadZip
+powershell -ExecutionPolicy Bypass -File .\deploy\client\publish-update-origin.ps1 -Version 0.1.6 -ServerPassword <root-password> -ReleaseNotes "0.1.6 prefers the local Amnezia daemon when present to avoid mixed runtime paths." -UploadZip
 ```
 
 Current origin target:

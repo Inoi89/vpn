@@ -1,7 +1,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$RuntimeIdentifier = "win-x64",
-    [string]$Version = "0.1.5",
+    [string]$Version = "0.1.6",
     [string]$OutputRoot = "artifacts/client-publish",
     [switch]$ZipPackage
 )
@@ -105,6 +105,14 @@ if ($ZipPackage) {
         Remove-Item $zipPath -Force
     }
 
-    Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $zipPath
+    $archiveEntries = Get-ChildItem -Path $publishDirectory -Force |
+        Where-Object { $_.Name -ne ".updater-staging" } |
+        ForEach-Object { $_.FullName }
+
+    if ($archiveEntries.Count -eq 0) {
+        throw "No publish files were found to archive in '$publishDirectory'."
+    }
+
+    Compress-Archive -Path $archiveEntries -DestinationPath $zipPath
     Write-Host "Created zip package: $zipPath"
 }

@@ -6,7 +6,7 @@ This document describes the runtime strategy actually implemented in the client.
 
 The critical architectural decision is:
 
-Use the bundled AmneziaWG service path first, then the external Amnezia daemon path, and only then fall back to a raw Windows WireGuard path.
+Use the external Amnezia daemon path first when it is already available on the machine, then the bundled AmneziaWG service path, and only then fall back to a raw Windows WireGuard path.
 
 ## 1. Why This Exists
 
@@ -104,10 +104,10 @@ Runtime asset resolution for the fallback path lives in:
 
 Behavior:
 
-1. Probe bundled runtime availability
-2. Use bundled AmneziaWG service runtime when available
-3. Otherwise probe external Amnezia daemon availability
-4. Use daemon runtime when available
+1. Probe external Amnezia daemon availability
+2. Use daemon runtime when available
+3. Otherwise probe bundled runtime availability
+4. Use bundled AmneziaWG service runtime when available
 5. Fall back to legacy Windows runtime otherwise
 6. Preserve warnings when fallback mode is used
 
@@ -188,8 +188,8 @@ The remaining risk is explicit:
 
 So the production recommendation is:
 
-1. prefer bundled AmneziaWG runtime
-2. otherwise use daemon runtime
+1. prefer the local Amnezia daemon when it already exists on the machine
+2. otherwise use bundled AmneziaWG runtime
 3. treat the legacy fallback runtime as compatibility mode
 4. if a config shows `handshake without traffic`, reproduce on bundled or daemon path before investigating servers
 
