@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  product-platform-db:
+    image: postgres:16
+    container_name: product-platform-db
+    environment:
+      POSTGRES_DB: vpn_product_platform
+      POSTGRES_USER: vpn
+      POSTGRES_PASSWORD: vpn
+    ports:
+      - "5434:5432"
+    volumes:
+      - product-platform-db-data:/var/lib/postgresql/data
+
+  product-platform-api:
+    build:
+      context: ../..
+      dockerfile: src/ProductPlatform/VpnProductPlatform.Api/Dockerfile
+    container_name: product-platform-api
+    depends_on:
+      - product-platform-db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ProductPlatform: Host=product-platform-db;Port=5432;Database=vpn_product_platform;Username=vpn;Password=vpn
+      Jwt__Issuer: VpnProductPlatform
+      Jwt__Audience: VpnProductPlatform.Client
+      Jwt__SigningKey: development-signing-key-change-me-please
+      Jwt__LifetimeMinutes: 1440
+    ports:
+      - "7101:8080"
+
+volumes:
+  product-platform-db-data:

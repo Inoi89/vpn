@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.12" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VpnProductPlatform.Application\VpnProductPlatform.Application.csproj" />
+    <ProjectReference Include="..\VpnProductPlatform.Infrastructure\VpnProductPlatform.Infrastructure.csproj" />
+    <ProjectReference Include="..\VpnProductPlatform.Contracts\VpnProductPlatform.Contracts.csproj" />
+  </ItemGroup>
+</Project>

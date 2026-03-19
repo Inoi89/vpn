@@ -22,6 +22,11 @@ It does not yet solve:
 
 This document is the plan for those missing systems.
 
+Implementation seed now exists here:
+
+- [VpnProductPlatform.sln](/c:/Users/rrese/source/repos/vpn/VpnProductPlatform.sln)
+- [product-platform-architecture.md](/c:/Users/rrese/source/repos/vpn/docs/product-platform-architecture.md)
+
 ## 1. Product Goal
 
 Target MVP behavior:

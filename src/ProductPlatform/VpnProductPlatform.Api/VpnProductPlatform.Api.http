@@ -1,0 +1,20 @@
+@Host = http://localhost:7101
+
+### register
+POST {{Host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "owner@example.com",
+  "password": "supersecret",
+  "displayName": "Owner"
+}
+
+### login
+POST {{Host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner@example.com",
+  "password": "supersecret"
+}
