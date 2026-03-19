@@ -36,6 +36,7 @@ public interface IAccountSessionRepository
 public interface IAccessGrantRepository
 {
     Task AddAsync(AccessGrant accessGrant, CancellationToken cancellationToken);
+    Task<AccessGrant?> GetActiveByDeviceIdAsync(Guid accountId, Guid deviceId, CancellationToken cancellationToken);
     Task<IReadOnlyList<AccessGrant>> ListByAccountIdAsync(Guid accountId, CancellationToken cancellationToken);
 }
 

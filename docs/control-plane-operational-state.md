@@ -236,11 +236,18 @@ What exists:
 
 What is still missing:
 
-- a live issuance path from `VpnProductPlatform` into `VpnControlPlane`
-- stable propagation of `account/device` metadata into new peer configs
-- a permanent shared identifier between `AccessGrant` and `PeerConfig`
+- revoke/rotate flow from `VpnProductPlatform` back into `VpnControlPlane`
+- desktop enrollment that consumes the product API directly
+- a stronger long-term shared identifier than the current optional `controlPlaneAccessId`
 
-So old keys and manually issued keys will still appear with partial identity until they are reissued through the new product flow.
+What now exists:
+
+- `IssueNodeAccess` accepts optional product account and device metadata
+- the node agent writes that metadata into peer comments in `wg0.conf`
+- the operator dashboard projects those `product-*` fields back into access rows
+- new accesses issued from `VpnProductPlatform` can therefore show account email, device name, device fingerprint, client version, and issued VPN IP in the operator panel
+
+Old keys and manually issued keys will still appear with partial identity until they are reissued through the new product flow.
 
 ### 5.2 What Was Already Confirmed
 
@@ -352,9 +359,9 @@ Node-level sanity checks:
 - `GET /api/nodes/{nodeId}/sessions`
 - `POST /api/nodes/register`
 - `POST /api/nodes/{nodeId}/accesses`
-- `POST /api/nodes/{nodeId}/accesses/{userId}/state`
-- `DELETE /api/nodes/{nodeId}/accesses/{userId}`
-- `GET /api/nodes/{nodeId}/accesses/{userId}/config`
+- `POST /api/nodes/{nodeId}/accesses/{accessId}/state`
+- `DELETE /api/nodes/{nodeId}/accesses/{accessId}`
+- `GET /api/nodes/{nodeId}/accesses/{accessId}/config`
 - `GET /hubs/sessions`
 
 ### Node Agent

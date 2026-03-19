@@ -42,7 +42,8 @@ public sealed class AgentAccessService(
             publicKey,
             request.DisplayName,
             request.UserEmail,
-            privateKey);
+            privateKey,
+            request.ProductMetadata);
 
         context.Config.UpsertPeer(peer);
         context.ClientsTable.Upsert(ClientTableEntry.Create(peer.PublicKey, peer.DisplayName, peer.AllowedIps));
@@ -65,7 +66,8 @@ public sealed class AgentAccessService(
                 privateKey,
                 publicKey,
                 request.DisplayName,
-                request.UserEmail),
+                request.UserEmail,
+                request.ProductMetadata),
             clientConfigFileName,
             clientConfig);
     }
@@ -89,7 +91,8 @@ public sealed class AgentAccessService(
                 request.Peer.UserExternalId,
                 request.Peer.DisplayName,
                 request.Peer.UserEmail,
-                request.Peer.ClientPrivateKey);
+                request.Peer.ClientPrivateKey,
+                request.Peer.ProductMetadata);
 
             context.Config.UpsertPeer(peer);
             context.ClientsTable.Upsert(ClientTableEntry.Create(peer.PublicKey, peer.DisplayName, peer.AllowedIps));
@@ -149,7 +152,8 @@ public sealed class AgentAccessService(
             request.Peer.UserExternalId,
             request.Peer.DisplayName,
             request.Peer.UserEmail,
-            clientPrivateKey);
+            clientPrivateKey,
+            request.Peer.ProductMetadata);
 
         var (fileName, clientConfig) = BuildClientExport(
             context.Config,
@@ -796,7 +800,8 @@ public sealed class AgentAccessService(
             string userExternalId,
             string displayName,
             string? userEmail,
-            string? clientPrivateKey)
+            string? clientPrivateKey,
+            ProductPeerMetadata? productMetadata)
         {
             var properties = new List<KeyValueEntry>
             {
@@ -823,6 +828,46 @@ public sealed class AgentAccessService(
             if (!string.IsNullOrWhiteSpace(clientPrivateKey))
             {
                 metadata["vpn-client-private-key"] = clientPrivateKey;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.AccountId))
+            {
+                metadata["product-account-id"] = productMetadata.AccountId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.AccountEmail))
+            {
+                metadata["product-account-email"] = productMetadata.AccountEmail;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.AccountDisplayName))
+            {
+                metadata["product-account-display-name"] = productMetadata.AccountDisplayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.DeviceId))
+            {
+                metadata["product-device-id"] = productMetadata.DeviceId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.DeviceName))
+            {
+                metadata["product-device-name"] = productMetadata.DeviceName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.DevicePlatform))
+            {
+                metadata["product-device-platform"] = productMetadata.DevicePlatform;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.DeviceFingerprint))
+            {
+                metadata["product-device-fingerprint"] = productMetadata.DeviceFingerprint;
+            }
+
+            if (!string.IsNullOrWhiteSpace(productMetadata?.ClientVersion))
+            {
+                metadata["product-client-version"] = productMetadata.ClientVersion;
             }
 
             metadata["vpn-issued-at"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);

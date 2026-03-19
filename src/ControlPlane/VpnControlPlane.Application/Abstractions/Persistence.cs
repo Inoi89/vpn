@@ -26,6 +26,8 @@ public interface IUserRepository
 public interface IAccessRepository
 {
     Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid accessId, Guid userId, string publicKey, CancellationToken cancellationToken);
+
+    Task<(Guid AccessId, Guid UserId)?> FindNodeAccessByPublicKeyAsync(Guid nodeId, string publicKey, CancellationToken cancellationToken);
 }
 
 public interface IDashboardReadService

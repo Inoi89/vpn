@@ -71,6 +71,17 @@ internal sealed class EfUserRepository(ControlPlaneDbContext dbContext) : IUserR
 
 internal sealed class EfAccessRepository(ControlPlaneDbContext dbContext) : IAccessRepository
 {
+    public async Task<(Guid AccessId, Guid UserId)?> FindNodeAccessByPublicKeyAsync(Guid nodeId, string publicKey, CancellationToken cancellationToken)
+    {
+        var item = await dbContext.PeerConfigs
+            .AsNoTracking()
+            .Where(x => x.NodeId == nodeId && x.PublicKey == publicKey)
+            .Select(x => new { x.Id, x.UserId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return item is null ? null : (item.Id, item.UserId);
+    }
+
     public async Task<bool> DeleteNodeAccessAsync(Guid nodeId, Guid accessId, Guid userId, string publicKey, CancellationToken cancellationToken)
     {
         var peerConfig = await dbContext.PeerConfigs

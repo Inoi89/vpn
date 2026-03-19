@@ -70,14 +70,26 @@ public sealed record AgentPeerMaterial(
     string? ClientPrivateKey,
     string UserExternalId,
     string DisplayName,
-    string? UserEmail);
+    string? UserEmail,
+    ProductPeerMetadata? ProductMetadata);
+
+public sealed record ProductPeerMetadata(
+    string? AccountId,
+    string? AccountEmail,
+    string? AccountDisplayName,
+    string? DeviceId,
+    string? DeviceName,
+    string? DevicePlatform,
+    string? DeviceFingerprint,
+    string? ClientVersion);
 
 public sealed record IssueAccessRequest(
     string UserExternalId,
     string DisplayName,
     string? UserEmail,
     string EndpointHost,
-    string? Format);
+    string? Format,
+    ProductPeerMetadata? ProductMetadata);
 
 public sealed record IssueAccessResponse(
     AgentPeerMaterial Peer,

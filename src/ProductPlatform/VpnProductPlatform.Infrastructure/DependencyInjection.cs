@@ -51,6 +51,18 @@ public static class DependencyInjection
         };
         services.AddSingleton<IOptions<EmailVerificationOptions>>(Options.Create(emailVerificationOptions));
 
+        var controlPlaneSection = configuration.GetSection(ControlPlaneOptions.SectionName);
+        var controlPlaneOptions = new ControlPlaneOptions
+        {
+            BaseUrl = controlPlaneSection["BaseUrl"] ?? string.Empty,
+            JwtSigningKey = controlPlaneSection["JwtSigningKey"] ?? string.Empty,
+            JwtIssuer = controlPlaneSection["JwtIssuer"] ?? "vpn-control-plane",
+            JwtAudience = controlPlaneSection["JwtAudience"] ?? "vpn-control-plane-ui",
+            JwtSubject = controlPlaneSection["JwtSubject"] ?? "product-platform",
+            JwtRole = controlPlaneSection["JwtRole"] ?? "internal"
+        };
+        services.AddSingleton<IOptions<ControlPlaneOptions>>(Options.Create(controlPlaneOptions));
+
         services.AddDbContext<ProductPlatformDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("ProductPlatform")));
 
@@ -66,6 +78,14 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IEmailVerificationTokenService, EmailVerificationTokenService>();
         services.AddScoped<IAccountEmailService, SmtpAccountEmailService>();
+        services.AddHttpClient<IControlPlaneProvisioningClient, ControlPlaneProvisioningClient>((provider, client) =>
+        {
+            var opts = provider.GetRequiredService<IOptions<ControlPlaneOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(opts.BaseUrl))
+            {
+                client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/'));
+            }
+        });
         services.AddScoped<ProductPlatformDbSeeder>();
 
         return services;

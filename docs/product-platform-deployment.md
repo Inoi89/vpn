@@ -6,8 +6,8 @@ Snapshot date: `2026-03-19`
 
 The recommended layout is:
 
-- `192.168.1.2`: `VpnControlPlane` plus the new `VpnProductPlatform.Api`
-- `5.61.37.29`: future public cabinet/static web host
+- `192.168.1.2`: `VpnControlPlane` plus `VpnProductPlatform.Api`
+- `5.61.37.29`: public cabinet/static web host
 
 ## Current nginx Findings on `192.168.1.2`
 
@@ -67,6 +67,12 @@ Required deploy variables:
 - `PRODUCT_PLATFORM_EMAIL_VERIFICATION_SIGNING_KEY`
 - `PRODUCT_PLATFORM_EMAIL_VERIFICATION_LIFETIME_HOURS`
 - `PRODUCT_PLATFORM_EMAIL_VERIFICATION_CABINET_BASE_URL`
+- `PRODUCT_PLATFORM_CONTROL_PLANE_BASE_URL`
+- `PRODUCT_PLATFORM_CONTROL_PLANE_JWT_SIGNING_KEY`
+- `PRODUCT_PLATFORM_CONTROL_PLANE_JWT_ISSUER`
+- `PRODUCT_PLATFORM_CONTROL_PLANE_JWT_AUDIENCE`
+- `PRODUCT_PLATFORM_CONTROL_PLANE_JWT_SUBJECT`
+- `PRODUCT_PLATFORM_CONTROL_PLANE_JWT_ROLE`
 
 If SMTP is disabled or temporarily unavailable, registration still succeeds and the API only logs the send failure.
 
@@ -79,10 +85,23 @@ Current live state:
   - the email contains a link to `http://5.61.37.29/?verify=...`
   - `POST /api/auth/verify-email` returns the account to `Active`
   - pending accounts are blocked from device registration
+  - `POST /api/access-grants` now successfully provisions a device-bound access through `VpnControlPlane`
+
+## Control Plane Link
+
+`VpnProductPlatform.Api` now has an internal provisioning client to `VpnControlPlane`.
+
+What it is used for:
+
+- list healthy VPN nodes that are safe for user issuance
+- issue a device-bound VPN access on a chosen node
+- persist the resulting `controlPlaneAccessId`, `peerPublicKey`, and `allowedIps`
+
+The product API does not talk to node agents directly. It always goes through `VpnControlPlane`.
 
 ## Frontend Deployment
 
-The cabinet should be a separate static React build on `5.61.37.29` or another edge host.
+The cabinet is a separate static React build on `5.61.37.29`.
 
 Recommended behavior:
 
@@ -104,7 +123,7 @@ That avoids blocking the cabinet rollout on HTTPS termination for `api.etojesim.
 Current live state:
 
 - `5.61.37.29` does not have `docker compose`
-- the cabinet is deployed there via plain `docker build` plus `docker run`
+- the cabinet is deployed there via plain `docker run` on top of a prebuilt static bundle
 - container name: `product-platform-web`
 - public entrypoint: `http://5.61.37.29/`
 - the SPA proxies `/api/` server-side to the API origin
@@ -133,9 +152,11 @@ For the first deploy, the preferred production path is still:
 
 ## Current Limitation
 
-I was able to inspect `5.61.37.29` over SSH only far enough to confirm it is currently running the VPN stack and does not already have nginx bound on 80/443.
+`5.61.37.29` is now already used as the cabinet host. The remaining limitation there is not host suitability but deployment hygiene:
 
-That makes it a clean candidate for the future cabinet host.
+- there is still no `docker compose`
+- the cabinet is currently updated through manual static bundle replacement
+- this should be turned into a small scripted deploy flow next
 
 Another current limitation is external TLS for `api.etojesim.com`:
 

@@ -33,7 +33,16 @@ public sealed class SetNodeAccessStateCommandHandler(
                 metadata.ClientPrivateKey,
                 peerConfig.User.ExternalId,
                 peerConfig.DisplayName,
-                peerConfig.User.Email),
+                peerConfig.User.Email,
+                new ProductPeerMetadata(
+                    metadata.ProductAccountId,
+                    metadata.ProductAccountEmail,
+                    metadata.ProductAccountDisplayName,
+                    metadata.ProductDeviceId,
+                    metadata.ProductDeviceName,
+                    metadata.ProductDevicePlatform,
+                    metadata.ProductDeviceFingerprint,
+                    metadata.ProductClientVersion)),
             command.IsEnabled,
             command.IsEnabled ? GetEndpointHost(node.AgentBaseAddress) : null);
 

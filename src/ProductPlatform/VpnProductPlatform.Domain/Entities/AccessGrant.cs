@@ -14,7 +14,9 @@ public sealed class AccessGrant : AuditableEntity
         Guid accountId,
         Guid deviceId,
         Guid? nodeId,
+        Guid? controlPlaneAccessId,
         string? peerPublicKey,
+        string? allowedIps,
         string configFormat,
         DateTimeOffset issuedAtUtc,
         DateTimeOffset? expiresAtUtc,
@@ -24,7 +26,9 @@ public sealed class AccessGrant : AuditableEntity
         AccountId = accountId;
         DeviceId = deviceId;
         NodeId = nodeId;
+        ControlPlaneAccessId = controlPlaneAccessId;
         PeerPublicKey = string.IsNullOrWhiteSpace(peerPublicKey) ? null : peerPublicKey.Trim();
+        AllowedIps = string.IsNullOrWhiteSpace(allowedIps) ? null : allowedIps.Trim();
         ConfigFormat = NormalizeRequired(configFormat, nameof(configFormat));
         IssuedAtUtc = issuedAtUtc;
         ExpiresAtUtc = expiresAtUtc;
@@ -42,7 +46,11 @@ public sealed class AccessGrant : AuditableEntity
 
     public Guid? NodeId { get; private set; }
 
+    public Guid? ControlPlaneAccessId { get; private set; }
+
     public string? PeerPublicKey { get; private set; }
+
+    public string? AllowedIps { get; private set; }
 
     public string ConfigFormat { get; private set; } = string.Empty;
 
@@ -59,19 +67,23 @@ public sealed class AccessGrant : AuditableEntity
         Guid accountId,
         Guid deviceId,
         Guid? nodeId,
+        Guid? controlPlaneAccessId,
         string? peerPublicKey,
+        string? allowedIps,
         string configFormat,
         DateTimeOffset issuedAtUtc,
         DateTimeOffset? expiresAtUtc,
         DateTimeOffset now)
     {
-        return new AccessGrant(id, accountId, deviceId, nodeId, peerPublicKey, configFormat, issuedAtUtc, expiresAtUtc, now);
+        return new AccessGrant(id, accountId, deviceId, nodeId, controlPlaneAccessId, peerPublicKey, allowedIps, configFormat, issuedAtUtc, expiresAtUtc, now);
     }
 
-    public void Activate(Guid? nodeId, string? peerPublicKey, DateTimeOffset now)
+    public void Activate(Guid? nodeId, Guid? controlPlaneAccessId, string? peerPublicKey, string? allowedIps, DateTimeOffset now)
     {
         NodeId = nodeId;
+        ControlPlaneAccessId = controlPlaneAccessId;
         PeerPublicKey = string.IsNullOrWhiteSpace(peerPublicKey) ? null : peerPublicKey.Trim();
+        AllowedIps = string.IsNullOrWhiteSpace(allowedIps) ? null : allowedIps.Trim();
         Status = AccessGrantStatus.Active;
         MarkUpdated(now);
     }

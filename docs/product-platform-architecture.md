@@ -59,6 +59,9 @@ The current skeleton already includes:
 - device registration with plan-based device limit
 - device registration blocked until email verification
 - device revoke
+- control-plane-backed list of issuable VPN nodes
+- device-bound VPN access issuance through the control plane
+- control-plane metadata propagation into peer metadata
 - PostgreSQL persistence through EF Core
 
 ## Current API Surface
@@ -76,9 +79,16 @@ The current skeleton already includes:
 - `GET /api/sessions`
 - `DELETE /api/sessions/{sessionId}`
 - `GET /api/access-grants`
+- `GET /api/access-grants/nodes`
+- `POST /api/access-grants`
 - `GET /healthz`
 
-`AccessGrant` already exists in the domain model. The cabinet can read grant history, but issuance endpoints are intentionally not exposed yet.
+`AccessGrant` is no longer just a passive history row. The product platform can now:
+
+- select a healthy node from the control plane
+- issue a device-bound access for an active device
+- persist `controlPlaneAccessId`, `peerPublicKey`, and `allowedIps`
+- return the generated `.vpn` or `.conf` payload to the caller
 
 ## Current Product Assumption
 
@@ -115,7 +125,8 @@ dotnet run --project src/ProductPlatform/VpnProductPlatform.Api/VpnProductPlatfo
 
 The next implementation steps should be:
 
-1. add enrollment endpoint that requests access issuance from the control plane
-2. add billing provider abstraction and webhook handling
-3. harden refresh-token persistence and cleanup jobs
-4. add audit trail and operator tooling around device revoke and entitlement changes
+1. add revoke/rotate flow from `Product Platform` back into `Control Plane`
+2. let the desktop client authenticate and request device enrollment directly
+3. add billing provider abstraction and webhook handling
+4. harden refresh-token persistence and cleanup jobs
+5. add audit trail and operator tooling around device revoke and entitlement changes

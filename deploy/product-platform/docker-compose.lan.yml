@@ -44,6 +44,12 @@ services:
       EmailVerification__SigningKey: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_SIGNING_KEY:-}
       EmailVerification__LifetimeHours: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_LIFETIME_HOURS:-24}
       EmailVerification__CabinetBaseUrl: ${PRODUCT_PLATFORM_EMAIL_VERIFICATION_CABINET_BASE_URL:-http://5.61.37.29}
+      ControlPlane__BaseUrl: ${PRODUCT_PLATFORM_CONTROL_PLANE_BASE_URL:-http://192.168.1.2:7001}
+      ControlPlane__JwtSigningKey: ${PRODUCT_PLATFORM_CONTROL_PLANE_JWT_SIGNING_KEY:-}
+      ControlPlane__JwtIssuer: ${PRODUCT_PLATFORM_CONTROL_PLANE_JWT_ISSUER:-vpn-control-plane}
+      ControlPlane__JwtAudience: ${PRODUCT_PLATFORM_CONTROL_PLANE_JWT_AUDIENCE:-vpn-control-plane-ui}
+      ControlPlane__JwtSubject: ${PRODUCT_PLATFORM_CONTROL_PLANE_JWT_SUBJECT:-product-platform}
+      ControlPlane__JwtRole: ${PRODUCT_PLATFORM_CONTROL_PLANE_JWT_ROLE:-internal}
       Cors__AllowedOrigins__0: http://5.61.37.29
       Cors__AllowedOrigins__1: https://5.61.37.29
       Cors__AllowedOrigins__2: http://localhost:5173

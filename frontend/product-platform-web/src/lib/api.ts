@@ -2,6 +2,9 @@ import type {
   AccessGrantResponse,
   AuthResponse,
   DeviceResponse,
+  IssueAccessGrantRequest,
+  IssuableNodeResponse,
+  IssuedAccessGrantResponse,
   LoginRequest,
   MeResponse,
   RefreshTokenRequest,
@@ -96,8 +99,17 @@ export function createCabinetApi(context: RequestContext = {}) {
     devices(): Promise<DeviceResponse[]> {
       return request<DeviceResponse[]>('/api/devices')
     },
+    issuableNodes(): Promise<IssuableNodeResponse[]> {
+      return request<IssuableNodeResponse[]>('/api/access-grants/nodes')
+    },
     accessGrants(): Promise<AccessGrantResponse[]> {
       return request<AccessGrantResponse[]>('/api/access-grants')
+    },
+    issueAccessGrant(payload: IssueAccessGrantRequest): Promise<IssuedAccessGrantResponse> {
+      return request<IssuedAccessGrantResponse>('/api/access-grants', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
     },
     revokeDevice(deviceId: string): Promise<void> {
       return request<void>(`/api/devices/${deviceId}`, { method: 'DELETE' })

@@ -81,7 +81,10 @@ public sealed class ProductPlatformDbContext(DbContextOptions<ProductPlatformDbC
             builder.ToTable("access_grants");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.AccountId, x.DeviceId });
+            builder.HasIndex(x => x.ControlPlaneAccessId);
+            builder.Property(x => x.ControlPlaneAccessId).HasColumnName("control_plane_access_id");
             builder.Property(x => x.PeerPublicKey).HasMaxLength(128);
+            builder.Property(x => x.AllowedIps).HasColumnName("allowed_ips").HasMaxLength(128);
             builder.Property(x => x.ConfigFormat).HasMaxLength(32).IsRequired();
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
             builder.HasOne(x => x.Device).WithMany().HasForeignKey(x => x.DeviceId);

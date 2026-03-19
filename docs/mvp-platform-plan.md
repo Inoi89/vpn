@@ -398,6 +398,13 @@ Fields:
 6. Desktop client receives config and stores it locally.
 7. Client connects.
 
+Current implementation state:
+
+- `Account`, `Device`, `Subscription`, and `AccessGrant` are already in place.
+- email verification and device registration already work.
+- `Product Platform` can now call `Control Plane` to issue a device-bound access on a healthy node.
+- the remaining gap is teaching the desktop client to authenticate and consume this flow directly instead of importing files manually.
+
 ### 6.3 Reconnect
 
 1. Client starts.
@@ -639,9 +646,9 @@ Instead:
 
 The next concrete implementation step should be:
 
-1. define the new domain model for `Account`, `Device`, `Subscription`, and `AccessGrant`
-2. add a new product API project for auth and enrollment
-3. teach the desktop client to authenticate and request device enrollment
+1. teach the desktop client to authenticate and request device enrollment
+2. add revoke and rotate flow from `Product Platform` into `Control Plane`
+3. expose the issued device-bound access cleanly in the personal cabinet
 4. only after that move to billing provider integration
 
 This order gives the fastest path to a real MVP instead of a collection of infrastructure tools.

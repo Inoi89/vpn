@@ -72,12 +72,45 @@ export type AccessGrantResponse = {
   deviceId: string
   deviceName: string
   nodeId?: string | null
+  controlPlaneAccessId?: string | null
   peerPublicKey?: string | null
+  allowedIps?: string | null
   configFormat: string
   status: string
   issuedAtUtc: string
   expiresAtUtc?: string | null
   revokedAtUtc?: string | null
+}
+
+export type IssuableNodeResponse = {
+  nodeId: string
+  name: string
+  status: string
+  activeSessions: number
+  enabledPeerCount: number
+}
+
+export type IssueAccessGrantRequest = {
+  deviceId: string
+  nodeId: string
+  configFormat?: string | null
+}
+
+export type IssuedAccessGrantResponse = {
+  accessGrantId: string
+  deviceId: string
+  deviceName: string
+  nodeId: string
+  controlPlaneAccessId?: string | null
+  peerPublicKey?: string | null
+  allowedIps?: string | null
+  configFormat: string
+  status: string
+  issuedAtUtc: string
+  expiresAtUtc?: string | null
+  revokedAtUtc?: string | null
+  clientConfigFileName: string
+  clientConfig: string
 }
 
 export type StoredAuth = {
@@ -96,4 +129,5 @@ export type CabinetProfile = {
   sessions: SessionResponse[]
   devices: DeviceResponse[]
   accessGrants: AccessGrantResponse[]
+  issuableNodes: IssuableNodeResponse[]
 }

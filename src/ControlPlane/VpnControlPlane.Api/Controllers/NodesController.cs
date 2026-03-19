@@ -59,7 +59,17 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
         CancellationToken cancellationToken)
     {
         var result = await commandDispatcher.Send(
-            new IssueNodeAccessCommand(nodeId, request.DisplayName, request.Email, request.ConfigFormat),
+            new IssueNodeAccessCommand(nodeId, request.DisplayName, request.Email, request.ConfigFormat, request.ProductMetadata is null
+                ? null
+                : new ProductPeerMetadata(
+                    request.ProductMetadata.AccountId,
+                    request.ProductMetadata.AccountEmail,
+                    request.ProductMetadata.AccountDisplayName,
+                    request.ProductMetadata.DeviceId,
+                    request.ProductMetadata.DeviceName,
+                    request.ProductMetadata.DevicePlatform,
+                    request.ProductMetadata.DeviceFingerprint,
+                    request.ProductMetadata.ClientVersion)),
             cancellationToken);
 
         return Ok(result);
@@ -117,6 +127,17 @@ public sealed class NodesController(ICommandDispatcher commandDispatcher, IQuery
 public sealed record IssueNodeAccessRequest(
     string DisplayName,
     string? Email,
-    string? ConfigFormat);
+    string? ConfigFormat,
+    ProductAccessMetadataRequest? ProductMetadata);
+
+public sealed record ProductAccessMetadataRequest(
+    string? AccountId,
+    string? AccountEmail,
+    string? AccountDisplayName,
+    string? DeviceId,
+    string? DeviceName,
+    string? DevicePlatform,
+    string? DeviceFingerprint,
+    string? ClientVersion);
 
 public sealed record NodeAccessStateRequest(bool IsEnabled);

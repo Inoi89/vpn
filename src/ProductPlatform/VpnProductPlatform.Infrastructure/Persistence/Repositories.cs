@@ -122,6 +122,15 @@ internal sealed class EfAccessGrantRepository(ProductPlatformDbContext dbContext
         return dbContext.AccessGrants.AddAsync(accessGrant, cancellationToken).AsTask();
     }
 
+    public Task<AccessGrant?> GetActiveByDeviceIdAsync(Guid accountId, Guid deviceId, CancellationToken cancellationToken)
+    {
+        return dbContext.AccessGrants
+            .Include(x => x.Device)
+            .Where(x => x.AccountId == accountId && x.DeviceId == deviceId)
+            .OrderByDescending(x => x.IssuedAtUtc)
+            .FirstOrDefaultAsync(x => x.Status == AccessGrantStatus.Active, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<AccessGrant>> ListByAccountIdAsync(Guid accountId, CancellationToken cancellationToken)
     {
         return await dbContext.AccessGrants

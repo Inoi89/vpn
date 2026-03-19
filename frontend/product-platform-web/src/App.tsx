@@ -5,6 +5,7 @@ import type {
   AccessGrantResponse,
   AuthResponse,
   DeviceResponse,
+  IssuableNodeResponse,
   MeResponse,
   SessionResponse,
   StoredAuth,
@@ -13,7 +14,15 @@ import type {
 type ScreenState =
   | { status: 'loading' }
   | { status: 'anonymous' }
-  | { status: 'authenticated'; auth: StoredAuth; me: MeResponse; sessions: SessionResponse[]; devices: DeviceResponse[]; accessGrants: AccessGrantResponse[] }
+  | {
+      status: 'authenticated'
+      auth: StoredAuth
+      me: MeResponse
+      sessions: SessionResponse[]
+      devices: DeviceResponse[]
+      accessGrants: AccessGrantResponse[]
+      issuableNodes: IssuableNodeResponse[]
+    }
 
 type AuthMode = 'login' | 'register'
 
@@ -40,6 +49,10 @@ export default function App() {
   const [verifyBanner, setVerifyBanner] = useState<Banner | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isResendingVerification, setIsResendingVerification] = useState(false)
+  const [isIssuingAccess, setIsIssuingAccess] = useState(false)
+  const [selectedDeviceId, setSelectedDeviceId] = useState('')
+  const [selectedNodeId, setSelectedNodeId] = useState('')
+  const [selectedConfigFormat, setSelectedConfigFormat] = useState<'amnezia-vpn' | 'amnezia-awg-native'>('amnezia-vpn')
 
   useEffect(() => {
     void bootstrap()
@@ -118,14 +131,15 @@ export default function App() {
 
   async function loadProfile(auth: StoredAuth) {
     const api = createCabinetApi({ accessToken: auth.accessToken })
-    const [me, sessions, devices, accessGrants] = await Promise.all([
+    const [me, sessions, devices, accessGrants, issuableNodes] = await Promise.all([
       api.me(),
       api.sessions(),
       api.devices(),
       api.accessGrants(),
+      api.issuableNodes(),
     ])
 
-    return { me, sessions, devices, accessGrants }
+    return { me, sessions, devices, accessGrants, issuableNodes }
   }
 
   async function refreshAuth(auth: StoredAuth): Promise<StoredAuth> {
@@ -210,6 +224,64 @@ export default function App() {
         title: 'Не удалось обновить данные',
         text: getErrorMessage(error),
       })
+    }
+  }
+
+  async function handleIssueAccessGrant() {
+    if (screen.status !== 'authenticated') {
+      return
+    }
+
+    const deviceId = selectedDeviceId || activeDevices(screen.devices)[0]?.deviceId || screen.devices[0]?.deviceId
+    const nodeId = selectedNodeId || screen.issuableNodes[0]?.nodeId
+
+    if (!deviceId) {
+      setBanner({
+        tone: 'error',
+        title: 'No device selected',
+        text: 'Register a device first, then issue VPN access for it.',
+      })
+      return
+    }
+
+    if (!nodeId) {
+      setBanner({
+        tone: 'error',
+        title: 'No node available',
+        text: 'There is no healthy VPN node available for issuance right now.',
+      })
+      return
+    }
+
+    setBanner(null)
+    setIsIssuingAccess(true)
+
+    try {
+      const api = createCabinetApi({ accessToken: screen.auth.accessToken })
+      const result = await api.issueAccessGrant({
+        deviceId,
+        nodeId,
+        configFormat: selectedConfigFormat,
+      })
+
+      const profile = await loadProfile(screen.auth)
+      setScreen({ ...screen, ...profile })
+      setSelectedDeviceId(deviceId)
+      setSelectedNodeId(nodeId)
+      downloadIssuedConfig(result.clientConfigFileName, result.clientConfig)
+      setBanner({
+        tone: 'success',
+        title: 'VPN access issued',
+        text: `Config ${result.clientConfigFileName} was generated and downloaded.`,
+      })
+    } catch (error) {
+      setBanner({
+        tone: 'error',
+        title: 'Failed to issue VPN access',
+        text: getErrorMessage(error),
+      })
+    } finally {
+      setIsIssuingAccess(false)
     }
   }
 
@@ -454,6 +526,56 @@ export default function App() {
             )}
           </div>
 
+          <div className="surface entitlement-panel">
+            <div className="panel-head">
+              <div>
+                <div className="eyebrow">VPN access</div>
+                <h3>Выдать доступ устройству</h3>
+              </div>
+            </div>
+
+            <div className="summary-list">
+              <label className="field">
+                <span>Устройство</span>
+                <select value={selectedDeviceId} onChange={(event) => setSelectedDeviceId(event.target.value)}>
+                  <option value="">Выберите устройство</option>
+                  {activeDevices(screen.devices).map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.deviceName} · {device.platform}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Нода</span>
+                <select value={selectedNodeId} onChange={(event) => setSelectedNodeId(event.target.value)}>
+                  <option value="">Выберите ноду</option>
+                  {screen.issuableNodes.map((node) => (
+                    <option key={node.nodeId} value={node.nodeId}>
+                      {node.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Формат</span>
+                <select
+                  value={selectedConfigFormat}
+                  onChange={(event) => setSelectedConfigFormat(event.target.value as 'amnezia-vpn' | 'amnezia-awg-native')}
+                >
+                  <option value="amnezia-vpn">Amnezia VPN (.vpn)</option>
+                  <option value="amnezia-awg-native">AmneziaWG (.conf)</option>
+                </select>
+              </label>
+            </div>
+
+            <button className="primary-button compact" type="button" onClick={() => void handleIssueAccessGrant()} disabled={isIssuingAccess}>
+              {isIssuingAccess ? 'Выдаём...' : 'Выдать доступ'}
+            </button>
+          </div>
+
           <div className="surface table-panel">
             <div className="panel-head">
               <div>
@@ -469,6 +591,7 @@ export default function App() {
                   <th>Устройство</th>
                   <th>Формат</th>
                   <th>Статус</th>
+                  <th>VPN IP</th>
                   <th>Выдан</th>
                   <th>Публичный ключ</th>
                 </tr>
@@ -485,13 +608,14 @@ export default function App() {
                         {grant.status}
                       </span>
                     </td>
+                    <td>{grant.allowedIps ?? '—'}</td>
                     <td>{formatDateTime(grant.issuedAtUtc)}</td>
                     <td className="mono-cell">{trimPublicKey(grant.peerPublicKey)}</td>
                   </tr>
                 ))}
                 {screen.accessGrants.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="empty-cell">
+                    <td colSpan={6} className="empty-cell">
                       Пока нет выданных VPN-доступов.
                     </td>
                   </tr>
@@ -648,6 +772,18 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Неизвестная ошибка.'
+}
+
+function downloadIssuedConfig(fileName: string, content: string) {
+  const blob = new Blob([content], { type: 'application/octet-stream;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
 }
 
 function formatDateTime(value: string): string {

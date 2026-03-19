@@ -66,6 +66,7 @@ public sealed record AccessSummaryDto(
 
 public sealed record IssuedNodeAccessDto(
     Guid NodeId,
+    Guid? AccessId,
     Guid UserId,
     string ExternalId,
     string DisplayName,
