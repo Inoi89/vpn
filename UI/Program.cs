@@ -9,6 +9,7 @@ using VpnClient.Application.Profiles;
 using VpnClient.Application.Updates;
 using VpnClient.Core.Interfaces;
 using VpnClient.Infrastructure.Diagnostics;
+using VpnClient.Infrastructure.Auth;
 using VpnClient.Infrastructure.Import;
 using VpnClient.Infrastructure.Logging;
 using VpnClient.Infrastructure.Persistence;
@@ -66,6 +67,8 @@ class Program
             builder.Services.AddSingleton<AmneziaDaemonRuntimeAdapter>();
             builder.Services.AddSingleton<IVpnRuntimeAdapter, HybridVpnRuntimeAdapter>();
             builder.Services.AddSingleton<IVpnDiagnosticsService, VpnDiagnosticsService>();
+            builder.Services.AddSingleton(builder.Configuration.GetSection("ProductPlatform").Get<ProductPlatformOptions>() ?? new ProductPlatformOptions());
+            builder.Services.AddSingleton<IProductPlatformAuthService, JsonProductPlatformAuthService>();
             builder.Services.AddSingleton(builder.Configuration.GetSection("Updates").Get<AppUpdateOptions>() ?? new AppUpdateOptions());
             builder.Services.AddSingleton<IAppUpdateService, JsonManifestAppUpdateService>();
 

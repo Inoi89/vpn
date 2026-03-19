@@ -11,6 +11,7 @@ using VpnClient.Core.Interfaces;
 using VpnClient.Core.Models;
 using VpnClient.Core.Models.Diagnostics;
 using VpnClient.Core.Models.Updates;
+using VpnClient.Infrastructure.Auth;
 
 namespace VpnClient.UI.ViewModels;
 
@@ -52,6 +53,8 @@ public partial class MainWindowViewModel : ObservableObject
         LaunchPreparedAppUpdateUseCase launchPreparedAppUpdateUseCase,
         IVpnRuntimeAdapter runtimeAdapter,
         IVpnDiagnosticsService diagnosticsService,
+        IProductPlatformAuthService productPlatformAuthService,
+        ProductPlatformOptions productPlatformOptions,
         ILogger<MainWindowViewModel> logger)
     {
         _importProfileUseCase = importProfileUseCase;
@@ -65,6 +68,8 @@ public partial class MainWindowViewModel : ObservableObject
         _launchPreparedAppUpdateUseCase = launchPreparedAppUpdateUseCase;
         _runtimeAdapter = runtimeAdapter;
         _diagnosticsService = diagnosticsService;
+        _productPlatformAuthService = productPlatformAuthService;
+        _productPlatformOptions = productPlatformOptions;
         _logger = logger;
 
         Profiles = [];
@@ -506,6 +511,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         _initialized = true;
         UpdateState = _appUpdateService.CurrentState;
+        await RestoreAccountSessionAsync();
 
         var snapshot = await _listProfilesUseCase.ExecuteAsync();
         ApplySnapshot(snapshot, snapshot.ActiveProfileId);
@@ -1001,6 +1007,18 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasProfiles));
         OnPropertyChanged(nameof(HasNoProfiles));
         OnPropertyChanged(nameof(HasSelectedProfile));
+        OnPropertyChanged(nameof(IsAuthenticated));
+        OnPropertyChanged(nameof(ShowAccountScreen));
+        OnPropertyChanged(nameof(CanDismissAccountScreen));
+        OnPropertyChanged(nameof(ShowAuthForm));
+        OnPropertyChanged(nameof(ShowAuthenticatedCard));
+        OnPropertyChanged(nameof(CanSignIn));
+        OnPropertyChanged(nameof(AccountTitle));
+        OnPropertyChanged(nameof(AccountSubtitle));
+        OnPropertyChanged(nameof(AccountButtonBadge));
+        OnPropertyChanged(nameof(AccountIdentityText));
+        OnPropertyChanged(nameof(LegacyImportHintText));
+        OnPropertyChanged(nameof(AccountPrimaryActionText));
         OnPropertyChanged(nameof(ShowImportShortcut));
         OnPropertyChanged(nameof(UpdatesEnabled));
         OnPropertyChanged(nameof(ShowUpdateCard));
@@ -1049,6 +1067,7 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(LastActionTitle));
         OnPropertyChanged(nameof(WarningSummaryText));
         RunUpdateActionCommand.NotifyCanExecuteChanged();
+        SignInCommand.NotifyCanExecuteChanged();
         ToggleConnectionCommand.NotifyCanExecuteChanged();
         RenameSelectedProfileCommand.NotifyCanExecuteChanged();
         DeleteSelectedProfileCommand.NotifyCanExecuteChanged();

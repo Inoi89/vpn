@@ -15,89 +15,237 @@
 
     <Border Classes="phone-shell"
             Padding="18,16,18,22">
-        <Grid RowDefinitions="Auto,*,Auto">
-            <Grid ColumnDefinitions="44,*,44" ColumnSpacing="12">
-                <Button Classes="icon-button"
-                        Content="+"
-                        IsVisible="{Binding ShowImportShortcut}"
-                        Click="OnImportConfigClick" />
+        <Grid>
+            <Grid RowDefinitions="Auto,*,Auto">
+                <Grid ColumnDefinitions="44,*,Auto" ColumnSpacing="12">
+                    <Button Classes="icon-button"
+                            Content="+"
+                            IsVisible="{Binding ShowImportShortcut}"
+                            Click="OnImportConfigClick" />
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            Spacing="8"
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <Image Width="18"
+                               Height="18"
+                               Source="avares://VpnClient.UI/Assets/shield.png" />
+
+                        <TextBlock Classes="app-title"
+                                   VerticalAlignment="Center"
+                                   Text="VPN" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="8">
+                        <Button Classes="icon-button alert-button"
+                                Content="!"
+                                IsVisible="{Binding ShowUpdateAction}"
+                                IsEnabled="{Binding CanRunUpdateAction}"
+                                Command="{Binding RunUpdateActionCommand}"
+                                ToolTip.Tip="{Binding UpdateActionText}" />
+
+                        <Button Classes="icon-button"
+                                Command="{Binding OpenAccountScreenCommand}"
+                                ToolTip.Tip="Аккаунт">
+                            <Grid Width="18"
+                                  Height="18">
+                                <Canvas Width="18"
+                                        Height="18">
+                                    <Ellipse Canvas.Left="5.3"
+                                             Canvas.Top="1.8"
+                                             Width="7.4"
+                                             Height="7.4"
+                                             Stroke="#F9F5FF"
+                                             StrokeThickness="1.6" />
+                                    <Path Canvas.Left="0"
+                                          Canvas.Top="0"
+                                          Data="M3,16 C4.1,13.3 6.8,11.8 9,11.8 C11.2,11.8 13.9,13.3 15,16"
+                                          Stroke="#F9F5FF"
+                                          StrokeThickness="1.6"
+                                          StrokeLineCap="Round" />
+                                    <Ellipse Canvas.Left="12.6"
+                                             Canvas.Top="1.2"
+                                             Width="4"
+                                             Height="4"
+                                             Fill="#1FE3D5"
+                                             IsVisible="{Binding IsAuthenticated}" />
+                                </Canvas>
+                            </Grid>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Row="1"
                             HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <Image Width="18"
-                           Height="18"
-                           Source="avares://VpnClient.UI/Assets/shield.png" />
+                            VerticalAlignment="Center"
+                            Spacing="18">
+                    <TextBlock Classes="muted"
+                               MaxWidth="260"
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding HasNoProfiles}"
+                               Text="{Binding EmptyStateText}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
 
-                    <TextBlock Classes="app-title"
-                               VerticalAlignment="Center"
-                               Text="VPN" />
+                    <Button Classes="ring-button"
+                            HorizontalAlignment="Center"
+                            BorderBrush="{Binding RingAccentBrush}"
+                            Foreground="{Binding RingAccentBrush}"
+                            Click="OnPrimaryActionClick">
+                        <TextBlock Classes="power-glyph" Text="вЏ»" />
+                    </Button>
+
+                    <TextBlock Classes="status-value"
+                               HorizontalAlignment="Center"
+                               Foreground="{Binding RingAccentBrush}"
+                               Text="{Binding ConnectionLabelText}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
                 </StackPanel>
 
-                <Button Grid.Column="2"
-                        Classes="icon-button alert-button"
-                        Content="!"
-                        IsVisible="{Binding ShowUpdateAction}"
-                        IsEnabled="{Binding CanRunUpdateAction}"
-                        Command="{Binding RunUpdateActionCommand}"
-                        ToolTip.Tip="{Binding UpdateActionText}" />
+                <Border Grid.Row="2"
+                        IsVisible="{Binding HasProfiles}"
+                        Padding="16"
+                        Classes="glass-card">
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                        <TextBlock Grid.Row="0"
+                                   Classes="card-label"
+                                   Text="Сервер" />
+
+                        <ComboBox Grid.Row="1"
+                                  Classes="profile-combo"
+                                  ItemsSource="{Binding Profiles}"
+                                  SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ImportedServerProfile">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="2"
+                                   Classes="muted"
+                                   Text="{Binding EndpointText}"
+                                   TextWrapping="Wrap" />
+                    </Grid>
+                </Border>
             </Grid>
 
-            <StackPanel Grid.Row="1"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Spacing="18">
-                <TextBlock Classes="muted"
-                           MaxWidth="260"
-                           HorizontalAlignment="Center"
-                           IsVisible="{Binding HasNoProfiles}"
-                           Text="{Binding EmptyStateText}"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap" />
+            <Border IsVisible="{Binding ShowAccountScreen}"
+                    Background="#D9120A31"
+                    Padding="6">
+                <Border Classes="glass-card auth-card"
+                        Padding="18">
+                    <Grid RowDefinitions="Auto,Auto,*"
+                          RowSpacing="16">
+                        <Grid ColumnDefinitions="44,*,44"
+                              ColumnSpacing="12">
+                            <Button Classes="icon-button"
+                                    Content="←"
+                                    IsVisible="{Binding CanDismissAccountScreen}"
+                                    Command="{Binding CloseAccountScreenCommand}" />
 
-                <Button Classes="ring-button"
-                        HorizontalAlignment="Center"
-                        BorderBrush="{Binding RingAccentBrush}"
-                        Foreground="{Binding RingAccentBrush}"
-                        Click="OnPrimaryActionClick">
-                    <TextBlock Classes="power-glyph" Text="⏻" />
-                </Button>
+                            <TextBlock Grid.Column="1"
+                                       Classes="app-title"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding AccountTitle}" />
 
-                <TextBlock Classes="status-value"
-                           HorizontalAlignment="Center"
-                           Foreground="{Binding RingAccentBrush}"
-                           Text="{Binding ConnectionLabelText}"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap" />
-            </StackPanel>
+                            <Button Grid.Column="2"
+                                    Classes="icon-button"
+                                    Content="+"
+                                    Click="OnImportConfigClick"
+                                    ToolTip.Tip="Импортировать конфиг" />
+                        </Grid>
 
-            <Border Grid.Row="2"
-                    IsVisible="{Binding HasProfiles}"
-                    Padding="16"
-                    Classes="glass-card">
-                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-                    <TextBlock Grid.Row="0"
-                               Classes="card-label"
-                               Text="Сервер" />
+                        <TextBlock Grid.Row="1"
+                                   Classes="muted"
+                                   MaxWidth="260"
+                                   HorizontalAlignment="Center"
+                                   Text="{Binding AccountSubtitle}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
 
-                    <ComboBox Grid.Row="1"
-                              Classes="profile-combo"
-                              ItemsSource="{Binding Profiles}"
-                              SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="models:ImportedServerProfile">
-                                <TextBlock Text="{Binding DisplayName}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                        <StackPanel Grid.Row="2"
+                                    Spacing="14">
+                            <StackPanel Spacing="12"
+                                        IsVisible="{Binding ShowAuthForm}">
+                                <Border Classes="glass-card"
+                                        Padding="16">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Classes="card-label"
+                                                   Text="Авторизация" />
 
-                    <TextBlock Grid.Row="2"
-                               Classes="muted"
-                               Text="{Binding EndpointText}"
-                               TextWrapping="Wrap" />
-                </Grid>
+                                        <TextBox Classes="auth-input"
+                                                 Watermark="Email"
+                                                 Text="{Binding AuthEmail, Mode=TwoWay}" />
+
+                                        <TextBox Classes="auth-input"
+                                                 Watermark="Пароль"
+                                                 PasswordChar="•"
+                                                 Text="{Binding AuthPassword, Mode=TwoWay}" />
+
+                                        <TextBlock Classes="auth-error"
+                                                   Text="{Binding AuthErrorMessage}"
+                                                   TextWrapping="Wrap" />
+
+                                        <Button Classes="cta-button compact-button"
+                                                Command="{Binding SignInCommand}"
+                                                IsEnabled="{Binding CanSignIn}"
+                                                Content="Войти" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Button Classes="secondary-button"
+                                        Command="{Binding OpenRegistrationPortalCommand}"
+                                        Content="Зарегистрироваться" />
+
+                                <Button Classes="secondary-button"
+                                        Click="OnImportConfigClick"
+                                        Content="У меня уже есть конфиг" />
+
+                                <TextBlock Classes="muted"
+                                           Text="{Binding LegacyImportHintText}"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="12"
+                                        IsVisible="{Binding ShowAuthenticatedCard}">
+                                <Border Classes="glass-card"
+                                        Padding="18">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Classes="card-label"
+                                                   Text="Текущий аккаунт" />
+                                        <TextBlock Classes="status-value"
+                                                   Text="{Binding AccountIdentityText}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Button Classes="cta-button compact-button"
+                                        Command="{Binding OpenCabinetPortalCommand}"
+                                        Content="Открыть кабинет" />
+
+                                <Button Classes="secondary-button"
+                                        Click="OnImportConfigClick"
+                                        Content="Импортировать конфиг" />
+
+                                <Button Classes="secondary-button"
+                                        Command="{Binding SignOutCommand}"
+                                        Content="Выйти" />
+
+                                <TextBlock Classes="muted"
+                                           Text="{Binding LegacyImportHintText}"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </Border>
         </Grid>
     </Border>

@@ -16,6 +16,8 @@ The desktop client currently supports:
 
 - import `.vpn`
 - import `.conf`
+- product account login
+- local account session restore
 - local profile storage
 - profile rename
 - profile delete
@@ -38,7 +40,6 @@ It intentionally does not support:
 - node list
 - control plane API work
 - user management on servers
-- account login
 - subscription validation
 - device enrollment
 - self-service billing
@@ -98,9 +99,14 @@ Profiles are stored in:
 
 `%AppData%/YourVpnClient/profiles.json`
 
+Product account session is stored in:
+
+`%AppData%/YourVpnClient/account-session.json`
+
 Repository:
 
 - [JsonProfileRepository.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Persistence/JsonProfileRepository.cs)
+- [JsonProductPlatformAuthService.cs](/c:/Users/rrese/source/repos/vpn/Infrastructure/Auth/JsonProductPlatformAuthService.cs)
 
 Important behavior:
 
@@ -174,10 +180,27 @@ The UI is intentionally minimal now.
 
 The visible shell surfaces only:
 
+- login/register entry for managed users
 - import when no profile exists
 - one primary connect or disconnect action
 - current connection label
 - selected server
+
+The current shell is now split into two UX paths:
+
+- `legacy`
+  - manual `.vpn` / `.conf` import
+  - one-tap connect
+  - no forced account requirement
+- `managed`
+  - product account icon in the header
+  - login form and external registration path to the personal cabinet
+  - local account session restore across app restarts
+
+Important product rule:
+
+- existing manually imported profiles must continue to work after client updates
+- account login is additive, not a breaking prerequisite for legacy users
 
 Diagnostics and connection logging no longer live in the visible window.
 They are written to the local log file near the app runtime instead.

@@ -403,7 +403,10 @@ Current implementation state:
 - `Account`, `Device`, `Subscription`, and `AccessGrant` are already in place.
 - email verification and device registration already work.
 - `Product Platform` can now call `Control Plane` to issue a device-bound access on a healthy node.
-- the remaining gap is teaching the desktop client to authenticate and consume this flow directly instead of importing files manually.
+- the desktop client now has the first `legacy + managed` shell split:
+  - legacy imported configs continue to connect without auth
+  - new users can enter account login or registration from the client shell
+- the remaining gap is teaching the desktop client to consume enrollment and issuance directly after login instead of stopping at account auth.
 
 ### 6.3 Reconnect
 
