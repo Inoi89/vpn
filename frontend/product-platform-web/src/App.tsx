@@ -54,8 +54,14 @@ export default function App() {
 
   async function loadProfile(auth: StoredAuth): Promise<CabinetProfile> {
     const api = createCabinetApi({ accessToken: auth.accessToken })
-    const [me, sessions, devices] = await Promise.all([api.me(), api.sessions(), api.devices()])
-    return { me, sessions, devices }
+    const [me, sessions, devices, accessGrants] = await Promise.all([
+      api.me(),
+      api.sessions(),
+      api.devices(),
+      api.accessGrants(),
+    ])
+
+    return { me, sessions, devices, accessGrants }
   }
 
   async function refreshAuth(auth: StoredAuth): Promise<StoredAuth> {
@@ -98,7 +104,7 @@ export default function App() {
     try {
       await api.logout()
     } catch {
-      // Local logout should still work even if the server refuses the request.
+      // Local logout is still valid even if the backend rejects this request.
     }
 
     saveStoredAuth(null)
@@ -158,12 +164,18 @@ export default function App() {
     }
   }
 
-  const activeDevices = screen.status === 'authenticated'
-    ? screen.profile.devices.filter((device) => device.status.toLowerCase() === 'active')
-    : []
-  const activeSessions = screen.status === 'authenticated'
-    ? screen.profile.sessions.filter((session) => session.status.toLowerCase() === 'active')
-    : []
+  const activeDevices =
+    screen.status === 'authenticated'
+      ? screen.profile.devices.filter((device) => device.status.toLowerCase() === 'active')
+      : []
+  const activeSessions =
+    screen.status === 'authenticated'
+      ? screen.profile.sessions.filter((session) => session.status.toLowerCase() === 'active')
+      : []
+  const activeAccessGrants =
+    screen.status === 'authenticated'
+      ? screen.profile.accessGrants.filter((grant) => grant.status.toLowerCase() === 'active')
+      : []
 
   return (
     <div className="app-shell">
@@ -193,14 +205,15 @@ export default function App() {
       ) : screen.status === 'anonymous' ? (
         <section className="auth-layout">
           <div className="hero-panel surface">
-            <div className="eyebrow">Простой VPN-клиент</div>
-            <h2>Вход, устройства, сессии и подписка без лишнего шума.</h2>
+            <div className="eyebrow">Пользовательский слой</div>
+            <h2>Аккаунт, устройства, активный ключ и недавние входы без операторского шума.</h2>
             <p>
-              Здесь только то, что нужно пользователю: регистрация, вход, просмотр активного доступа,
-              устройств и сессий.
+              Здесь только то, что реально нужно пользователю: регистрация, вход, просмотр своего доступа,
+              устройств и активных сессий.
             </p>
             <div className="note-box">
-              API-настройка и reverse proxy задаются на стороне деплоя. В самом UI нет скрытых dev-панелей.
+              Сам VPN и конфигурация нод остаются во внутреннем control plane. Этот кабинет отвечает только за
+              аккаунт, устройство и пользовательский доступ.
             </div>
           </div>
 
@@ -276,16 +289,21 @@ export default function App() {
                 <span>Всего устройств</span>
                 <strong>{screen.profile.devices.length}</strong>
               </div>
+              <div>
+                <span>Активных ключей</span>
+                <strong>{activeAccessGrants.length}</strong>
+              </div>
             </div>
           </div>
 
           <div className="surface entitlement-panel">
-            <div className="eyebrow">Активный доступ</div>
+            <div className="eyebrow">Подписка</div>
             {screen.profile.me.subscription ? (
               <div className="entitlement-card">
                 <h3>{screen.profile.me.subscription.planName}</h3>
                 <p>
-                  Статус: {screen.profile.me.subscription.status}. Лимит устройств: {screen.profile.me.subscription.maxDevices}. Лимит сессий:{' '}
+                  Статус: {screen.profile.me.subscription.status}. Лимит устройств:{' '}
+                  {screen.profile.me.subscription.maxDevices}. Лимит одновременных сессий:{' '}
                   {screen.profile.me.subscription.maxConcurrentSessions}.
                 </p>
                 <div className="muted-row">
@@ -296,16 +314,59 @@ export default function App() {
             ) : (
               <div className="empty-state">Активная подписка не найдена.</div>
             )}
-            <div className="note-box compact">
-              Точный summary по VPN access grant пока не выделен отдельным API. Сейчас кабинет показывает подписку, устройства и сессии.
+          </div>
+
+          <div className="surface table-panel">
+            <div className="panel-head">
+              <div>
+                <div className="eyebrow">VPN доступы</div>
+                <h3>Активные и выданные ключи</h3>
+              </div>
+              <span className="badge subtle">{screen.profile.accessGrants.length}</span>
             </div>
+
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Устройство</th>
+                  <th>Формат</th>
+                  <th>Статус</th>
+                  <th>Выдан</th>
+                  <th>Публичный ключ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {screen.profile.accessGrants.map((grant) => (
+                  <tr key={grant.accessGrantId}>
+                    <td>
+                      <strong>{grant.deviceName}</strong>
+                    </td>
+                    <td>{grant.configFormat}</td>
+                    <td>
+                      <span className={grant.status.toLowerCase() === 'active' ? 'pill success' : 'pill muted'}>
+                        {grant.status}
+                      </span>
+                    </td>
+                    <td>{formatDateTime(grant.issuedAtUtc)}</td>
+                    <td className="mono-cell">{trimPublicKey(grant.peerPublicKey)}</td>
+                  </tr>
+                ))}
+                {screen.profile.accessGrants.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="empty-cell">
+                      Пока нет выданных VPN-доступов.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
 
           <div className="surface table-panel">
             <div className="panel-head">
               <div>
                 <div className="eyebrow">Устройства</div>
-                <h3>Эти установки имеют доступ</h3>
+                <h3>Установки с доступом</h3>
               </div>
               <span className="badge subtle">{screen.profile.devices.length}</span>
             </div>
@@ -376,7 +437,11 @@ export default function App() {
                 {screen.profile.sessions.map((session) => (
                   <tr key={session.sessionId}>
                     <td>
-                      <span className={session.isCurrent ? 'pill current' : session.status.toLowerCase() === 'active' ? 'pill success' : 'pill muted'}>
+                      <span
+                        className={
+                          session.isCurrent ? 'pill current' : session.status.toLowerCase() === 'active' ? 'pill success' : 'pill muted'
+                        }
+                      >
                         {session.isCurrent ? 'Текущая' : session.status}
                       </span>
                     </td>
@@ -432,4 +497,12 @@ function trimUserAgent(value?: string | null): string {
   }
 
   return value.length > 32 ? `${value.slice(0, 32)}...` : value
+}
+
+function trimPublicKey(value?: string | null): string {
+  if (!value) {
+    return '—'
+  }
+
+  return value.length > 18 ? `${value.slice(0, 18)}...` : value
 }

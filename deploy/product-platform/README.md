@@ -23,6 +23,15 @@ On first startup the API bootstrap auto-creates the schema with `EnsureCreated` 
 
 The future React cabinet should be deployed as static files on the web host and reverse-proxy `/api/` to `https://api.etojesim.com/`.
 
+For the current MVP, there is also a temporary Docker-based web deployment:
+
+- [docker-compose.web.yml](./docker-compose.web.yml)
+- [nginx.proxy.conf](/c:/Users/rrese/source/repos/vpn/frontend/product-platform-web/nginx.proxy.conf)
+
+This setup serves the cabinet on `5.61.37.29:80` and proxies `/api/` to `http://93.100.54.80/` with `Host: api.etojesim.com`.
+
+Current live rollout uses plain Docker on `5.61.37.29`, not `docker compose`, because that host currently has Docker installed without the compose plugin.
+
 If we want to tighten the API surface further, the API host can also be firewalled so inbound `443` is allowed only from the cabinet host public IP.
 
 Sample nginx config:
@@ -41,3 +50,4 @@ Copy [`.env.example`](./.env.example) to `.env` and set:
 - Do not edit the existing nginx server blocks in place.
 - Add a new `sites-available` file and symlink it into `sites-enabled`.
 - Keep the product platform stack isolated from the existing control-plane stack.
+- The live `api.etojesim.com` origin on `192.168.1.2` is already restricted to `5.61.37.29` and `127.0.0.1`.

@@ -63,6 +63,19 @@ export type DeviceResponse = {
   lastSeenAtUtc: string
 }
 
+export type AccessGrantResponse = {
+  accessGrantId: string
+  deviceId: string
+  deviceName: string
+  nodeId?: string | null
+  peerPublicKey?: string | null
+  configFormat: string
+  status: string
+  issuedAtUtc: string
+  expiresAtUtc?: string | null
+  revokedAtUtc?: string | null
+}
+
 export type StoredAuth = {
   accessToken: string
   refreshToken: string
@@ -78,4 +91,5 @@ export type CabinetProfile = {
   me: MeResponse
   sessions: SessionResponse[]
   devices: DeviceResponse[]
+  accessGrants: AccessGrantResponse[]
 }

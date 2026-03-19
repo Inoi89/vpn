@@ -38,6 +38,14 @@ Recommended binding:
 
 The nginx vhost for `api.etojesim.com` should proxy to `http://127.0.0.1:7201`.
 
+Current live state:
+
+- `VpnProductPlatform.Api` is already running on `192.168.1.2`
+- nginx on `192.168.1.2` has a dedicated `api.etojesim.com` vhost
+- direct public access to that vhost is restricted to:
+  - `127.0.0.1`
+  - `5.61.37.29`
+
 The current API bootstrap uses `EnsureCreated` on startup for the initial schema and seeds the default plan automatically. That makes the first deploy simple, but it also means we should switch to explicit migrations before this moves beyond MVP.
 
 ## Frontend Deployment
@@ -51,6 +59,23 @@ Recommended behavior:
 - cabinet host proxies `/api/` to `https://api.etojesim.com`
 
 That keeps the browser flow same-origin on the web host and avoids touching the API nginx outside a single new vhost.
+
+For the current MVP rollout, there is also a simpler temporary path:
+
+- run the cabinet in Docker on `5.61.37.29`
+- expose it directly on port `80`
+- proxy `/api/` from that container to `http://93.100.54.80/`
+- force `Host: api.etojesim.com` on that upstream request
+
+That avoids blocking the cabinet rollout on HTTPS termination for `api.etojesim.com`.
+
+Current live state:
+
+- `5.61.37.29` does not have `docker compose`
+- the cabinet is deployed there via plain `docker build` plus `docker run`
+- container name: `product-platform-web`
+- public entrypoint: `http://5.61.37.29/`
+- the SPA proxies `/api/` server-side to the API origin
 
 If we want to tighten the public surface further, the API host can additionally be firewalled so that inbound 443 is allowed only from the cabinet host public IP. The browser would still talk only to the cabinet host; the cabinet host would be the sole server-side caller of `api.etojesim.com`.
 
@@ -79,3 +104,15 @@ For the first deploy, the preferred production path is still:
 I was able to inspect `5.61.37.29` over SSH only far enough to confirm it is currently running the VPN stack and does not already have nginx bound on 80/443.
 
 That makes it a clean candidate for the future cabinet host.
+
+Another current limitation is external TLS for `api.etojesim.com`:
+
+- the origin API is already running on `192.168.1.2`
+- a clean HTTP-only nginx vhost exists on the origin
+- but Let's Encrypt `HTTP-01` currently fails because `api.etojesim.com` is proxied through Cloudflare and challenge traffic is not reaching the origin webroot as-is
+
+Until Cloudflare proxying is relaxed or DNS-based validation is introduced, the safe MVP path is:
+
+- keep the API origin on HTTP behind the new host vhost
+- let the cabinet host proxy server-side to that HTTP origin
+- do not expose the raw API to browsers directly

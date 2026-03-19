@@ -328,6 +328,11 @@ input {
   white-space: nowrap;
 }
 
+.mono-cell {
+  font-family: Consolas, "SFMono-Regular", "Courier New", monospace;
+  font-size: 13px;
+}
+
 .empty-cell {
   text-align: center;
   color: var(--muted);

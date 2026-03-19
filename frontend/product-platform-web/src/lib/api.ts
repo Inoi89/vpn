@@ -1,4 +1,5 @@
 import type {
+  AccessGrantResponse,
   AuthResponse,
   DeviceResponse,
   LoginRequest,
@@ -82,6 +83,9 @@ export function createCabinetApi(context: RequestContext = {}) {
     },
     devices(): Promise<DeviceResponse[]> {
       return request<DeviceResponse[]>('/api/devices')
+    },
+    accessGrants(): Promise<AccessGrantResponse[]> {
+      return request<AccessGrantResponse[]>('/api/access-grants')
     },
     revokeDevice(deviceId: string): Promise<void> {
       return request<void>(`/api/devices/${deviceId}`, { method: 'DELETE' })
