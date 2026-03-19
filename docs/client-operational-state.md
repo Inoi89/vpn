@@ -36,6 +36,10 @@ It intentionally does not support:
 - node list
 - control plane API work
 - user management on servers
+- account login
+- subscription validation
+- device enrollment
+- self-service billing
 
 ## 2. Main Entry Points
 
@@ -77,6 +81,10 @@ Main shell:
 Updater launcher:
 
 - [Program.cs](/c:/Users/rrese/source/repos/vpn/Updater/Program.cs)
+
+Future product layer:
+
+- [mvp-platform-plan.md](/c:/Users/rrese/source/repos/vpn/docs/mvp-platform-plan.md)
 
 Update strategy:
 

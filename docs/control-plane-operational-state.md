@@ -7,6 +7,7 @@ This document captures the current operational state of the VPN control plane wo
 Related baseline design:
 - [architecture.md](../architecture.md)
 - [docs/operational-state.md](./operational-state.md)
+- [docs/mvp-platform-plan.md](./mvp-platform-plan.md)
 
 ## 1. What Exists Today
 
@@ -94,6 +95,30 @@ Current security assumptions:
 - In the current lab rollout, `AllowAnyClientCertificate` is used at Kestrel level and thumbprint authorization is enforced in application code.
 
 This is acceptable for the current internal setup, but it is not a production-hardening endpoint.
+
+## 2.4 Product Boundary
+
+The current control plane is an infrastructure system, not the future public product API.
+
+The next planned layer above it is documented here:
+
+- [docs/mvp-platform-plan.md](./mvp-platform-plan.md)
+
+That future layer should own:
+
+- real customer accounts
+- subscription validation
+- device enrollment
+- anti-sharing policy
+- self-service billing
+
+The control plane should remain focused on:
+
+- nodes
+- agents
+- runtime state
+- peer application
+- operator rollout
 
 ## 3. Current Fleet
 
