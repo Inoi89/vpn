@@ -13,6 +13,8 @@ public sealed class ProductPlatformDbContext(DbContextOptions<ProductPlatformDbC
 
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
+    public DbSet<AccountSession> AccountSessions => Set<AccountSession>();
+
     public DbSet<AccessGrant> AccessGrants => Set<AccessGrant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -29,6 +31,7 @@ public sealed class ProductPlatformDbContext(DbContextOptions<ProductPlatformDbC
             builder.HasMany(x => x.Devices).WithOne(x => x.Account).HasForeignKey(x => x.AccountId);
             builder.HasMany(x => x.Subscriptions).WithOne(x => x.Account).HasForeignKey(x => x.AccountId);
             builder.HasMany(x => x.AccessGrants).WithOne(x => x.Account).HasForeignKey(x => x.AccountId);
+            builder.HasMany(x => x.Sessions).WithOne(x => x.Account).HasForeignKey(x => x.AccountId);
         });
 
         modelBuilder.Entity<Device>(builder =>
@@ -60,6 +63,17 @@ public sealed class ProductPlatformDbContext(DbContextOptions<ProductPlatformDbC
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.AccountId, x.Status });
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
+        });
+
+        modelBuilder.Entity<AccountSession>(builder =>
+        {
+            builder.ToTable("account_sessions");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.AccountId);
+            builder.Property(x => x.RefreshTokenHash).HasMaxLength(128).IsRequired();
+            builder.Property(x => x.IpAddress).HasMaxLength(64);
+            builder.Property(x => x.UserAgent).HasMaxLength(512);
+            builder.Property(x => x.RevokedReason).HasMaxLength(256);
         });
 
         modelBuilder.Entity<AccessGrant>(builder =>

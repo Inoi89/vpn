@@ -94,11 +94,41 @@ internal sealed class EfSubscriptionRepository(ProductPlatformDbContext dbContex
     }
 }
 
+internal sealed class EfAccountSessionRepository(ProductPlatformDbContext dbContext) : IAccountSessionRepository
+{
+    public Task AddAsync(AccountSession session, CancellationToken cancellationToken)
+    {
+        return dbContext.AccountSessions.AddAsync(session, cancellationToken).AsTask();
+    }
+
+    public Task<AccountSession?> GetByIdAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        return dbContext.AccountSessions.FirstOrDefaultAsync(x => x.Id == sessionId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AccountSession>> ListByAccountIdAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        return await dbContext.AccountSessions
+            .Where(x => x.AccountId == accountId)
+            .OrderByDescending(x => x.LastSeenAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+}
+
 internal sealed class EfAccessGrantRepository(ProductPlatformDbContext dbContext) : IAccessGrantRepository
 {
     public Task AddAsync(AccessGrant accessGrant, CancellationToken cancellationToken)
     {
         return dbContext.AccessGrants.AddAsync(accessGrant, cancellationToken).AsTask();
+    }
+
+    public async Task<IReadOnlyList<AccessGrant>> ListByAccountIdAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        return await dbContext.AccessGrants
+            .Include(x => x.Device)
+            .Where(x => x.AccountId == accountId)
+            .OrderByDescending(x => x.IssuedAtUtc)
+            .ToListAsync(cancellationToken);
     }
 }
 

@@ -26,9 +26,17 @@ public interface ISubscriptionRepository
     Task AddPlanAsync(SubscriptionPlan plan, CancellationToken cancellationToken);
 }
 
+public interface IAccountSessionRepository
+{
+    Task AddAsync(AccountSession session, CancellationToken cancellationToken);
+    Task<AccountSession?> GetByIdAsync(Guid sessionId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<AccountSession>> ListByAccountIdAsync(Guid accountId, CancellationToken cancellationToken);
+}
+
 public interface IAccessGrantRepository
 {
     Task AddAsync(AccessGrant accessGrant, CancellationToken cancellationToken);
+    Task<IReadOnlyList<AccessGrant>> ListByAccountIdAsync(Guid accountId, CancellationToken cancellationToken);
 }
 
 public interface IUnitOfWork

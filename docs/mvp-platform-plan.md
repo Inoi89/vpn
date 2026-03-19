@@ -26,6 +26,7 @@ Implementation seed now exists here:
 
 - [VpnProductPlatform.sln](/c:/Users/rrese/source/repos/vpn/VpnProductPlatform.sln)
 - [product-platform-architecture.md](/c:/Users/rrese/source/repos/vpn/docs/product-platform-architecture.md)
+- [product-platform-deployment.md](/c:/Users/rrese/source/repos/vpn/docs/product-platform-deployment.md)
 
 ## 1. Product Goal
 
@@ -71,10 +72,17 @@ We are missing:
 - account registration
 - login
 - password reset
-- session management
+- password reset flow
 - account status
 - owned devices
 - owned entitlements
+
+What now exists in seed form:
+
+- account registration and login
+- JWT access token issuance
+- refresh token rotation
+- account session list and revoke
 
 ### 3.2 Entitlement Layer
 
@@ -133,6 +141,10 @@ Purpose:
 - device management UI
 - download page for desktop client
 
+Current work already started:
+
+- [frontend/product-platform-web](/c:/Users/rrese/source/repos/vpn/frontend/product-platform-web)
+
 Suggested shape:
 
 - separate website or frontend app
@@ -149,6 +161,15 @@ Purpose:
 - enrollment tokens
 - plan enforcement
 - billing webhooks
+
+Current API hardening now includes:
+
+- refresh tokens
+- account sessions
+- logout
+- access token validation against live session state
+- CORS hook for separate frontend origin
+- forwarded headers for proxy deployments
 
 This is the missing "server-side validation" layer.
 
@@ -483,6 +504,7 @@ Build:
 - `SubscriptionPlan`
 - `Subscription`
 - login and auth
+- refresh tokens and account sessions
 
 Result:
 

@@ -15,4 +15,9 @@
     <BaseIntermediateOutputPath>obj\VpnClient.Diagnostics.Tests\</BaseIntermediateOutputPath>
     <BaseOutputPath>bin\VpnClient.Diagnostics.Tests\</BaseOutputPath>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'VpnProductPlatform.Tests'">
+    <BaseIntermediateOutputPath>obj\VpnProductPlatform.Tests\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\VpnProductPlatform.Tests\</BaseOutputPath>
+  </PropertyGroup>
 </Project>

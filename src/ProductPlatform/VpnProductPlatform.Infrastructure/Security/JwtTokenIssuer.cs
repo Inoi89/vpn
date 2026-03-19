@@ -11,15 +11,17 @@ internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options) : ITokenIssue
 {
     private readonly JwtOptions _options = options.Value;
 
-    public (string Token, DateTimeOffset ExpiresAtUtc) Issue(Guid accountId, string email)
+    public (string Token, DateTimeOffset ExpiresAtUtc) Issue(Guid accountId, string email, Guid sessionId)
     {
         var expiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(_options.LifetimeMinutes);
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, accountId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
+            new Claim(JwtRegisteredClaimNames.Sid, sessionId.ToString()),
             new Claim(ClaimTypes.NameIdentifier, accountId.ToString()),
-            new Claim(ClaimTypes.Email, email)
+            new Claim(ClaimTypes.Email, email),
+            new Claim(ClaimTypes.Sid, sessionId.ToString())
         };
 
         var credentials = new SigningCredentials(

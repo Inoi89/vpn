@@ -9,12 +9,17 @@ public sealed record LoginRequest(
     string Email,
     string Password);
 
+public sealed record RefreshTokenRequest(string RefreshToken);
+
 public sealed record AuthTokenResponse(
     Guid AccountId,
     string Email,
     string DisplayName,
+    Guid SessionId,
     string AccessToken,
-    DateTimeOffset ExpiresAtUtc);
+    DateTimeOffset ExpiresAtUtc,
+    string RefreshToken,
+    DateTimeOffset RefreshTokenExpiresAtUtc);
 
 public sealed record MeResponse(
     Guid AccountId,

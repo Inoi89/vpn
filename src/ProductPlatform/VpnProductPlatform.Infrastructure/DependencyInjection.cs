@@ -22,7 +22,8 @@ public static class DependencyInjection
             Issuer = jwtSection["Issuer"] ?? "VpnProductPlatform",
             Audience = jwtSection["Audience"] ?? "VpnProductPlatform.Client",
             SigningKey = jwtSection["SigningKey"] ?? "development-signing-key-change-me-please",
-            LifetimeMinutes = int.TryParse(jwtSection["LifetimeMinutes"], out var lifetimeMinutes) ? lifetimeMinutes : 1440
+            LifetimeMinutes = int.TryParse(jwtSection["LifetimeMinutes"], out var lifetimeMinutes) ? lifetimeMinutes : 1440,
+            RefreshLifetimeDays = int.TryParse(jwtSection["RefreshLifetimeDays"], out var refreshLifetimeDays) ? refreshLifetimeDays : 30
         };
         services.AddSingleton<IOptions<JwtOptions>>(Options.Create(jwtOptions));
 
@@ -32,11 +33,13 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, EfAccountRepository>();
         services.AddScoped<IDeviceRepository, EfDeviceRepository>();
         services.AddScoped<ISubscriptionRepository, EfSubscriptionRepository>();
+        services.AddScoped<IAccountSessionRepository, EfAccountSessionRepository>();
         services.AddScoped<IAccessGrantRepository, EfAccessGrantRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IClock, SystemClock>();
         services.AddScoped<IPasswordHashService, PasswordHashService>();
         services.AddScoped<ITokenIssuer, JwtTokenIssuer>();
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<ProductPlatformDbSeeder>();
 
         return services;

@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  product-platform-db:
+    image: postgres:16
+    container_name: product-platform-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vpn_product_platform
+      POSTGRES_USER: vpn
+      POSTGRES_PASSWORD: ${PRODUCT_PLATFORM_POSTGRES_PASSWORD:-vpn}
+    volumes:
+      - product-platform-db-data:/var/lib/postgresql/data
+    networks:
+      - product-platform
+
+  product-platform-api:
+    build:
+      context: ../..
+      dockerfile: src/ProductPlatform/VpnProductPlatform.Api/Dockerfile
+    container_name: product-platform-api
+    restart: unless-stopped
+    depends_on:
+      - product-platform-db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__ProductPlatform: Host=product-platform-db;Port=5432;Database=vpn_product_platform;Username=vpn;Password=${PRODUCT_PLATFORM_POSTGRES_PASSWORD:-vpn}
+      Jwt__Issuer: VpnProductPlatform
+      Jwt__Audience: VpnProductPlatform.Client
+      Jwt__SigningKey: ${PRODUCT_PLATFORM_JWT_SIGNING_KEY:-change-me-please}
+      Jwt__LifetimeMinutes: 1440
+      Jwt__RefreshLifetimeDays: 30
+      Cors__AllowedOrigins__0: http://5.61.37.29
+      Cors__AllowedOrigins__1: https://5.61.37.29
+      Cors__AllowedOrigins__2: http://localhost:5173
+      Cors__AllowedOrigins__3: http://localhost:3000
+    ports:
+      - "127.0.0.1:7201:8080"
+    networks:
+      - product-platform
+
+volumes:
+  product-platform-db-data:
+
+networks:
+  product-platform:
+    driver: bridge

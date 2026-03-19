@@ -6,13 +6,18 @@ namespace VpnProductPlatform.Application.Accounts;
 
 public sealed class AccountApplicationService(
     IAccountRepository accountRepository,
+    IAccountSessionRepository accountSessionRepository,
     ISubscriptionRepository subscriptionRepository,
     IPasswordHashService passwordHashService,
     ITokenIssuer tokenIssuer,
+    IRefreshTokenService refreshTokenService,
     IUnitOfWork unitOfWork,
     IClock clock)
 {
-    public async Task<AuthTokenResponse> RegisterAsync(RegisterAccountRequest request, CancellationToken cancellationToken)
+    public async Task<AuthTokenResponse> RegisterAsync(
+        RegisterAccountRequest request,
+        AuthSessionContext sessionContext,
+        CancellationToken cancellationToken)
     {
         ValidatePassword(request.Password);
 
@@ -42,13 +47,15 @@ public sealed class AccountApplicationService(
             TimeSpan.FromDays(7));
         await subscriptionRepository.AddAsync(trial, cancellationToken);
 
+        var response = await CreateAuthResponseAsync(account, sessionContext, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        var issued = tokenIssuer.Issue(account.Id, account.Email);
-        return new AuthTokenResponse(account.Id, account.Email, account.DisplayName, issued.Token, issued.ExpiresAtUtc);
+        return response;
     }
 
-    public async Task<AuthTokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    public async Task<AuthTokenResponse> LoginAsync(
+        LoginRequest request,
+        AuthSessionContext sessionContext,
+        CancellationToken cancellationToken)
     {
         var email = NormalizeEmail(request.Email);
         var account = await accountRepository.FindByEmailAsync(email, cancellationToken)
@@ -60,10 +67,9 @@ public sealed class AccountApplicationService(
         }
 
         account.RecordLogin(clock.UtcNow);
+        var response = await CreateAuthResponseAsync(account, sessionContext, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        var issued = tokenIssuer.Issue(account.Id, account.Email);
-        return new AuthTokenResponse(account.Id, account.Email, account.DisplayName, issued.Token, issued.ExpiresAtUtc);
+        return response;
     }
 
     public async Task<MeResponse> GetCurrentAsync(Guid accountId, CancellationToken cancellationToken)
@@ -87,6 +93,36 @@ public sealed class AccountApplicationService(
                     subscription.Plan.MaxConcurrentSessions,
                     subscription.StartsAtUtc,
                     subscription.EndsAtUtc));
+    }
+
+    private async Task<AuthTokenResponse> CreateAuthResponseAsync(
+        Account account,
+        AuthSessionContext sessionContext,
+        CancellationToken cancellationToken)
+    {
+        var sessionId = Guid.NewGuid();
+        var refreshToken = refreshTokenService.Issue(sessionId);
+        var session = AccountSession.Create(
+            sessionId,
+            account.Id,
+            refreshToken.TokenHash,
+            refreshToken.ExpiresAtUtc,
+            sessionContext.IpAddress,
+            sessionContext.UserAgent,
+            clock.UtcNow);
+
+        await accountSessionRepository.AddAsync(session, cancellationToken);
+
+        var issued = tokenIssuer.Issue(account.Id, account.Email, session.Id);
+        return new AuthTokenResponse(
+            account.Id,
+            account.Email,
+            account.DisplayName,
+            session.Id,
+            issued.Token,
+            issued.ExpiresAtUtc,
+            refreshToken.Token,
+            refreshToken.ExpiresAtUtc);
     }
 
     private static string NormalizeEmail(string email)

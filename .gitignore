@@ -3,6 +3,7 @@ bin/
 obj/
 dist/
 node_modules/
+*.tsbuildinfo
 
 # Rider / VSCode / etc.
 *.user

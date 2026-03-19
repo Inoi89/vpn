@@ -35,6 +35,7 @@ Those remain in the existing `VpnControlPlane`.
 - [VpnProductPlatform.Contracts](/c:/Users/rrese/source/repos/vpn/src/ProductPlatform/VpnProductPlatform.Contracts/VpnProductPlatform.Contracts.csproj)
 - [VpnProductPlatform.Api](/c:/Users/rrese/source/repos/vpn/src/ProductPlatform/VpnProductPlatform.Api/VpnProductPlatform.Api.csproj)
 - [VpnProductPlatform.Tests](/c:/Users/rrese/source/repos/vpn/tests/ProductPlatform/VpnProductPlatform.Tests/VpnProductPlatform.Tests.csproj)
+- [frontend/product-platform-web](/c:/Users/rrese/source/repos/vpn/frontend/product-platform-web)
 
 ## Current Implemented Slice
 
@@ -45,8 +46,13 @@ The current skeleton already includes:
 - `SubscriptionPlan`
 - `Subscription`
 - `AccessGrant`
+- `AccountSession`
 - JWT login
 - account registration
+- refresh tokens with rotation
+- session list and revoke
+- authenticated logout
+- access token validation against live account session state
 - default trial subscription on registration
 - device registration with plan-based device limit
 - device revoke
@@ -56,11 +62,18 @@ The current skeleton already includes:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
 - `GET /api/me`
 - `GET /api/devices`
 - `POST /api/devices`
 - `DELETE /api/devices/{deviceId}`
+- `GET /api/sessions`
+- `DELETE /api/sessions/{sessionId}`
+- `GET /api/access-grants`
 - `GET /healthz`
+
+`AccessGrant` already exists in the domain model. The cabinet can read grant history, but issuance endpoints are intentionally not exposed yet.
 
 ## Current Product Assumption
 
@@ -77,6 +90,7 @@ This solution is designed to be deployed independently from the control plane.
 Sample deployment:
 
 - [docker-compose.sample.yml](/c:/Users/rrese/source/repos/vpn/deploy/product-platform/docker-compose.sample.yml)
+- [docker-compose.lan.yml](/c:/Users/rrese/source/repos/vpn/deploy/product-platform/docker-compose.lan.yml)
 - [Dockerfile](/c:/Users/rrese/source/repos/vpn/src/ProductPlatform/VpnProductPlatform.Api/Dockerfile)
 
 Default local port mapping:
@@ -96,8 +110,7 @@ dotnet run --project src/ProductPlatform/VpnProductPlatform.Api/VpnProductPlatfo
 
 The next implementation steps should be:
 
-1. add refresh tokens and real user sessions
+1. add enrollment endpoint that requests access issuance from the control plane
 2. add billing provider abstraction and webhook handling
-3. add enrollment endpoint that requests access issuance from the control plane
-4. add personal cabinet frontend
-5. add audit trail and operator tooling around device revoke and entitlement changes
+3. harden refresh-token persistence and cleanup jobs
+4. add audit trail and operator tooling around device revoke and entitlement changes

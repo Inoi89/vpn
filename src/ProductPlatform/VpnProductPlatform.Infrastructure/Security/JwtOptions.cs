@@ -11,4 +11,6 @@ public sealed class JwtOptions
     public string SigningKey { get; set; } = "development-signing-key-change-me-please";
 
     public int LifetimeMinutes { get; set; } = 1440;
+
+    public int RefreshLifetimeDays { get; set; } = 30;
 }

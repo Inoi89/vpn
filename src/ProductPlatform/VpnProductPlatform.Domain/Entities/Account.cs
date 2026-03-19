@@ -8,6 +8,7 @@ public sealed class Account : AuditableEntity
     private readonly List<Device> _devices = [];
     private readonly List<Subscription> _subscriptions = [];
     private readonly List<AccessGrant> _accessGrants = [];
+    private readonly List<AccountSession> _sessions = [];
 
     private Account()
     {
@@ -44,6 +45,8 @@ public sealed class Account : AuditableEntity
     public IReadOnlyCollection<Subscription> Subscriptions => _subscriptions;
 
     public IReadOnlyCollection<AccessGrant> AccessGrants => _accessGrants;
+
+    public IReadOnlyCollection<AccountSession> Sessions => _sessions;
 
     public static Account Create(
         Guid id,
