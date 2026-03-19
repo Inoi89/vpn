@@ -31,3 +31,13 @@ public interface IRefreshTokenService
     bool TryGetSessionId(string refreshToken, out Guid sessionId);
     bool Verify(string refreshToken, string expectedTokenHash);
 }
+
+public interface IAccountEmailService
+{
+    Task SendWelcomeAsync(
+        string email,
+        string displayName,
+        string? planName,
+        DateTimeOffset? subscriptionEndsAtUtc,
+        CancellationToken cancellationToken);
+}

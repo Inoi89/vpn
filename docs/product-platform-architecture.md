@@ -49,6 +49,7 @@ The current skeleton already includes:
 - `AccountSession`
 - JWT login
 - account registration
+- best-effort welcome email on registration via SMTP
 - refresh tokens with rotation
 - session list and revoke
 - authenticated logout

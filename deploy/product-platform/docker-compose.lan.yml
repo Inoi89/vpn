@@ -31,6 +31,14 @@ services:
       Jwt__SigningKey: ${PRODUCT_PLATFORM_JWT_SIGNING_KEY:-change-me-please}
       Jwt__LifetimeMinutes: 1440
       Jwt__RefreshLifetimeDays: 30
+      Smtp__Enabled: ${PRODUCT_PLATFORM_SMTP_ENABLED:-false}
+      Smtp__Host: ${PRODUCT_PLATFORM_SMTP_HOST:-}
+      Smtp__Port: ${PRODUCT_PLATFORM_SMTP_PORT:-587}
+      Smtp__SecureSocketMode: ${PRODUCT_PLATFORM_SMTP_SECURE_SOCKET_MODE:-StartTls}
+      Smtp__UserName: ${PRODUCT_PLATFORM_SMTP_USERNAME:-}
+      Smtp__Password: ${PRODUCT_PLATFORM_SMTP_PASSWORD:-}
+      Smtp__FromEmail: ${PRODUCT_PLATFORM_SMTP_FROM_EMAIL:-no-reply@etojesim.com}
+      Smtp__FromName: ${PRODUCT_PLATFORM_SMTP_FROM_NAME:-EtoJeSim VPN}
       Cors__AllowedOrigins__0: http://5.61.37.29
       Cors__AllowedOrigins__1: https://5.61.37.29
       Cors__AllowedOrigins__2: http://localhost:5173

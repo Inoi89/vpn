@@ -23,6 +23,8 @@ public sealed class AuthSessionFlowTests
         Assert.StartsWith(response.SessionId.ToString("N"), response.RefreshToken);
         Assert.Single(fixture.AccountSessions.Items);
         Assert.Single(fixture.Subscriptions.Subscriptions);
+        Assert.Single(fixture.AccountEmails.Sent);
+        Assert.Equal("alex@example.com", fixture.AccountEmails.Sent[0].Email);
     }
 
     [Fact]
@@ -98,18 +100,21 @@ public sealed class AuthSessionFlowTests
             AccountApplicationService accounts,
             SessionApplicationService sessions,
             InMemoryAccountSessionRepository accountSessions,
-            InMemorySubscriptionRepository subscriptions)
+            InMemorySubscriptionRepository subscriptions,
+            FakeAccountEmailService accountEmails)
         {
             Accounts = accounts;
             Sessions = sessions;
             AccountSessions = accountSessions;
             Subscriptions = subscriptions;
+            AccountEmails = accountEmails;
         }
 
         public AccountApplicationService Accounts { get; }
         public SessionApplicationService Sessions { get; }
         public InMemoryAccountSessionRepository AccountSessions { get; }
         public InMemorySubscriptionRepository Subscriptions { get; }
+        public FakeAccountEmailService AccountEmails { get; }
 
         public static TestFixture Create()
         {
@@ -120,6 +125,7 @@ public sealed class AuthSessionFlowTests
             var passwordHasher = new FakePasswordHashService();
             var tokenIssuer = new FakeTokenIssuer();
             var refreshTokens = new FakeRefreshTokenService(clock);
+            var accountEmails = new FakeAccountEmailService();
             var unitOfWork = new FakeUnitOfWork();
 
             return new TestFixture(
@@ -130,6 +136,7 @@ public sealed class AuthSessionFlowTests
                     passwordHasher,
                     tokenIssuer,
                     refreshTokens,
+                    accountEmails,
                     unitOfWork,
                     clock),
                 new SessionApplicationService(
@@ -140,7 +147,24 @@ public sealed class AuthSessionFlowTests
                     unitOfWork,
                     clock),
                 sessions,
-                subscriptions);
+                subscriptions,
+                accountEmails);
+        }
+    }
+
+    private sealed class FakeAccountEmailService : IAccountEmailService
+    {
+        public List<(string Email, string DisplayName, string? PlanName, DateTimeOffset? SubscriptionEndsAtUtc)> Sent { get; } = [];
+
+        public Task SendWelcomeAsync(
+            string email,
+            string displayName,
+            string? planName,
+            DateTimeOffset? subscriptionEndsAtUtc,
+            CancellationToken cancellationToken)
+        {
+            Sent.Add((email, displayName, planName, subscriptionEndsAtUtc));
+            return Task.CompletedTask;
         }
     }
 

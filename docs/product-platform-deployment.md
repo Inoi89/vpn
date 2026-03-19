@@ -48,6 +48,23 @@ Current live state:
 
 The current API bootstrap uses `EnsureCreated` on startup for the initial schema and seeds the default plan automatically. That makes the first deploy simple, but it also means we should switch to explicit migrations before this moves beyond MVP.
 
+## SMTP
+
+Registration now supports a best-effort welcome email through the `Smtp` configuration section.
+
+Required deploy variables:
+
+- `PRODUCT_PLATFORM_SMTP_ENABLED`
+- `PRODUCT_PLATFORM_SMTP_HOST`
+- `PRODUCT_PLATFORM_SMTP_PORT`
+- `PRODUCT_PLATFORM_SMTP_SECURE_SOCKET_MODE`
+- `PRODUCT_PLATFORM_SMTP_USERNAME`
+- `PRODUCT_PLATFORM_SMTP_PASSWORD`
+- `PRODUCT_PLATFORM_SMTP_FROM_EMAIL`
+- `PRODUCT_PLATFORM_SMTP_FROM_NAME`
+
+If SMTP is disabled or temporarily unavailable, registration still succeeds and the API only logs the send failure.
+
 ## Frontend Deployment
 
 The cabinet should be a separate static React build on `5.61.37.29` or another edge host.

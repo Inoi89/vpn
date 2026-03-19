@@ -44,6 +44,14 @@ Copy [`.env.example`](./.env.example) to `.env` and set:
 
 - `PRODUCT_PLATFORM_POSTGRES_PASSWORD`
 - `PRODUCT_PLATFORM_JWT_SIGNING_KEY`
+- `PRODUCT_PLATFORM_SMTP_ENABLED`
+- `PRODUCT_PLATFORM_SMTP_HOST`
+- `PRODUCT_PLATFORM_SMTP_PORT`
+- `PRODUCT_PLATFORM_SMTP_SECURE_SOCKET_MODE`
+- `PRODUCT_PLATFORM_SMTP_USERNAME`
+- `PRODUCT_PLATFORM_SMTP_PASSWORD`
+- `PRODUCT_PLATFORM_SMTP_FROM_EMAIL`
+- `PRODUCT_PLATFORM_SMTP_FROM_NAME`
 
 ## Notes
 
@@ -51,3 +59,4 @@ Copy [`.env.example`](./.env.example) to `.env` and set:
 - Add a new `sites-available` file and symlink it into `sites-enabled`.
 - Keep the product platform stack isolated from the existing control-plane stack.
 - The live `api.etojesim.com` origin on `192.168.1.2` is already restricted to `5.61.37.29` and `127.0.0.1`.
+- Registration welcome mail is best-effort: account creation should not fail if SMTP is temporarily unavailable.

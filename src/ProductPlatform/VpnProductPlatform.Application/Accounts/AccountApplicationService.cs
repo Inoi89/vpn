@@ -11,6 +11,7 @@ public sealed class AccountApplicationService(
     IPasswordHashService passwordHashService,
     ITokenIssuer tokenIssuer,
     IRefreshTokenService refreshTokenService,
+    IAccountEmailService accountEmailService,
     IUnitOfWork unitOfWork,
     IClock clock)
 {
@@ -49,6 +50,12 @@ public sealed class AccountApplicationService(
 
         var response = await CreateAuthResponseAsync(account, sessionContext, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await accountEmailService.SendWelcomeAsync(
+            account.Email,
+            account.DisplayName,
+            defaultPlan.Name,
+            trial.EndsAtUtc,
+            cancellationToken);
         return response;
     }
 
