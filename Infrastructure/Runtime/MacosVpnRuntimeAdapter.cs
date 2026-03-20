@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using VpnClient.Core.Interfaces;
 using VpnClient.Core.Models;
@@ -54,16 +53,24 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
 
         try
         {
-            await _transport.SendAsync(BuildActivationPayload(profile), cancellationToken);
+            using (var hello = await _transport.RequestAsync(MacosRuntimeBridgeProtocol.BuildHelloRequest(), cancellationToken))
+            {
+                MacosRuntimeBridgeProtocol.EnsureSuccess(hello);
+            }
+
+            using (var configure = await _transport.RequestAsync(MacosRuntimeBridgeProtocol.BuildConfigureRequest(profile), cancellationToken))
+            {
+                MacosRuntimeBridgeProtocol.EnsureSuccess(configure);
+            }
+
+            using (var activate = await _transport.RequestAsync(MacosRuntimeBridgeProtocol.BuildActivateRequest(profile), cancellationToken))
+            {
+                MacosRuntimeBridgeProtocol.EnsureSuccess(activate);
+            }
+
             await _killSwitch.ArmAsync(profile.Endpoint ?? string.Empty, cancellationToken);
             _activeProfile = profile;
-            return UpdateState(connectingState with
-            {
-                Status = RuntimeConnectionStatus.Connected,
-                AdapterPresent = true,
-                TunnelActive = true,
-                UpdatedAtUtc = DateTimeOffset.UtcNow
-            });
+            return await GetStatusAsync(cancellationToken);
         }
         catch (Exception exception)
         {
@@ -94,10 +101,10 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
 
         try
         {
-            await _transport.SendAsync(new JsonObject
-            {
-                ["type"] = "deactivate"
-            }, cancellationToken);
+            using var response = await _transport.RequestAsync(
+                MacosRuntimeBridgeProtocol.BuildDeactivateRequest(_activeProfile?.Id),
+                cancellationToken);
+            MacosRuntimeBridgeProtocol.EnsureSuccess(response);
         }
         catch (Exception exception)
         {
@@ -123,12 +130,9 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
 
         try
         {
-            using var response = await _transport.RequestAsync(new JsonObject
-            {
-                ["type"] = "status"
-            }, cancellationToken);
-
-            return UpdateState(ParseStatus(response.RootElement));
+            using var response = await _transport.RequestAsync(MacosRuntimeBridgeProtocol.BuildStatusRequest(), cancellationToken);
+            var payload = MacosRuntimeBridgeProtocol.ExtractPayloadOrRoot(response);
+            return UpdateState(ParseStatus(payload));
         }
         catch (Exception exception)
         {
@@ -163,15 +167,12 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
 
         try
         {
-            using var response = await _transport.RequestAsync(new JsonObject
-            {
-                ["type"] = "status"
-            }, cancellationToken);
-
-            var state = ParseStatus(response.RootElement);
+            using var response = await _transport.RequestAsync(MacosRuntimeBridgeProtocol.BuildStatusRequest(), cancellationToken);
+            var payload = MacosRuntimeBridgeProtocol.ExtractPayloadOrRoot(response);
+            var state = ParseStatus(payload);
             if (state.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Connecting or RuntimeConnectionStatus.Degraded)
             {
-                _activeProfile = profiles.FirstOrDefault();
+                _activeProfile = TryMatchProfile(payload, profiles) ?? profiles.FirstOrDefault();
             }
 
             return UpdateState(state);
@@ -181,26 +182,6 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
             _logger.LogWarning(exception, "macOS runtime bridge restore probe failed.");
             return UpdateState(ConnectionState.Disconnected(AdapterName));
         }
-    }
-
-    private static JsonObject BuildActivationPayload(ImportedServerProfile profile)
-    {
-        var tunnel = profile.TunnelConfig;
-
-        return new JsonObject
-        {
-            ["type"] = "activate",
-            ["profile"] = new JsonObject
-            {
-                ["id"] = profile.Id.ToString(),
-                ["name"] = profile.DisplayName,
-                ["endpoint"] = profile.Endpoint,
-                ["address"] = profile.Address,
-                ["dns"] = new JsonArray(tunnel.DnsServers.Select(server => JsonValue.Create(server)).ToArray()),
-                ["mtu"] = tunnel.Mtu is null ? null : JsonValue.Create(tunnel.Mtu),
-                ["allowedIps"] = new JsonArray(tunnel.AllowedIps.Select(ip => JsonValue.Create(ip)).ToArray())
-            }
-        };
     }
 
     private static ConnectionState BuildState(
@@ -241,36 +222,53 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
         return warnings;
     }
 
-    private static ConnectionState ParseStatus(JsonElement root)
+    private ConnectionState ParseStatus(JsonElement root)
     {
-        var connected = root.TryGetProperty("connected", out var connectedElement)
-                        && connectedElement.ValueKind == JsonValueKind.True;
+        var status = ParseRuntimeStatus(root);
+        var connected = status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded;
+        var fallbackProfile = _activeProfile;
 
         var endpoint = TryGetString(root, "serverEndpoint")
                        ?? TryGetString(root, "serverIpv4Gateway")
-                       ?? TryGetString(root, "endpoint");
+                       ?? TryGetString(root, "endpoint")
+                       ?? fallbackProfile?.Endpoint;
 
         var address = TryGetString(root, "deviceIpv4Address")
                       ?? TryGetString(root, "deviceIpv6Address")
-                      ?? TryGetString(root, "address");
+                      ?? TryGetString(root, "address")
+                      ?? fallbackProfile?.Address;
 
         var received = TryGetInt64(root, "rxBytes");
         var sent = TryGetInt64(root, "txBytes");
         var handshake = TryGetDateTimeOffset(root, "latestHandshakeAtUtc")
                         ?? TryGetDateTimeOffset(root, "date");
+        var warnings = TryGetStringArray(root, "warnings");
+        var lastError = TryGetString(root, "lastError")
+                        ?? MacosRuntimeBridgeProtocol.TryExtractError(root);
+        var dnsServers = TryGetStringArray(root, "dns");
+        var allowedIps = TryGetStringArray(root, "allowedIps");
+        var routes = TryGetStringArray(root, "routes");
 
         return new ConnectionState
         {
-            Status = connected ? RuntimeConnectionStatus.Connected : RuntimeConnectionStatus.Disconnected,
+            Status = status,
             AdapterName = AdapterName,
+            ProfileId = TryGetGuid(root, "profileId") ?? fallbackProfile?.Id,
+            ProfileName = TryGetString(root, "profileName") ?? fallbackProfile?.DisplayName,
             Endpoint = endpoint,
             Address = address,
+            DnsServers = dnsServers.Count > 0 ? dnsServers : fallbackProfile?.DnsServers ?? Array.Empty<string>(),
+            Mtu = TryGetInt(root, "mtu") ?? ParseNullableInt(fallbackProfile?.Mtu),
+            AllowedIps = allowedIps.Count > 0 ? allowedIps : fallbackProfile?.AllowedIps ?? Array.Empty<string>(),
+            Routes = routes.Count > 0 ? routes : allowedIps.Count > 0 ? allowedIps : fallbackProfile?.AllowedIps ?? Array.Empty<string>(),
             UpdatedAtUtc = DateTimeOffset.UtcNow,
             LatestHandshakeAtUtc = handshake,
             ReceivedBytes = received ?? 0,
             SentBytes = sent ?? 0,
-            AdapterPresent = connected,
+            AdapterPresent = status is not RuntimeConnectionStatus.Disconnected and not RuntimeConnectionStatus.Unsupported,
             TunnelActive = connected,
+            Warnings = warnings,
+            LastError = lastError,
             IsWindowsFirst = false,
             UsesSetConf = false
         };
@@ -290,6 +288,54 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
             : null;
     }
 
+    private static int? TryGetInt(JsonElement root, string propertyName)
+    {
+        return root.TryGetProperty(propertyName, out var element) && element.TryGetInt32(out var value)
+            ? value
+            : null;
+    }
+
+    private static Guid? TryGetGuid(JsonElement root, string propertyName)
+    {
+        return root.TryGetProperty(propertyName, out var element)
+               && element.ValueKind == JsonValueKind.String
+               && Guid.TryParse(element.GetString(), out var value)
+            ? value
+            : null;
+    }
+
+    private static IReadOnlyList<string> TryGetStringArray(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var element) || element.ValueKind != JsonValueKind.Array)
+        {
+            return Array.Empty<string>();
+        }
+
+        return element.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.String)
+            .Select(item => item.GetString())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Cast<string>()
+            .ToArray();
+    }
+
+    private static RuntimeConnectionStatus ParseRuntimeStatus(JsonElement root)
+    {
+        var explicitStatus = TryGetString(root, "status")
+                             ?? TryGetString(root, "state");
+        if (!string.IsNullOrWhiteSpace(explicitStatus)
+            && Enum.TryParse<RuntimeConnectionStatus>(explicitStatus, ignoreCase: true, out var parsed))
+        {
+            return parsed;
+        }
+
+        var connected = root.TryGetProperty("connected", out var connectedElement)
+                        && connectedElement.ValueKind == JsonValueKind.True;
+        return connected
+            ? RuntimeConnectionStatus.Connected
+            : RuntimeConnectionStatus.Disconnected;
+    }
+
     private static DateTimeOffset? TryGetDateTimeOffset(JsonElement root, string propertyName)
     {
         return root.TryGetProperty(propertyName, out var element) && element.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(element.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var value)
@@ -302,6 +348,46 @@ public sealed class MacosVpnRuntimeAdapter : IVpnRuntimeAdapter
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : null;
+    }
+
+    private static ImportedServerProfile? TryMatchProfile(JsonElement status, IReadOnlyList<ImportedServerProfile> profiles)
+    {
+        var profileId = TryGetGuid(status, "profileId");
+        if (profileId is not null)
+        {
+            var byId = profiles.FirstOrDefault(profile => profile.Id == profileId.Value);
+            if (byId is not null)
+            {
+                return byId;
+            }
+        }
+
+        var profileName = TryGetString(status, "profileName");
+        if (!string.IsNullOrWhiteSpace(profileName))
+        {
+            var byName = profiles.FirstOrDefault(profile => string.Equals(profile.DisplayName, profileName, StringComparison.OrdinalIgnoreCase));
+            if (byName is not null)
+            {
+                return byName;
+            }
+        }
+
+        var endpoint = TryGetString(status, "serverEndpoint") ?? TryGetString(status, "endpoint");
+        if (!string.IsNullOrWhiteSpace(endpoint))
+        {
+            var byEndpoint = profiles.FirstOrDefault(profile => string.Equals(profile.Endpoint, endpoint, StringComparison.OrdinalIgnoreCase));
+            if (byEndpoint is not null)
+            {
+                return byEndpoint;
+            }
+        }
+
+        var address = TryGetString(status, "deviceIpv4Address")
+                      ?? TryGetString(status, "deviceIpv6Address")
+                      ?? TryGetString(status, "address");
+        return string.IsNullOrWhiteSpace(address)
+            ? null
+            : profiles.FirstOrDefault(profile => string.Equals(profile.Address, address, StringComparison.OrdinalIgnoreCase));
     }
 
     private ConnectionState UpdateState(ConnectionState state)

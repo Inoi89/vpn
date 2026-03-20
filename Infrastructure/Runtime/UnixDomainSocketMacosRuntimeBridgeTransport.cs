@@ -14,7 +14,7 @@ public sealed class UnixDomainSocketMacosRuntimeBridgeTransport : IMacosRuntimeB
     private readonly string _socketPath;
 
     public UnixDomainSocketMacosRuntimeBridgeTransport()
-        : this(Path.Combine(Path.GetTempPath(), "etoVPN.runtime.sock"))
+        : this(MacosRuntimeBridgeProtocol.DefaultSocketPath)
     {
     }
 

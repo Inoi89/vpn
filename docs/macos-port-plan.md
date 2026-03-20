@@ -23,6 +23,12 @@ Phase 1 is now implemented in the source tree:
 - macOS-safe startup now falls back to no-op runtime, kill switch, diagnostics, and updater services.
 - Tray and activation wiring is only enabled on Windows.
 
+Phase 2 is now started in the source tree:
+
+- The desktop macOS adapter now speaks a stable bridge envelope instead of ad-hoc JSON commands.
+- The macOS bridge contract is documented in `docs/macos-runtime-bridge-contract.md`.
+- A native `native/macos/` scaffold now exists for the bridge helper, packet tunnel, and shared models.
+
 ## Что уже можно переиспользовать
 
 Эти части уже в основном кроссплатформенные:
