@@ -26,6 +26,10 @@ request the system to start or stop this extension.
   Extension lifecycle entry point.
 - `Sources/etoVPNPacketTunnel/TunnelConfiguration.swift`
   Placeholder typed configuration model for the staged profile.
+- `Sources/etoVPNPacketTunnel/PacketTunnelNetworkSettingsBuilder.swift`
+  Scaffold builder for `NEPacketTunnelNetworkSettings`.
+- `Sources/etoVPNPacketTunnel/TunnelRuntimeSnapshot.swift`
+  Provider-side runtime snapshot surfaced through `handleAppMessage`.
 - `Sources/etoVPNPacketTunnel/WireGuardTunnelAdapter.swift`
   Placeholder boundary where the tunnel engine integration should live.
 - `Info.plist`

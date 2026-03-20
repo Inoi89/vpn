@@ -15,10 +15,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             let providerProtocol = protocolConfiguration as? NETunnelProviderProtocol
             let configuration = try controlStore.loadConfiguration(from: providerProtocol)
             activeConfiguration = configuration
-            applyScaffoldNetworkSettings(using: configuration)
-            tunnelAdapter.start(with: configuration)
-            completionHandler(PacketTunnelScaffoldError.notImplemented)
+            try applyScaffoldNetworkSettings(using: configuration, completionHandler: completionHandler)
         } catch {
+            tunnelAdapter.markFailed(error.localizedDescription)
             completionHandler(error)
         }
     }
@@ -46,15 +45,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         switch request.action
         {
             case "status":
-                let isConnected = activeConfiguration != nil
-                let response = TunnelProviderMessageStatusResponse(
-                    connected: isConnected,
-                    state: isConnected ? .connecting : .disconnected,
-                    rxBytes: 0,
-                    txBytes: 0,
-                    latestHandshakeAtUtc: nil,
-                    warnings: ["Packet tunnel provider status is still scaffolded."],
-                    lastError: nil)
+                let response = tunnelAdapter.currentSnapshot().asProviderMessage()
                 completionHandler?(try? encoder.encode(response))
 
             default:
@@ -62,16 +53,27 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         }
     }
 
-    private func applyScaffoldNetworkSettings(using configuration: TunnelConfiguration) {
-        // Placeholder only.
-        //
-        // The real implementation should:
-        // - decode the real payload from `protocolConfiguration.providerConfiguration`
-        // - keep the staged control-store only as a scaffold fallback
-        // - build `NEPacketTunnelNetworkSettings` from `configuration`
-        // - apply DNS/routes/MTU
-        // - start the tunnel backend before calling the completion handler
-        _ = configuration
+    private func applyScaffoldNetworkSettings(
+        using configuration: TunnelConfiguration,
+        completionHandler: @escaping (Error?) -> Void)
+        throws
+    {
+        let settings = try PacketTunnelNetworkSettingsBuilder.build(from: configuration)
+        setTunnelNetworkSettings(settings) { [weak self] error in
+            guard let self else {
+                completionHandler(error)
+                return
+            }
+
+            if let error {
+                self.tunnelAdapter.markFailed(error.localizedDescription)
+                completionHandler(error)
+                return
+            }
+
+            self.tunnelAdapter.start(with: configuration)
+            completionHandler(PacketTunnelScaffoldError.notImplemented)
+        }
     }
 }
 

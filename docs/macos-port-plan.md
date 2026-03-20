@@ -31,6 +31,7 @@ Phase 2 is now started in the source tree:
 - The native bridge now has a newline-delimited request/response processing skeleton.
 - The bridge and packet tunnel now share a staged profile handoff path through a common control-store filename.
 - The next real runtime step is to replace that temporary staged-file handoff with `NETunnelProviderProtocol.providerConfiguration`, matching the upstream Apple path.
+- The packet tunnel now has a scaffold builder for `NEPacketTunnelNetworkSettings` and a provider-side status message path.
 
 ## Что уже можно переиспользовать
 

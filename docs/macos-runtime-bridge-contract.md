@@ -244,6 +244,13 @@ The bridge-side scaffold now follows that shape conceptually:
 - `TunnelManagerStatusObserver` owns `NEVPNStatusDidChangeNotification`
 - `TunnelStatusPoller` owns periodic provider status polling
 
+The packet-tunnel scaffold now also owns the matching provider-side path:
+
+- `PacketTunnelNetworkSettingsBuilder` builds `NEPacketTunnelNetworkSettings`
+  from the decoded `TunnelProfilePayload`
+- `PacketTunnelProvider.handleAppMessage` answers `{"action":"status"}`
+  with a typed JSON snapshot
+
 ## Current Phase 2 expectation
 
 This scaffold is not yet a real VPN runtime. Phase 2 is successful when:
