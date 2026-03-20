@@ -10,7 +10,6 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using VpnClient.Core.Models;
-using VpnClient.Core.Models.Updates;
 using VpnClient.UI.ViewModels;
 
 namespace VpnClient.UI;
@@ -29,8 +28,6 @@ public partial class App : Avalonia.Application
     private NativeMenuItem? _exitItem;
     private WindowNotificationManager? _notificationManager;
     private RuntimeConnectionStatus? _lastNotifiedConnectionStatus;
-    private AppUpdateStatus? _lastNotifiedUpdateStatus;
-    private string? _lastNotifiedUpdateVersion;
     private byte[]? _iconBytes;
     private bool _allowWindowClose;
     private bool _shutdownCleanupStarted;
@@ -68,9 +65,8 @@ public partial class App : Avalonia.Application
             if (_viewModel is not null)
             {
                 _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+                _viewModel.NotificationRequested += OnNotificationRequested;
                 _lastNotifiedConnectionStatus = _viewModel.ConnectionState.Status;
-                _lastNotifiedUpdateStatus = _viewModel.UpdateState.Status;
-                _lastNotifiedUpdateVersion = _viewModel.UpdateState.AvailableRelease?.Version;
             }
 
             if (Program.SingleInstance is not null)
@@ -118,7 +114,7 @@ public partial class App : Avalonia.Application
             _trayIcon = new TrayIcon
             {
                 Icon = CreateWindowIcon() ?? new WindowIcon(Environment.ProcessPath!),
-                ToolTipText = "Your VPN Client",
+                ToolTipText = "etojeVPN",
                 Menu = menu,
                 IsVisible = true
             };
@@ -138,7 +134,7 @@ public partial class App : Avalonia.Application
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         UpdateTrayMenuState();
-        MaybeShowNotifications(e.PropertyName);
+        MaybeShowConnectionNotifications(e.PropertyName);
     }
 
     private void OnActivationRequested()
@@ -254,6 +250,7 @@ public partial class App : Avalonia.Application
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.NotificationRequested -= OnNotificationRequested;
         }
 
         if (Program.SingleInstance is not null)
@@ -264,7 +261,7 @@ public partial class App : Avalonia.Application
         _trayIcon?.Dispose();
     }
 
-    private void MaybeShowNotifications(string? propertyName)
+    private void MaybeShowConnectionNotifications(string? propertyName)
     {
         if (_viewModel is null || _notificationManager is null)
         {
@@ -274,88 +271,67 @@ public partial class App : Avalonia.Application
         if (!_viewModel.NotificationsEnabled)
         {
             _lastNotifiedConnectionStatus = _viewModel.ConnectionState.Status;
-            _lastNotifiedUpdateStatus = _viewModel.UpdateState.Status;
-            _lastNotifiedUpdateVersion = _viewModel.UpdateState.AvailableRelease?.Version;
             return;
         }
 
-        if (propertyName == nameof(MainWindowViewModel.ConnectionState))
+        if (propertyName != nameof(MainWindowViewModel.ConnectionState))
         {
-            var currentStatus = _viewModel.ConnectionState.Status;
-            var previousStatus = _lastNotifiedConnectionStatus;
-            _lastNotifiedConnectionStatus = currentStatus;
-
-            if (currentStatus == previousStatus)
-            {
-                return;
-            }
-
-            var profileName = _viewModel.ConnectionState.ProfileName ?? _viewModel.SelectedProfile?.DisplayName ?? "VPN";
-            switch (currentStatus)
-            {
-                case RuntimeConnectionStatus.Connected:
-                case RuntimeConnectionStatus.Degraded:
-                    _notificationManager.Show(new Notification(
-                        "VPN подключен",
-                        $"Активен профиль '{profileName}'.",
-                        NotificationType.Success));
-                    break;
-                case RuntimeConnectionStatus.Disconnected when previousStatus is RuntimeConnectionStatus.Connected
-                    or RuntimeConnectionStatus.Degraded
-                    or RuntimeConnectionStatus.Connecting
-                    or RuntimeConnectionStatus.Disconnecting:
-                    _notificationManager.Show(new Notification(
-                        "VPN отключен",
-                        $"Профиль '{profileName}' больше не активен.",
-                        NotificationType.Warning));
-                    break;
-                case RuntimeConnectionStatus.Failed:
-                    _notificationManager.Show(new Notification(
-                        "Ошибка подключения",
-                        _viewModel.ConnectionState.LastError ?? "Не удалось поднять VPN-соединение.",
-                        NotificationType.Error));
-                    break;
-            }
-
             return;
         }
 
-        if (propertyName == nameof(MainWindowViewModel.UpdateState))
+        var currentStatus = _viewModel.ConnectionState.Status;
+        var previousStatus = _lastNotifiedConnectionStatus;
+        _lastNotifiedConnectionStatus = currentStatus;
+
+        if (currentStatus == previousStatus)
         {
-            var currentStatus = _viewModel.UpdateState.Status;
-            var currentVersion = _viewModel.UpdateState.AvailableRelease?.Version;
-            var shouldNotify = currentStatus != _lastNotifiedUpdateStatus || !string.Equals(currentVersion, _lastNotifiedUpdateVersion, StringComparison.Ordinal);
-
-            _lastNotifiedUpdateStatus = currentStatus;
-            _lastNotifiedUpdateVersion = currentVersion;
-
-            if (!shouldNotify)
-            {
-                return;
-            }
-
-            switch (currentStatus)
-            {
-                case AppUpdateStatus.UpdateAvailable when !string.IsNullOrWhiteSpace(currentVersion):
-                    _notificationManager.Show(new Notification(
-                        "Доступно обновление",
-                        $"Можно установить версию {currentVersion}.",
-                        NotificationType.Information));
-                    break;
-                case AppUpdateStatus.ReadyToInstall when !string.IsNullOrWhiteSpace(currentVersion):
-                    _notificationManager.Show(new Notification(
-                        "Обновление загружено",
-                        $"Версия {currentVersion} готова к установке.",
-                        NotificationType.Success));
-                    break;
-                case AppUpdateStatus.Failed when !string.IsNullOrWhiteSpace(_viewModel.UpdateState.LastError):
-                    _notificationManager.Show(new Notification(
-                        "Обновление недоступно",
-                        _viewModel.UpdateState.LastError!,
-                        NotificationType.Warning));
-                    break;
-            }
+            return;
         }
+
+        var profileName = _viewModel.ConnectionState.ProfileName ?? _viewModel.SelectedProfile?.DisplayName ?? "VPN";
+        switch (currentStatus)
+        {
+            case RuntimeConnectionStatus.Connected:
+            case RuntimeConnectionStatus.Degraded:
+                _notificationManager.Show(new Notification(
+                    "VPN подключен",
+                    $"Активен профиль '{profileName}'.",
+                    NotificationType.Success));
+                break;
+            case RuntimeConnectionStatus.Disconnected when previousStatus is RuntimeConnectionStatus.Connected
+                or RuntimeConnectionStatus.Degraded
+                or RuntimeConnectionStatus.Connecting
+                or RuntimeConnectionStatus.Disconnecting:
+                _notificationManager.Show(new Notification(
+                    "VPN отключен",
+                    $"Профиль '{profileName}' больше не активен.",
+                    NotificationType.Warning));
+                break;
+            case RuntimeConnectionStatus.Failed:
+                _notificationManager.Show(new Notification(
+                    "Ошибка подключения",
+                    _viewModel.ConnectionState.LastError ?? "Не удалось поднять VPN-соединение.",
+                    NotificationType.Error));
+                break;
+        }
+    }
+
+    private void OnNotificationRequested(UiNotificationRequest request)
+    {
+        if (_viewModel is null || _notificationManager is null || !_viewModel.NotificationsEnabled)
+        {
+            return;
+        }
+
+        var type = request.Level switch
+        {
+            UiNotificationLevel.Success => NotificationType.Success,
+            UiNotificationLevel.Warning => NotificationType.Warning,
+            UiNotificationLevel.Error => NotificationType.Error,
+            _ => NotificationType.Information
+        };
+
+        _notificationManager.Show(new Notification(request.Title, request.Message, type));
     }
 
     private async Task DisconnectActiveTunnelAsync()

@@ -17,6 +17,8 @@ namespace VpnClient.UI.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
+    public event Action<UiNotificationRequest>? NotificationRequested;
+
     private readonly ImportProfileUseCase _importProfileUseCase;
     private readonly AddProfileUseCase _addProfileUseCase;
     private readonly ListProfilesUseCase _listProfilesUseCase;
@@ -1313,5 +1315,15 @@ public partial class MainWindowViewModel : ObservableObject
         {
             desktopLifetime.Shutdown();
         }
+    }
+
+    private void RequestNotification(string title, string message, UiNotificationLevel level)
+    {
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        NotificationRequested?.Invoke(new UiNotificationRequest(title, message, level));
     }
 }
