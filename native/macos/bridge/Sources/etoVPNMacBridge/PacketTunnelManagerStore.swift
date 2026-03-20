@@ -38,26 +38,26 @@ final class PacketTunnelManagerStore {
     }
 
     func requestStatus(from manager: NETunnelProviderManager) async throws -> TunnelProviderMessageStatusResponse? {
-        guard let session = manager.connection as? NETunnelProviderSession else {
-            throw PacketTunnelManagerStoreError.unexpectedSessionType
-        }
+        try await requestProviderMessage(
+            from: manager,
+            action: "status",
+            as: TunnelProviderMessageStatusResponse.self)
+    }
 
-        let request = TunnelProviderMessageRequest(action: "status")
-        let encoder = JSONEncoder()
-        let payload = try encoder.encode(request)
+    func requestLogs(from manager: NETunnelProviderManager) async throws -> TunnelProviderMessageLogsResponse? {
+        try await requestProviderMessage(
+            from: manager,
+            action: "logs",
+            as: TunnelProviderMessageLogsResponse.self)
+    }
 
-        let responseData = try await withCheckedThrowingContinuation { continuation in
-            session.sendProviderMessage(payload) { response in
-                continuation.resume(returning: response)
-            }
-        }
-
-        guard let responseData else {
-            return nil
-        }
-
-        let decoder = JSONDecoder()
-        return try decoder.decode(TunnelProviderMessageStatusResponse.self, from: responseData)
+    func requestRuntimeConfiguration(
+        from manager: NETunnelProviderManager) async throws -> TunnelProviderMessageRuntimeConfigurationResponse?
+    {
+        try await requestProviderMessage(
+            from: manager,
+            action: "runtimeConfiguration",
+            as: TunnelProviderMessageRuntimeConfigurationResponse.self)
     }
 
     func stop(_ manager: NETunnelProviderManager) {
@@ -116,6 +116,33 @@ final class PacketTunnelManagerStore {
                 continuation.resume(returning: ())
             }
         }
+    }
+
+    private func requestProviderMessage<Response: Decodable>(
+        from manager: NETunnelProviderManager,
+        action: String,
+        as responseType: Response.Type) async throws -> Response?
+    {
+        guard let session = manager.connection as? NETunnelProviderSession else {
+            throw PacketTunnelManagerStoreError.unexpectedSessionType
+        }
+
+        let request = TunnelProviderMessageRequest(action: action)
+        let encoder = JSONEncoder()
+        let payload = try encoder.encode(request)
+
+        let responseData = try await withCheckedThrowingContinuation { continuation in
+            session.sendProviderMessage(payload) { response in
+                continuation.resume(returning: response)
+            }
+        }
+
+        guard let responseData else {
+            return nil
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(responseType, from: responseData)
     }
 }
 

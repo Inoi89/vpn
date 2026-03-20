@@ -1,4 +1,5 @@
 import Foundation
+import Dispatch
 import NetworkExtension
 import etoVPNMacShared
 
@@ -128,6 +129,32 @@ final class PacketTunnelCoordinator {
                 latestHandshakeAtUtc: nil,
                 warnings: [],
                 lastError: nil))
+    }
+
+    func requestLogs() -> [String] {
+        guard let activeManager else {
+            return []
+        }
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var entries: [String] = []
+
+        Task {
+            defer { semaphore.signal() }
+
+            do {
+                if let response = try await managerStore.requestLogs(from: activeManager) {
+                    entries = response.entries
+                }
+            } catch {
+                entries = ["Provider log request failed: \(error.localizedDescription)"]
+            }
+        }
+
+        guard semaphore.wait(timeout: .now() + 3) == .success else {
+            return ["Provider log request timed out."]
+        }
+        return entries
     }
 
     private func makeStatusSnapshot(

@@ -105,7 +105,9 @@ final class BridgeCommandDispatcher {
     }
 
     func handleLogs(requestId: String) -> RuntimeBridgeSuccessEnvelope<LogsResponsePayload> {
-        RuntimeBridgeSuccessEnvelope(id: requestId, payload: LogsResponsePayload(entries: []))
+        RuntimeBridgeSuccessEnvelope(
+            id: requestId,
+            payload: LogsResponsePayload(entries: coordinator.requestLogs()))
     }
 
     func handleQuit(requestId: String) -> RuntimeBridgeSuccessEnvelope<QuitResponsePayload> {
