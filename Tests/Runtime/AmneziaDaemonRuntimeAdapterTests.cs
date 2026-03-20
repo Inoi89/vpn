@@ -130,6 +130,8 @@ public sealed class AmneziaDaemonRuntimeAdapterTests
     private sealed class FakeRuntimeEnvironment : IRuntimeEnvironment
     {
         public bool IsWindows => true;
+
+        public bool IsMacOS => false;
     }
 
     private sealed class RecordingDaemonTransport : IAmneziaDaemonTransport

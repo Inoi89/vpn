@@ -221,6 +221,8 @@ public sealed class WindowsFirstVpnRuntimeAdapterTests
     private sealed class FakeRuntimeEnvironment : IRuntimeEnvironment
     {
         public bool IsWindows => true;
+
+        public bool IsMacOS => false;
     }
 
     private sealed class FakeWindowsRuntimeAssetLocator : IWindowsRuntimeAssetLocator
