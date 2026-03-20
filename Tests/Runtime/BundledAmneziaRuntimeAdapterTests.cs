@@ -12,6 +12,7 @@ public sealed class BundledAmneziaRuntimeAdapterTests
     {
         var executor = new RecordingRuntimeCommandExecutor(
             new RuntimeCommandResult(0, string.Empty, string.Empty),
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
             new RuntimeCommandResult(
                 0,
                 """
@@ -34,6 +35,9 @@ public sealed class BundledAmneziaRuntimeAdapterTests
             call.FileName.Equals(@"C:\bundle\runtime\wireguard\amneziawg.exe", StringComparison.OrdinalIgnoreCase)
             && call.Arguments.SequenceEqual(["/installtunnelservice", @"C:\ProgramData\YourVpnClient\Runtime\Configurations\yvc_test.conf"]));
         Assert.Contains(executor.Calls, call =>
+            call.FileName.Equals("sc.exe", StringComparison.OrdinalIgnoreCase)
+            && call.Arguments.SequenceEqual(["config", "AmneziaWGTunnel$yvc_test", "start=", "demand"]));
+        Assert.Contains(executor.Calls, call =>
             call.FileName.Equals(@"C:\bundle\runtime\wireguard\awg.exe", StringComparison.OrdinalIgnoreCase)
             && call.Arguments.SequenceEqual(["show", "yvc_test", "dump"]));
         Assert.Equal(1, store.PrepareCount);
@@ -44,6 +48,7 @@ public sealed class BundledAmneziaRuntimeAdapterTests
     {
         var executor = new RecordingRuntimeCommandExecutor(
             new RuntimeCommandResult(0, string.Empty, string.Empty),
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
             new RuntimeCommandResult(
                 0,
                 """
@@ -51,7 +56,8 @@ public sealed class BundledAmneziaRuntimeAdapterTests
                 server-pub	hidden	5.19.3.217:8271	10.8.1.2/32	1773782560	2404	8948	off
                 """,
                 string.Empty),
-            new RuntimeCommandResult(0, string.Empty, string.Empty));
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
+            new RuntimeCommandResult(1, string.Empty, "FAILED 1060: The specified service does not exist as an installed service."));
 
         var store = new RecordingAmneziaRuntimeConfigStore();
         var adapter = CreateAdapter(executor, store, new FakeWindowsRuntimeAssetLocator());
@@ -64,6 +70,41 @@ public sealed class BundledAmneziaRuntimeAdapterTests
         Assert.Contains(executor.Calls, call =>
             call.FileName.Equals(@"C:\bundle\runtime\wireguard\amneziawg.exe", StringComparison.OrdinalIgnoreCase)
             && call.Arguments.SequenceEqual(["/uninstalltunnelservice", "yvc_test"]));
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_ForceDeletesTunnelService_WhenUninstallLeavesItRegistered()
+    {
+        var executor = new RecordingRuntimeCommandExecutor(
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
+            new RuntimeCommandResult(
+                0,
+                """
+                yvc_test	private	443	off	0	0	0	off
+                server-pub	hidden	5.19.3.217:8271	10.8.1.2/32	1773782560	2404	8948	off
+                """,
+                string.Empty),
+            new RuntimeCommandResult(1, string.Empty, "service removal failed"),
+            new RuntimeCommandResult(0, "STATE              : 4  RUNNING", string.Empty),
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
+            new RuntimeCommandResult(1, string.Empty, "FAILED 1060: The specified service does not exist as an installed service."));
+
+        var store = new RecordingAmneziaRuntimeConfigStore();
+        var adapter = CreateAdapter(executor, store, new FakeWindowsRuntimeAssetLocator());
+
+        await adapter.ConnectAsync(BuildProfile());
+        var state = await adapter.DisconnectAsync();
+
+        Assert.Equal(RuntimeConnectionStatus.Disconnected, state.Status);
+        Assert.Equal(1, store.DeleteCount);
+        Assert.Contains(executor.Calls, call =>
+            call.FileName.Equals("sc.exe", StringComparison.OrdinalIgnoreCase)
+            && call.Arguments.SequenceEqual(["stop", "AmneziaWGTunnel$yvc_test"]));
+        Assert.Contains(executor.Calls, call =>
+            call.FileName.Equals("sc.exe", StringComparison.OrdinalIgnoreCase)
+            && call.Arguments.SequenceEqual(["delete", "AmneziaWGTunnel$yvc_test"]));
     }
 
     [Fact]
@@ -85,6 +126,7 @@ public sealed class BundledAmneziaRuntimeAdapterTests
     {
         var executor = new RecordingRuntimeCommandExecutor(
             new RuntimeCommandResult(1, string.Empty, "Tunnel already installed and running"),
+            new RuntimeCommandResult(0, string.Empty, string.Empty),
             new RuntimeCommandResult(
                 0,
                 """

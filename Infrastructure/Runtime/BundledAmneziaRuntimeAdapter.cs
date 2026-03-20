@@ -92,12 +92,20 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
 
             _activeProfile = profile;
             _activePreparedProfile = preparedProfile;
-            var effectiveWarnings = attachedToExistingTunnel
-                ? warnings.Concat(new[]
+
+            var effectiveWarnings = warnings.ToList();
+            var serviceStartModeWarning = await TryConfigureManualStartAsync(preparedProfile.TunnelName, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(serviceStartModeWarning))
+            {
+                effectiveWarnings.Add(serviceStartModeWarning);
+            }
+
+            effectiveWarnings = attachedToExistingTunnel
+                ? effectiveWarnings.Concat(new[]
                 {
                     "The tunnel service was already installed. The client attached to the existing AmneziaWG runtime instance."
-                }).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
-                : warnings;
+                }).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                : effectiveWarnings.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
             for (var attempt = 0; attempt < 10; attempt++)
             {
@@ -132,6 +140,8 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
             return UpdateState(ConnectionState.Disconnected(AdapterName));
         }
 
+        string? lastError = null;
+
         try
         {
             var result = await _commandExecutor.ExecuteAsync(
@@ -141,35 +151,32 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
 
             if (result.ExitCode != 0 && !LooksLikeMissingTunnel(result))
             {
-                return UpdateState((_currentState with
-                {
-                    Status = RuntimeConnectionStatus.Degraded,
-                    LastError = GetCommandError(result, "Bundled AmneziaWG failed to uninstall the tunnel service."),
-                    UpdatedAtUtc = DateTimeOffset.UtcNow,
-                    AdapterPresent = false,
-                    TunnelActive = false
-                }).WithWarnings("Tunnel service removal reported an error."));
+                lastError = GetCommandError(result, "Bundled AmneziaWG failed to uninstall the tunnel service.");
             }
         }
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "Bundled AmneziaWG runtime failed to disconnect cleanly.");
+            lastError = exception.Message;
+        }
+
+        var serviceRemoved = await EnsureTunnelServiceRemovedAsync(_activePreparedProfile.TunnelName, cancellationToken);
+        if (!serviceRemoved)
+        {
+            var serviceState = await QueryServiceStateAsync(_activePreparedProfile.TunnelName, cancellationToken);
             return UpdateState((_currentState with
             {
                 Status = RuntimeConnectionStatus.Degraded,
-                LastError = exception.Message,
+                LastError = lastError ?? "The tunnel service is still registered on the system.",
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
-                AdapterPresent = false,
-                TunnelActive = false
-            }).WithWarnings("Tunnel service removal reported an exception."));
-        }
-        finally
-        {
-            await _configStore.DeleteAsync(_activePreparedProfile, cancellationToken);
-            _activePreparedProfile = null;
-            _activeProfile = null;
+                AdapterPresent = serviceState != TunnelServiceState.NotFound,
+                TunnelActive = serviceState is TunnelServiceState.Running or TunnelServiceState.StartPending
+            }).WithWarnings("The tunnel service could not be removed cleanly and may survive a reboot."));
         }
 
+        await _configStore.DeleteAsync(_activePreparedProfile, cancellationToken);
+        _activePreparedProfile = null;
+        _activeProfile = null;
         return UpdateState(ConnectionState.Disconnected(AdapterName));
     }
 
@@ -333,7 +340,7 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
 
     private async Task<TunnelServiceState> QueryServiceStateAsync(string tunnelName, CancellationToken cancellationToken)
     {
-        var serviceName = $"AmneziaWGTunnel${tunnelName}";
+        var serviceName = BuildServiceName(tunnelName);
         var result = await _commandExecutor.ExecuteAsync("sc.exe", ["query", serviceName], cancellationToken);
         var output = $"{result.StandardOutput}\n{result.StandardError}";
 
@@ -359,6 +366,56 @@ public sealed class BundledAmneziaRuntimeAdapter : IVpnRuntimeAdapter
         }
 
         return TunnelServiceState.Unknown;
+    }
+
+    private async Task<string?> TryConfigureManualStartAsync(string tunnelName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _commandExecutor.ExecuteAsync(
+                "sc.exe",
+                ["config", BuildServiceName(tunnelName), "start=", "demand"],
+                cancellationToken);
+
+            return result.ExitCode == 0
+                ? null
+                : "The tunnel service could not be switched to manual start. It may survive a reboot if disconnect does not remove it cleanly.";
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Failed to switch bundled tunnel service {TunnelName} to manual start.", tunnelName);
+            return "The tunnel service could not be switched to manual start. It may survive a reboot if disconnect does not remove it cleanly.";
+        }
+    }
+
+    private async Task<bool> EnsureTunnelServiceRemovedAsync(string tunnelName, CancellationToken cancellationToken)
+    {
+        if (await QueryServiceStateAsync(tunnelName, cancellationToken) == TunnelServiceState.NotFound)
+        {
+            return true;
+        }
+
+        var serviceName = BuildServiceName(tunnelName);
+
+        await _commandExecutor.ExecuteAsync("sc.exe", ["stop", serviceName], cancellationToken);
+        await _commandExecutor.ExecuteAsync("sc.exe", ["delete", serviceName], cancellationToken);
+
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            if (await QueryServiceStateAsync(tunnelName, cancellationToken) == TunnelServiceState.NotFound)
+            {
+                return true;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+        }
+
+        return false;
+    }
+
+    private static string BuildServiceName(string tunnelName)
+    {
+        return $"AmneziaWGTunnel${tunnelName}";
     }
 
     private string? GetRuntimeAvailabilityError()
