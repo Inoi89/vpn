@@ -1,6 +1,6 @@
 # macOS Runtime Bridge Contract
 
-This document is the source of truth for the Phase 2 macOS runtime scaffold.
+This document is the source of truth for the Phase 2 macOS runtime path.
 
 The contract must stay aligned across:
 
@@ -56,8 +56,8 @@ If `ok` is `false`, the response should include an `error` object:
   "type": "response",
   "ok": false,
   "error": {
-    "code": "not_implemented",
-    "message": "Packet tunnel activation is not implemented.",
+    "code": "start_failed",
+    "message": "Packet tunnel activation failed.",
     "details": null
   }
 }
@@ -255,22 +255,26 @@ The packet-tunnel scaffold now also owns the matching provider-side path:
 
 ## Current Phase 2 expectation
 
-This scaffold is not yet a real VPN runtime. Phase 2 is successful when:
+The bridge contract and packet tunnel are now aligned to a real Apple
+WireGuard/AWG engine boundary. Phase 2 is successful when:
 
 1. The `.NET` client and native scaffold agree on socket path and command names.
 2. The native helper shape is explicit and ready for `NetworkExtension`.
 3. The desktop adapter can evolve against a stable bridge contract instead of
    inventing one later.
 
-## 2026-03-21 Scaffold update
+## 2026-03-21 Runtime update
 
 - The packet-tunnel scaffold now materializes a canonical WG/AWG runtime
   configuration from the shared profile payload before applying network
   settings.
 - The bridge now writes a narrow Apple-friendly `WireGuardProviderConfiguration`
   under `providerConfiguration["wireguard"]` instead of the full app profile.
-- The provider keeps a redacted `wg-quick` summary ready for the future native
-  WireGuard/AWG engine boundary.
+- The packet tunnel now routes startup/update/stop through the real Apple
+  `WireGuardAdapter` path from `amneziawg-apple`.
+- `build-native.sh` now hydrates the upstream `amneziawg-apple` sources if
+  needed and builds `libwg-go.a` plus `wireguard-go-version.h` before the
+  Xcode build.
 - The bridge/provider path should not report optimistic `connected` state
   unless the packet tunnel explicitly confirms `connected = true`.
 - The packet tunnel now also exposes a provider-side

@@ -1,10 +1,12 @@
 # Packet Tunnel Extension
 
-This directory contains the scaffold for the future macOS packet tunnel target.
+This directory now contains the first real macOS packet tunnel path for
+`etoVPN`.
 
-The packet tunnel is the `NetworkExtension` component that will eventually own
-the real macOS tunnel lifecycle. The bridge/helper will stage configuration and
-request the system to start or stop this extension.
+The packet tunnel is the `NetworkExtension` component that owns the actual
+WireGuard/AWG lifecycle on macOS. The bridge/helper stages configuration,
+starts or stops the extension through `NETunnelProviderManager`, and polls
+provider-side status.
 
 ## Responsibilities
 
@@ -12,13 +14,11 @@ request the system to start or stop this extension.
 - Read that staged profile from the shared control-store location.
 - Build a canonical packet-tunnel configuration object from the shared profile payload.
 - Preserve optional split-tunnel mode and site lists through the canonical
-  config so the network settings builder can apply include/exclude routes.
+  config so the WireGuard runtime receives correct include/exclude routes.
 - Prefer `NETunnelProviderProtocol.providerConfiguration` as the primary
   startup handoff.
-- Materialize DNS, routes, MTU, and addresses into
-  `NEPacketTunnelNetworkSettings` from the canonical config object.
-- Keep a redacted canonical `wg-quick` summary ready for the future native
-  WireGuard/AWG engine boundary.
+- Decode a real Apple `TunnelConfiguration` from the canonical `wg-quick`
+  payload.
 - Start and stop the actual WireGuard/AWG tunnel engine.
 - Expose a provider-side runtime-configuration/debug surface that can later map
   to the real engine runtime configuration.
@@ -39,15 +39,22 @@ request the system to start or stop this extension.
 - `Sources/etoVPNPacketTunnel/TunnelConfiguration.swift`
   Temporary staged profile store and provider-configuration decoder.
 - `Sources/etoVPNPacketTunnel/PacketTunnelNetworkSettingsBuilder.swift`
-  Scaffold builder for `NEPacketTunnelNetworkSettings`.
+  Legacy manual network-settings builder kept for reference while the real
+  Apple adapter path settles.
 - `Sources/etoVPNPacketTunnel/TunnelRuntimeSnapshot.swift`
   Provider-side runtime snapshot surfaced through `handleAppMessage`.
 - `Sources/etoVPNPacketTunnel/WireGuardTunnelAdapter.swift`
-  Placeholder boundary where the tunnel engine integration should live.
+  Thin boundary over the Apple WireGuard runtime engine.
 - `Sources/etoVPNPacketTunnel/PacketTunnelEngine.swift`
-  Engine protocol modeled after the future WireGuardKit/AWG boundary.
-- `Sources/etoVPNPacketTunnel/ScaffoldWireGuardEngine.swift`
-  Temporary no-op engine that preserves the intended lifecycle surface.
+  Engine protocol modeled after the Apple WireGuardKit/AWG boundary.
+- `Sources/etoVPNPacketTunnel/WireGuardAdapterEngine.swift`
+  Real Apple `WireGuardAdapter`-backed engine entry point.
+- `Sources/etoVPNPacketTunnel/WireGuardTunnelConfigurationFactory.swift`
+  Narrow bridge between our canonical packet-tunnel config and the upstream
+  Apple `TunnelConfiguration`.
+- `Sources/etoVPNPacketTunnel/WireGuardRuntimeConfigurationParser.swift`
+  Parses adapter runtime counters/handshake data and redacts sensitive fields
+  before surfacing them through the bridge.
 - `Info.plist`
   Packet tunnel bundle metadata.
 - `etoVPNPacketTunnel.entitlements`

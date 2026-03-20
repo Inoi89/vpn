@@ -46,15 +46,34 @@ targets:
     platform: macOS
     sources:
       - path: packet-tunnel/Sources/etoVPNPacketTunnel
+      - path: ../../.research/amnezia-client/client/3rd/amneziawg-apple/Sources/WireGuardKit
+      - path: ../../.research/amnezia-client/client/3rd/amneziawg-apple/Sources/WireGuardKitC
+      - path: ../../.research/amnezia-client/client/3rd/amneziawg-apple/Sources/Shared/Model/TunnelConfiguration+WgQuickConfig.swift
+      - path: ../../.research/amnezia-client/client/3rd/amneziawg-apple/Sources/Shared/Model/String+ArrayConversion.swift
     info:
       path: packet-tunnel/Info.plist
     entitlements:
       path: packet-tunnel/etoVPNPacketTunnel.entitlements
     dependencies:
       - target: etoVPNMacShared
+      - sdk: Network.framework
+      - sdk: NetworkExtension.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.etovpn.packet-tunnel
         PRODUCT_NAME: etoVPNPacketTunnel
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        CLANG_ENABLE_MODULES: YES
+        ENABLE_BITCODE: NO
+        HEADER_SEARCH_PATHS:
+          - $(SRCROOT)/../../.research/amnezia-client/client
+          - $(SRCROOT)/.generated/wireguard-go
+        LIBRARY_SEARCH_PATHS:
+          - $(SRCROOT)/.generated/wireguard-go
+        OTHER_LDFLAGS:
+          - -lwg-go
+          - -lresolv
+        SWIFT_OBJC_BRIDGING_HEADER: $(SRCROOT)/../../.research/amnezia-client/client/macos/networkextension/WireGuardNetworkExtension-Bridging-Header.h
+        SWIFT_PRECOMPILE_BRIDGING_HEADER: NO

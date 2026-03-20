@@ -5,7 +5,7 @@ final class WireGuardTunnelAdapter {
     private var activeConfiguration: PacketTunnelConfiguration?
     private let engine: PacketTunnelEngine
 
-    init(engine: PacketTunnelEngine = ScaffoldWireGuardEngine()) {
+    init(engine: PacketTunnelEngine) {
         self.engine = engine
     }
 
@@ -34,12 +34,8 @@ final class WireGuardTunnelAdapter {
                     engineName: self.engine.engineName,
                     interfaceName: self.engine.interfaceName,
                     runtimeConfigurationSummary: self.engine.runtimeConfiguration() ?? configuration.redactedSummary,
-                    warnings: [
-                        "Prepared canonical \(configuration.format.uppercased()) runtime configuration for \(configuration.tunnelRemoteAddress).",
-                        "The packet tunnel scaffold can apply network settings, but the native WireGuard/AWG engine is not attached yet."
-                    ],
+                    warnings: [],
                     lastError: error.localizedDescription)
-                _ = configuration.redactedSummary
                 completion(error)
             }
         }
@@ -81,7 +77,7 @@ final class WireGuardTunnelAdapter {
         activeConfiguration = configuration
         engine.update(configuration: configuration) { [weak self] result in
             guard let self else {
-                completion(.startFailed("The packet tunnel adapter was released before the engine updated."))
+                completion(.updateFailed("The packet tunnel adapter was released before the engine updated."))
                 return
             }
 
@@ -99,7 +95,7 @@ final class WireGuardTunnelAdapter {
                     engineName: self.engine.engineName,
                     interfaceName: self.engine.interfaceName,
                     runtimeConfigurationSummary: self.engine.runtimeConfiguration() ?? configuration.redactedSummary,
-                    warnings: ["The macOS packet tunnel engine rejected an in-place configuration update."],
+                    warnings: [],
                     lastError: error.localizedDescription)
                 completion(error)
             }

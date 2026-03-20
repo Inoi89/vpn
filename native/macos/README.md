@@ -1,10 +1,10 @@
-# macOS Native Runtime Scaffold
+# macOS Native Runtime
 
 This tree owns the future macOS-native runtime for `etoVPN`.
 
 It is intentionally isolated from the desktop C# code. The goal is to make the
-bridge and packet tunnel layout explicit before any real `NetworkExtension`
-implementation lands.
+bridge and packet tunnel layout explicit without touching the working Windows
+client.
 
 ## Intent
 
@@ -64,9 +64,10 @@ desktop publish script expects them:
 The bridge app target embeds the packet tunnel extension, so building or
 archiving `etoVPNMacBridge` is the path to a full macOS helper bundle.
 
-The scaffold is intentionally small. It gets the helper and packet tunnel into
-a generated Xcode project quickly, while leaving the Windows desktop client
-untouched.
+The native path is still pre-smoke, but it is no longer just a placeholder:
+`build-native.sh` now hydrates the upstream `amneziawg-apple` sources if
+needed, builds `libwg-go.a` from `WireGuardKitGo`, and wires the packet tunnel
+target to the real Apple `WireGuardAdapter` code path.
 
 ## Layout
 
@@ -90,4 +91,4 @@ adapter lives in:
 
 - `docs/macos-runtime-bridge-contract.md`
 
-This scaffold does not modify any existing desktop/runtime .NET source files.
+This native path does not modify any existing Windows desktop/runtime behavior.

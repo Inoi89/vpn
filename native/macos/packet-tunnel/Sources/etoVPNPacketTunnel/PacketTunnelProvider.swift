@@ -4,7 +4,7 @@ import etoVPNMacShared
 
 final class PacketTunnelProvider: NEPacketTunnelProvider {
     private let profileStore = TunnelProfileStore()
-    private let tunnelAdapter = WireGuardTunnelAdapter()
+    private lazy var tunnelAdapter = WireGuardTunnelAdapter(engine: WireGuardAdapterEngine(provider: self))
     private var activeConfiguration: PacketTunnelConfiguration?
 
     override func startTunnel(
@@ -15,7 +15,20 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             let providerProtocol = protocolConfiguration as? NETunnelProviderProtocol
             let configuration = try profileStore.loadConfiguration(from: providerProtocol)
             activeConfiguration = configuration
-            try applyScaffoldNetworkSettings(using: configuration, completionHandler: completionHandler)
+            tunnelAdapter.start(with: configuration) { [weak self] engineError in
+                guard let self else {
+                    completionHandler(engineError)
+                    return
+                }
+
+                if let engineError {
+                    self.tunnelAdapter.markFailed(engineError.localizedDescription)
+                    completionHandler(engineError)
+                    return
+                }
+
+                completionHandler(nil)
+            }
         } catch {
             tunnelAdapter.markFailed(error.localizedDescription)
             completionHandler(error)
@@ -64,6 +77,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                         profileId: activeConfiguration.profileId,
                         profileName: activeConfiguration.profileName,
                         format: activeConfiguration.format)
+                        .preservingRoutingMetadata(from: activeConfiguration)
                     tunnelAdapter.update(with: updatedConfiguration) { [weak self] engineError in
                         guard let self else {
                             completionHandler?(nil)
@@ -99,30 +113,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
             default:
                 completionHandler?(nil)
-        }
-    }
-
-    private func applyScaffoldNetworkSettings(
-        using configuration: PacketTunnelConfiguration,
-        completionHandler: @escaping (Error?) -> Void)
-        throws
-    {
-        let settings = try PacketTunnelNetworkSettingsBuilder.build(from: configuration)
-        setTunnelNetworkSettings(settings) { [weak self] error in
-            guard let self else {
-                completionHandler(error)
-                return
-            }
-
-            if let error {
-                self.tunnelAdapter.markFailed(error.localizedDescription)
-                completionHandler(error)
-                return
-            }
-
-            self.tunnelAdapter.start(with: configuration) { engineError in
-                completionHandler(engineError)
-            }
         }
     }
 }

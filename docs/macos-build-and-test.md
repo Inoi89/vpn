@@ -8,6 +8,7 @@ test.
 On the Mac machine, install:
 
 - .NET 8 SDK
+- Go 1.25+
 - Xcode
 - Xcode command line tools
 - XcodeGen
@@ -24,7 +25,9 @@ From the repo root:
 ```
 
 This generates the Xcode project from [project.yml](/c:/Users/rrese/source/repos/vpn/native/macos/project.yml),
-builds the helper app plus packet tunnel, and stages the outputs under:
+hydrates the upstream `amneziawg-apple` sources if needed, builds `libwg-go.a`
+from `WireGuardKitGo`, then builds the helper app plus packet tunnel and stages
+the outputs under:
 
 `artifacts/macos-native/osx-arm64`
 
@@ -75,6 +78,7 @@ SKIP_NATIVE_BUILD=1 ./deploy/client/publish-macos.sh
 ## Notes
 
 - The Windows updater/MSI path is unrelated to this flow.
-- The native macOS runtime is still scaffold-heavy; the next hard dependency is
-  real `WireGuardAdapter` / `amneziawg-apple` integration inside the packet
-  tunnel target.
+- The macOS packet tunnel is now wired to the real Apple `WireGuardAdapter`
+  path from `amneziawg-apple`.
+- The remaining blocker is no longer engine integration, but running the native
+  Xcode build and smoke-testing it on a real Mac with entitlements/signing.
