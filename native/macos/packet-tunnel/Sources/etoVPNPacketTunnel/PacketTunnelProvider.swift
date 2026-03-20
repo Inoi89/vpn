@@ -13,8 +13,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     {
         do {
             let providerProtocol = protocolConfiguration as? NETunnelProviderProtocol
-            let profile = try profileStore.loadProfile(from: providerProtocol)
-            let configuration = try PacketTunnelConfigurationBuilder.build(from: profile)
+            let configuration = try profileStore.loadConfiguration(from: providerProtocol)
             activeConfiguration = configuration
             try applyScaffoldNetworkSettings(using: configuration, completionHandler: completionHandler)
         } catch {

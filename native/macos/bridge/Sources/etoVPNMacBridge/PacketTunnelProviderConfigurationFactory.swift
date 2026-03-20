@@ -5,7 +5,8 @@ enum PacketTunnelProviderConfigurationFactory {
     static func makeProviderConfiguration(for profile: TunnelProfilePayload) throws -> [String: Any] {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let payload = try encoder.encode(profile)
+        let wireGuardPayload = try WireGuardProviderConfiguration.from(profile: profile)
+        let payload = try encoder.encode(wireGuardPayload)
 
         return [
             RuntimeBridgeConstants.providerProfilePayloadKey: payload,

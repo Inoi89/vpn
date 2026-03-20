@@ -43,5 +43,6 @@ The bridge should implement the command surface documented in:
 
 Today this scaffold is still not a real VPN runtime, but it now mirrors the
 target Apple control path more closely: socket request handling, staged profile
-handoff, and `NETunnelProviderManager` orchestration all have explicit native
-boundaries ready for the real implementation.
+handoff, canonical `wireguard` provider payloads, and
+`NETunnelProviderManager` orchestration all have explicit native boundaries
+ready for the real implementation.

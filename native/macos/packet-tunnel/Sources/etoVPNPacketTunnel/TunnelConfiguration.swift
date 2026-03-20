@@ -29,42 +29,47 @@ final class TunnelProfileStore {
         try FileManager.default.removeItem(at: fileURL)
     }
 
-    func loadProfile(from providerProtocol: NETunnelProviderProtocol?) throws -> TunnelProfilePayload {
+    func loadConfiguration(from providerProtocol: NETunnelProviderProtocol?) throws -> PacketTunnelConfiguration {
         guard let providerProtocol,
               let providerConfiguration = providerProtocol.providerConfiguration
         else {
-            return try loadFallbackProfile()
+            return try loadFallbackConfiguration()
         }
 
         if let data = providerConfiguration[RuntimeBridgeConstants.providerProfilePayloadKey] as? Data {
-            return try decodeProfile(from: data)
+            return try decodeConfiguration(from: data)
         }
 
         if let string = providerConfiguration[RuntimeBridgeConstants.providerProfilePayloadKey] as? String,
            let data = string.data(using: .utf8)
         {
-            return try decodeProfile(from: data)
+            return try decodeConfiguration(from: data)
         }
 
-        return try loadFallbackProfile()
+        return try loadFallbackConfiguration()
     }
 
-    private func loadFallbackProfile() throws -> TunnelProfilePayload {
+    private func loadFallbackConfiguration() throws -> PacketTunnelConfiguration {
         // Temporary scaffold fallback only.
-        // The target path is to decode the profile payload from
+        // The primary Apple path is to decode a normalized WireGuard payload from
         // `protocolConfiguration.providerConfiguration`.
         guard let data = try? Data(contentsOf: fileURL) else {
             throw TunnelProfileStoreError.missingProfile
         }
 
-        return try decodeProfile(from: data)
+        return try decodeConfiguration(from: data)
     }
 
-    private func decodeProfile(from data: Data) throws -> TunnelProfilePayload {
-        guard let profile = try? decoder.decode(TunnelProfilePayload.self, from: data) else {
-            throw TunnelProfileStoreError.unreadableProfile
+    private func decodeConfiguration(from data: Data) throws -> PacketTunnelConfiguration {
+        if let providerConfiguration = try? decoder.decode(WireGuardProviderConfiguration.self, from: data) {
+            return PacketTunnelConfigurationBuilder.build(from: providerConfiguration)
         }
-        return profile
+
+        if let profile = try? decoder.decode(TunnelProfilePayload.self, from: data) {
+            return try PacketTunnelConfigurationBuilder.build(from: profile)
+        }
+
+        throw TunnelProfileStoreError.unreadableProfile
     }
 }
 

@@ -210,11 +210,13 @@ The target handoff should mirror the upstream Amnezia Apple flow:
 
 For the first real implementation, the bridge should store a UTF-8 JSON payload
 under a stable provider-configuration key such as `wireguard`, derived from the
-desktop `TunnelProfilePayload`.
+desktop `TunnelProfilePayload` but narrowed to an Apple-friendly
+WireGuard/AWG provider model.
 
 Recommended provider-configuration keys:
 
-- `wireguard`: `Data` containing the UTF-8 JSON-encoded `TunnelProfilePayload`
+- `wireguard`: `Data` containing the UTF-8 JSON-encoded
+  `WireGuardProviderConfiguration`
 - `profileId`: `String`
 - `profileName`: `String`
 - `configFormat`: `String`
@@ -265,6 +267,8 @@ This scaffold is not yet a real VPN runtime. Phase 2 is successful when:
 - The packet-tunnel scaffold now materializes a canonical WG/AWG runtime
   configuration from the shared profile payload before applying network
   settings.
+- The bridge now writes a narrow Apple-friendly `WireGuardProviderConfiguration`
+  under `providerConfiguration["wireguard"]` instead of the full app profile.
 - The provider keeps a redacted `wg-quick` summary ready for the future native
   WireGuard/AWG engine boundary.
 - The bridge/provider path should not report optimistic `connected` state

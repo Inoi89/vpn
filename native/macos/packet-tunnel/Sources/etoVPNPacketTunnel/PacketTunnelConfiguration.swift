@@ -110,6 +110,36 @@ enum PacketTunnelConfigurationBuilder {
             redactedSummary: redact(wgQuickConfig))
     }
 
+    static func build(from providerConfiguration: WireGuardProviderConfiguration) -> PacketTunnelConfiguration {
+        let dnsServers = [providerConfiguration.dns1, providerConfiguration.dns2]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let awgValues = providerConfiguration.awgValues()
+        let wgQuickConfig = providerConfiguration.wgQuickConfig()
+
+        return PacketTunnelConfiguration(
+            profileId: providerConfiguration.profileId,
+            profileName: providerConfiguration.profileName,
+            format: providerConfiguration.format,
+            tunnelRemoteAddress: providerConfiguration.endpointString(),
+            interface: PacketTunnelInterfaceConfiguration(
+                addresses: parseDelimitedValues(providerConfiguration.clientIP),
+                dnsServers: dnsServers,
+                mtu: providerConfiguration.mtu,
+                interfaceValues: providerConfiguration.interfaceValues),
+            peer: PacketTunnelPeerConfiguration(
+                allowedIPs: providerConfiguration.allowedIPs,
+                endpoint: providerConfiguration.endpointString(),
+                publicKey: providerConfiguration.serverPublicKey,
+                presharedKey: providerConfiguration.presharedKey,
+                persistentKeepalive: providerConfiguration.persistentKeepAlive,
+                peerValues: providerConfiguration.peerValues,
+                awgValues: awgValues),
+            privateKey: providerConfiguration.clientPrivateKey,
+            wgQuickConfig: wgQuickConfig,
+            redactedSummary: providerConfiguration.redactedSummary())
+    }
+
     private static func parseDelimitedValues(_ raw: String?) -> [String] {
         guard let raw else {
             return []

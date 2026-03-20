@@ -15,6 +15,7 @@ the packet tunnel.
 - `Sources/etoVPNMacShared/RuntimeBridgeCommand.swift`
 - `Sources/etoVPNMacShared/RuntimeBridgePayloads.swift`
 - `Sources/etoVPNMacShared/TunnelProfilePayload.swift`
+- `Sources/etoVPNMacShared/WireGuardProviderConfiguration.swift`
 - `Sources/etoVPNMacShared/RuntimeBridgeConstants.swift`
 - `Sources/etoVPNMacShared/TunnelProviderMessage.swift`
 
