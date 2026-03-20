@@ -33,13 +33,17 @@ public partial class MainWindowViewModel
 
     public bool IsAuthenticated => AccountSession is not null;
 
-    public bool ShowAccountScreen => IsAccountScreenOpen || (!HasProfiles && !IsAuthenticated);
+    public bool ShowOnboardingScreen => HasNoProfiles && !IsAuthenticated && !IsAccountScreenOpen;
 
-    public bool CanDismissAccountScreen => HasProfiles;
+    public bool ShowAccountScreen => IsAccountScreenOpen || (HasNoProfiles && IsAuthenticated);
+
+    public bool CanDismissAccountScreen => HasProfiles || ShowOnboardingScreen;
 
     public bool ShowAuthForm => !IsAuthenticated;
 
     public bool ShowAuthenticatedCard => IsAuthenticated;
+
+    public bool ShowAccountShortcut => HasProfiles || IsAuthenticated;
 
     public bool CanSignIn =>
         !IsBusy

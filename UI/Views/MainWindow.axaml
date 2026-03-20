@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -7,412 +7,701 @@
         mc:Ignorable="d"
         x:Class="VpnClient.UI.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="VPN"
-        Width="356"
-        Height="676"
-        MinWidth="324"
-        MinHeight="560">
-
-    <Border Classes="app-shell">
-        <Grid>
+        x:Name="RootWindow"
+        Title="etojeVPN"
+        Width="390"
+        Height="844"
+        MinWidth="360"
+        MinHeight="760">
+    <ThemeVariantScope RequestedThemeVariant="Light">
+        <Grid Background="#F4F7F6">
             <Canvas IsHitTestVisible="False"
-                    Opacity="0.28">
-                <Rectangle Width="1"
-                           Height="920"
-                           Fill="#224055"
-                           Canvas.Left="18"
-                           Canvas.Top="-120" />
-                <Rectangle Width="1"
-                           Height="920"
-                           Fill="#183243"
-                           Canvas.Left="88"
-                           Canvas.Top="-120" />
-                <Rectangle Width="1"
-                           Height="920"
-                           Fill="#183243"
-                           Canvas.Left="268"
-                           Canvas.Top="-120" />
-                <Rectangle Width="1"
-                           Height="920"
-                           Fill="#224055"
-                           Canvas.Left="334"
-                           Canvas.Top="-120" />
-                <Rectangle Width="420"
-                           Height="1"
-                           Fill="#183243"
-                           Canvas.Left="-32"
-                           Canvas.Top="124" />
-                <Rectangle Width="420"
-                           Height="1"
-                           Fill="#183243"
-                           Canvas.Left="-32"
-                           Canvas.Top="432" />
-                <Rectangle Width="180"
-                           Height="180"
-                           Fill="#102535"
-                           Opacity="0.35"
-                           Canvas.Left="208"
-                           Canvas.Top="40" />
-                <Rectangle Width="140"
-                           Height="140"
-                           Fill="#102535"
-                           Opacity="0.25"
-                           Canvas.Left="-12"
-                           Canvas.Top="468" />
+                    Opacity="0.5">
+                <Ellipse Width="272"
+                         Height="272"
+                         Fill="#1682CAA4"
+                         Canvas.Left="-82"
+                         Canvas.Top="-118" />
+                <Ellipse Width="332"
+                         Height="332"
+                         Fill="#1497B9D8"
+                         Canvas.Left="210"
+                         Canvas.Top="580" />
+                <Ellipse Width="220"
+                         Height="220"
+                         Fill="#0F61E09C"
+                         Canvas.Left="34"
+                         Canvas.Top="628" />
+            </Canvas>
+            <Canvas IsHitTestVisible="False"
+                    Opacity="0.9">
+                <Ellipse Width="560"
+                         Height="240"
+                         Fill="#D7E6F6"
+                         Canvas.Left="-85"
+                         Canvas.Top="736" />
+                <Ellipse Width="420"
+                         Height="180"
+                         Fill="#C8DCF2"
+                         Canvas.Left="-8"
+                         Canvas.Top="772" />
+                <Ellipse Width="460"
+                         Height="200"
+                         Fill="#BFD8F1"
+                         Canvas.Left="112"
+                         Canvas.Top="760" />
             </Canvas>
 
-            <Grid Margin="18,16,18,18"
-                  RowDefinitions="Auto,*,Auto">
-                <Grid ColumnDefinitions="44,*,Auto"
-                      ColumnSpacing="12">
-                    <Button Classes="icon-button"
-                            IsVisible="{Binding ShowImportShortcut}"
-                            Click="OnImportConfigClick">
-                        <Grid Width="16"
-                              Height="16">
-                            <Border Width="16"
-                                    Height="2"
-                                    Background="#E7F4F6"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center" />
-                            <Border Width="2"
-                                    Height="16"
-                                    Background="#E7F4F6"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center" />
-                        </Grid>
-                    </Button>
-
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                Spacing="10"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                        <Image Width="18"
-                               Height="18"
-                               Source="avares://VpnClient.UI/Assets/shield.png" />
-                        <TextBlock Classes="header-title"
-                                   VerticalAlignment="Center"
-                                   Text="etojeVPN" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="2"
-                                Orientation="Horizontal"
-                                Spacing="8">
-                        <Button Classes="icon-button alert-button"
-                                IsVisible="{Binding ShowUpdateAction}"
-                                IsEnabled="{Binding CanRunUpdateAction}"
-                                Command="{Binding RunUpdateActionCommand}"
-                                ToolTip.Tip="{Binding UpdateActionText}">
-                            <Grid Width="18"
-                                  Height="18">
-                                <Path Data="M9 2 L9 10 M5 7 L9 11 L13 7 M3 15 H15"
-                                      Stroke="#4DE7D3"
-                                      StrokeThickness="1.8"
-                                      StrokeLineCap="Square" />
-                            </Grid>
-                        </Button>
-
-                        <Button Classes="icon-button"
+            <Grid IsVisible="{Binding ShowMainShell}">
+                <Grid IsVisible="{Binding IsHomeScreen}"
+                      Margin="24"
+                      RowDefinitions="Auto,*,Auto">
+                    <Grid ColumnDefinitions="48,*,48"
+                          ColumnSpacing="12">
+                        <Button Width="48"
+                                Height="48"
+                                Background="#FFFFFFFF"
+                                BorderThickness="0"
+                                CornerRadius="24"
                                 Command="{Binding OpenAccountScreenCommand}"
-                                ToolTip.Tip="Аккаунт">
-                            <Grid Width="18"
-                                  Height="18">
-                                <Canvas Width="18"
-                                        Height="18">
-                                    <Ellipse Canvas.Left="5.1"
-                                             Canvas.Top="1.6"
-                                             Width="7.8"
-                                             Height="7.8"
-                                             Stroke="#E7F4F6"
-                                             StrokeThickness="1.5" />
-                                    <Path Canvas.Left="2"
-                                          Canvas.Top="8.6"
-                                          Data="M1,7 C2.8,3.8 5.8,2.2 7,2.2 C8.2,2.2 11.2,3.8 13,7"
-                                          Stroke="#E7F4F6"
-                                          StrokeThickness="1.5"
-                                          StrokeLineCap="Square" />
-                                    <Rectangle Canvas.Left="13"
-                                               Canvas.Top="1"
-                                               Width="4"
-                                               Height="4"
-                                               Fill="#4DE7D3"
-                                               IsVisible="{Binding IsAuthenticated}" />
-                                </Canvas>
-                            </Grid>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-
-                <Grid Grid.Row="1"
-                      RowDefinitions="Auto,*,Auto"
-                      Margin="0,18,0,18">
-                    <StackPanel HorizontalAlignment="Stretch"
-                                Spacing="8">
-                        <TextBlock Classes="eyebrow"
-                                   IsVisible="{Binding HasProfiles}"
-                                   Text="{Binding ShellProfileLabel}" />
-                        <TextBlock Classes="eyebrow"
-                                   IsVisible="{Binding HasNoProfiles}"
-                                   Text="{Binding EmptyStateTitle}" />
-
-                        <TextBlock Classes="hero-title"
-                                   HorizontalAlignment="Center"
-                                   Text="{Binding ConnectionLabelText}"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
-
-                        <TextBlock Classes="hero-copy"
-                                   HorizontalAlignment="Center"
-                                   IsVisible="{Binding HasProfiles}"
-                                   MaxWidth="280"
-                                   Text="{Binding StatusTitle}"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
-
-                        <TextBlock Classes="hero-copy"
-                                   HorizontalAlignment="Center"
-                                   IsVisible="{Binding HasNoProfiles}"
-                                   MaxWidth="280"
-                                   Text="{Binding EmptyStateText}"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <Grid Grid.Row="1"
-                          Width="248"
-                          Height="248"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center">
-                        <Border Classes="reticle-frame"
-                                Width="248"
-                                Height="248" />
-                        <Rectangle Width="1"
-                                   Height="248"
-                                   Fill="#173040"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center" />
-                        <Rectangle Width="248"
-                                   Height="1"
-                                   Fill="#173040"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center" />
-                        <Border Width="206"
-                                Height="206"
-                                BorderBrush="#122633"
-                                BorderThickness="1"
-                                Background="#101923"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center" />
-
-                        <Button Classes="ring-button"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                BorderBrush="{Binding RingAccentBrush}"
-                                Foreground="{Binding RingAccentBrush}"
-                                Click="OnPrimaryActionClick">
-                            <Canvas Width="52"
-                                    Height="52">
-                                <Ellipse Width="52"
-                                         Height="52"
-                                         Stroke="{Binding RingAccentBrush}"
-                                         StrokeThickness="4" />
-                                <Path Data="M26 6 L26 24"
-                                      Stroke="{Binding RingAccentBrush}"
-                                      StrokeThickness="4"
-                                      StrokeLineCap="Round" />
+                                ToolTip.Tip="Профиль">
+                            <Canvas Width="22"
+                                    Height="16">
+                                <Rectangle Width="22" Height="2" RadiusX="1" RadiusY="1" Fill="#A0AEC0" Canvas.Left="0" Canvas.Top="1" />
+                                <Rectangle Width="22" Height="2" RadiusX="1" RadiusY="1" Fill="#A0AEC0" Canvas.Left="0" Canvas.Top="7" />
+                                <Rectangle Width="22" Height="2" RadiusX="1" RadiusY="1" Fill="#A0AEC0" Canvas.Left="0" Canvas.Top="13" />
                             </Canvas>
                         </Button>
+
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2D3748"
+                                   Text="etojeVPN" />
+
+                        <Button Grid.Column="2"
+                                Width="48"
+                                Height="48"
+                                Background="#FFFFFFFF"
+                                BorderThickness="0"
+                                CornerRadius="24"
+                                Command="{Binding OpenSettingsCommand}"
+                                ToolTip.Tip="Настройки">
+                            <Path Data="M9,1 L11,1 L11.7,3.2 C12.4,3.4 13.1,3.7 13.7,4.1 L15.9,3 L17.3,4.4 L16.2,6.6 C16.6,7.2 16.9,7.9 17.1,8.6 L19.3,9.3 L19.3,11.3 L17.1,12 C16.9,12.7 16.6,13.4 16.2,14 L17.3,16.2 L15.9,17.6 L13.7,16.5 C13.1,16.9 12.4,17.2 11.7,17.4 L11,19.6 L9,19.6 L8.3,17.4 C7.6,17.2 6.9,16.9 6.3,16.5 L4.1,17.6 L2.7,16.2 L3.8,14 C3.4,13.4 3.1,12.7 2.9,12 L0.7,11.3 L0.7,9.3 L2.9,8.6 C3.1,7.9 3.4,7.2 3.8,6.6 L2.7,4.4 L4.1,3 L6.3,4.1 C6.9,3.7 7.6,3.4 8.3,3.2 Z M10,7 C8.34,7 7,8.34 7,10 C7,11.66 8.34,13 10,13 C11.66,13 13,11.66 13,10 C13,8.34 11.66,7 10,7 Z"
+                                  Fill="#A0AEC0"
+                                  Stretch="Uniform"
+                                  Width="18"
+                                  Height="18" />
+                        </Button>
                     </Grid>
 
-                    <StackPanel Grid.Row="2"
+                    <StackPanel Grid.Row="1"
                                 HorizontalAlignment="Center"
-                                Spacing="6">
-                        <TextBlock Classes="status-copy"
-                                   HorizontalAlignment="Center"
-                                   MaxWidth="280"
-                                   Text="{Binding ShellEndpointHostText}"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
+                                VerticalAlignment="Center"
+                                Spacing="14">
+                        <TextBlock Classes="auth-screen-title"
+                                   Text="{Binding HomeStatusLabel}" />
+                        <TextBlock Classes="auth-screen-copy"
+                                   IsVisible="{Binding ShowHomeSessionLabel}"
+                                   MaxWidth="240"
+                                   Text="{Binding HomeSessionLabel}" />
+
+                        <Grid Width="180"
+                              Height="180"
+                              Margin="0,10,0,6">
+                            <Ellipse Width="180"
+                                     Height="180"
+                                     Fill="#FFFFFFFF"
+                                     Stroke="#E8EEEE"
+                                     StrokeThickness="1" />
+                            <Ellipse Width="164"
+                                     Height="164"
+                                     Stroke="{Binding RingAccentBrush}"
+                                     StrokeThickness="3"
+                                     Opacity="0.9"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center" />
+                            <Button Width="180"
+                                    Height="180"
+                                    CornerRadius="90"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Click="OnPrimaryActionClick">
+                                <Canvas Width="52"
+                                        Height="52">
+                                    <Ellipse Width="30"
+                                             Height="30"
+                                             Stroke="#A0AEC0"
+                                             StrokeThickness="3"
+                                             Canvas.Left="11"
+                                             Canvas.Top="12" />
+                                    <Path Data="M26 6 L26 20"
+                                          Stroke="#A0AEC0"
+                                          StrokeThickness="3"
+                                          StrokeLineCap="Round" />
+                                </Canvas>
+                            </Button>
+                        </Grid>
+
+                        <Button Classes="auth-link-button"
+                                IsVisible="{Binding ShowHomeUpdateAlert}"
+                                HorizontalAlignment="Center"
+                                Foreground="#E58921"
+                                Command="{Binding RunUpdateActionCommand}"
+                                IsEnabled="{Binding CanRunUpdateAction}"
+                                Content="{Binding HomeUpdateAlertText}" />
+                        <TextBlock Classes="auth-screen-copy"
+                                   IsVisible="{Binding ShowHomeFooterText}"
+                                   MaxWidth="250"
+                                   Text="{Binding HomeFooterText}" />
                     </StackPanel>
+
+                    <Border Grid.Row="2"
+                            Classes="auth-soft-card"
+                            Padding="18">
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Command="{Binding OpenServerSelectionCommand}">
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="12">
+                                <Border Width="40"
+                                        Height="40"
+                                        Background="#E8F8F0"
+                                        CornerRadius="20">
+                                    <TextBlock HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="18"
+                                               Text="{Binding SelectedMockLocation.Flag, FallbackValue=DE}" />
+                                </Border>
+                                <StackPanel Grid.Column="1"
+                                            Spacing="2"
+                                            VerticalAlignment="Center">
+                                    <TextBlock FontSize="16"
+                                               FontWeight="SemiBold"
+                                               Foreground="#2D3748"
+                                               Text="{Binding CurrentLocationName}" />
+                                </StackPanel>
+                                <Path Grid.Column="2"
+                                      Width="12"
+                                      Height="12"
+                                      VerticalAlignment="Center"
+                                      Data="M2 1 L8 6 L2 11"
+                                      Stroke="#95A3AF"
+                                      StrokeThickness="1.8"
+                                      StrokeLineCap="Round" />
+                            </Grid>
+                        </Button>
+                    </Border>
                 </Grid>
 
-                <Border Grid.Row="2"
-                        IsVisible="{Binding HasProfiles}"
-                        Classes="surface-panel"
-                        Padding="14">
-                    <Grid RowDefinitions="Auto,Auto,Auto"
-                          RowSpacing="10">
-                        <Grid Grid.Row="0"
-                              ColumnDefinitions="*,Auto"
-                              ColumnSpacing="10">
-                            <TextBlock Classes="panel-label"
-                                       VerticalAlignment="Center"
-                                       Text="ACTIVE SERVER" />
-                            <Button Grid.Column="1"
-                                    Classes="inline-action-button"
-                                    IsVisible="{Binding UpdatesEnabled}"
-                                    IsEnabled="{Binding CanRunUpdateAction}"
-                                    Command="{Binding RunUpdateActionCommand}"
-                                    Content="{Binding ServerPanelUpdateText}" />
-                        </Grid>
+                <Grid IsVisible="{Binding IsServerSelectionScreen}">
+                    <Border Background="#44131D28" />
+                    <Border VerticalAlignment="Bottom"
+                            Background="#FFFFFFFF"
+                            CornerRadius="28,28,0,0"
+                            Padding="0,16,0,24"
+                            Height="706">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*"
+                              RowSpacing="16">
+                            <Border Width="48"
+                                    Height="6"
+                                    CornerRadius="3"
+                                    Background="#D7E1E0"
+                                    HorizontalAlignment="Center" />
 
-                        <ComboBox Grid.Row="1"
-                                  Classes="profile-combo"
-                                  ItemsSource="{Binding Profiles}"
-                                  SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="models:ImportedServerProfile">
-                                    <TextBlock Text="{Binding DisplayName}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-
-                        <TextBlock Grid.Row="2"
-                                   Classes="panel-copy"
-                                   Text="{Binding ShellEndpointText}"
-                                   TextWrapping="Wrap" />
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <Border IsVisible="{Binding ShowAccountScreen}"
-                    Background="#D9081016">
-                <Border Classes="account-shell"
-                        Padding="16">
-                    <Grid RowDefinitions="Auto,Auto,*"
-                          RowSpacing="16">
-                        <Grid ColumnDefinitions="44,*,44"
-                              ColumnSpacing="12">
-                            <Button Classes="icon-button"
-                                    IsVisible="{Binding CanDismissAccountScreen}"
-                                    Command="{Binding CloseAccountScreenCommand}">
-                                <Grid Width="16"
-                                      Height="16">
-                                    <Path Data="M12 2 L4 8 L12 14"
-                                          Stroke="#E7F4F6"
+                            <Grid Grid.Row="1"
+                                  Margin="24,0,24,0"
+                                  ColumnDefinitions="Auto,*,Auto">
+                                <Button Width="36"
+                                        Height="36"
+                                        Background="#F4F7F6"
+                                        BorderBrush="#E4EEEC"
+                                        BorderThickness="1"
+                                        CornerRadius="18"
+                                        Command="{Binding ReturnHomeCommand}">
+                                    <Path Data="M10 4 L4 10 L10 16"
+                                          Stroke="#2D3748"
                                           StrokeThickness="1.8"
-                                          StrokeLineCap="Square" />
-                                </Grid>
-                            </Button>
-
-                            <StackPanel Grid.Column="1"
-                                        Spacing="2"
-                                        HorizontalAlignment="Center">
-                                <TextBlock Classes="header-title"
+                                          StrokeLineCap="Round"
+ />
+                                </Button>
+                                <TextBlock Grid.Column="1"
+                                           VerticalAlignment="Center"
                                            HorizontalAlignment="Center"
-                                           Text="{Binding AccountTitle}" />
-                                <TextBlock Classes="header-subtitle"
-                                           HorizontalAlignment="Center"
-                                           Text="identity" />
-                            </StackPanel>
+                                           FontSize="26"
+                                           FontWeight="SemiBold"
+                                           Foreground="#2D3748"
+                                           Text="Выбор локации" />
+                            </Grid>
 
-                            <Button Grid.Column="2"
-                                    Classes="icon-button"
-                                    Click="OnImportConfigClick"
-                                    ToolTip.Tip="Импортировать конфиг">
-                                <Grid Width="16"
-                                      Height="16">
-                                    <Border Width="16"
-                                            Height="2"
-                                            Background="#E7F4F6"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center" />
-                                    <Border Width="2"
-                                            Height="16"
-                                            Background="#E7F4F6"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center" />
+                            <Border Grid.Row="2"
+                                    Margin="24,0,24,0"
+                                    Background="#F6F8F7"
+                                    BorderBrush="#E4EEEC"
+                                    BorderThickness="1"
+                                    CornerRadius="26"
+                                    Padding="16,12">
+                                <Grid ColumnDefinitions="Auto,*"
+                                      ColumnSpacing="8">
+                                    <Path Width="16"
+                                          Height="16"
+                                          VerticalAlignment="Center"
+                                          Data="M11.5 11.5 L15 15 M6.5 12 C3.46 12 1 9.54 1 6.5 C1 3.46 3.46 1 6.5 1 C9.54 1 12 3.46 12 6.5 C12 9.54 9.54 12 6.5 12 Z"
+                                          Stroke="#A0AEC0"
+                                          StrokeThickness="1.5"
+                                          StrokeLineCap="Round" />
+                                    <TextBox Grid.Column="1"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             Watermark="Найти локацию..."
+                                             Text="{Binding ServerSearchText, Mode=TwoWay}" />
                                 </Grid>
-                            </Button>
+                            </Border>
+
+                            <ScrollViewer Grid.Row="3"
+                                          VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="0">
+                                    <TextBlock Classes="auth-screen-overline"
+                                               Margin="24,0,24,8"
+                                               HorizontalAlignment="Left"
+                                               Text="ТЕКУЩАЯ" />
+
+                                    <Border Background="#EAF9EF"
+                                            BorderBrush="#D5EFDE"
+                                            BorderThickness="1"
+                                            CornerRadius="24"
+                                            Margin="8,0,8,0"
+                                            HorizontalAlignment="Stretch"
+                                            Padding="16">
+                                        <Grid ColumnDefinitions="Auto,*,Auto"
+                                              ColumnSpacing="12">
+                                            <Border Width="40"
+                                                    Height="40"
+                                                    Background="#FFFFFFFF"
+                                                    CornerRadius="20">
+                                                <TextBlock HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="18"
+                                                           Text="{Binding SelectedMockLocation.Flag, FallbackValue=СЂСџвЂЎВ©СЂСџвЂЎР„}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1"
+                                                        Spacing="2"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock FontSize="16"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#2D3748"
+                                                           Text="{Binding CurrentLocationName}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <TextBlock Classes="auth-screen-overline"
+                                               Margin="24,20,24,8"
+                                               HorizontalAlignment="Left"
+                                               Text="ВСЕ ЛОКАЦИИ" />
+
+                                    <ItemsControl ItemsSource="{Binding VisibleMockLocations}"
+                                                  HorizontalAlignment="Stretch">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:MockLocationOption">
+                                                <Button Classes="location-row-button"
+                                                        Margin="8,0,8,10"
+                                                        Command="{Binding #RootWindow.DataContext.SelectMockLocationCommand}"
+                                                        CommandParameter="{Binding .}">
+                                                    <Grid ColumnDefinitions="Auto,*"
+                                                          ColumnSpacing="12">
+                                                        <Border Width="40"
+                                                                Height="40"
+                                                                Background="#F6F8F7"
+                                                                CornerRadius="20">
+                                                            <TextBlock HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="18"
+                                                                       Text="{Binding Flag}" />
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1"
+                                                                   VerticalAlignment="Center"
+                                                                   FontSize="16"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="#2D3748"
+                                                                   Text="{Binding Name}" />
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
                         </Grid>
+                    </Border>
+                </Grid>
 
-                        <TextBlock Grid.Row="1"
-                                   Classes="hero-copy"
+                <Grid IsVisible="{Binding IsSettingsScreen}"
+                      Margin="24"
+                      RowDefinitions="Auto,*"
+                      RowSpacing="20">
+                    <Grid ColumnDefinitions="36,*,Auto">
+                        <Button Width="36"
+                                Height="36"
+                                Background="#FFFFFFFF"
+                                BorderBrush="#E4EEEC"
+                                BorderThickness="1"
+                                CornerRadius="18"
+                                Command="{Binding ReturnHomeCommand}">
+                            <Path Data="M10 4 L4 10 L10 16"
+                                  Stroke="#2D3748"
+                                  StrokeThickness="1.8"
+                                  StrokeLineCap="Round"
+ />
+                        </Button>
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
                                    HorizontalAlignment="Center"
-                                   MaxWidth="280"
-                                   Text="{Binding AccountSubtitle}"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
+                                   FontSize="26"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2D3748"
+                                   Text="Настройки" />
+                    </Grid>
 
-                        <StackPanel Grid.Row="2"
-                                    Spacing="12">
-                            <StackPanel Spacing="12"
-                                        IsVisible="{Binding ShowAuthForm}">
-                                <Border Classes="surface-panel"
-                                        Padding="14">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Classes="panel-label"
-                                                   Text="SIGN IN" />
-
-                                        <TextBox Classes="auth-input"
-                                                 Watermark="Email"
-                                                 Text="{Binding AuthEmail, Mode=TwoWay}" />
-
-                                        <TextBox Classes="auth-input"
-                                                 Watermark="Пароль"
-                                                 PasswordChar="•"
-                                                 Text="{Binding AuthPassword, Mode=TwoWay}" />
-
-                                        <TextBlock Classes="auth-error"
-                                                   Text="{Binding AuthErrorMessage}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Border>
-
-                                <Button Classes="cta-button compact-button"
-                                        Command="{Binding SignInCommand}"
-                                        IsEnabled="{Binding CanSignIn}"
-                                        Content="Войти" />
-
-                                <Button Classes="secondary-button"
-                                        Command="{Binding OpenRegistrationPortalCommand}"
-                                        Content="Регистрация" />
-
-                                <Button Classes="secondary-button"
-                                        Click="OnImportConfigClick"
-                                        Content="Импортировать конфиг" />
-
-                                <TextBlock Classes="panel-copy"
-                                           Text="{Binding LegacyImportHintText}"
-                                           TextAlignment="Center"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="12"
-                                        IsVisible="{Binding ShowAuthenticatedCard}">
-                                <Border Classes="surface-panel"
-                                        Padding="14">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Classes="panel-label"
-                                                   Text="CURRENT ACCOUNT" />
-                                        <TextBlock Classes="identity-copy"
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="18">
+                            <TextBlock Classes="auth-screen-overline" HorizontalAlignment="Left" Text="АККАУНТ" />
+                            <Border Classes="auth-soft-card" Padding="16,14">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="12">
+                                    <StackPanel Spacing="3"
+                                                VerticalAlignment="Center">
+                                        <TextBlock FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#2D3748"
+                                                   Text="Вход и доступ" />
+                                        <TextBlock Classes="auth-caption"
+                                                   MaxWidth="220"
                                                    Text="{Binding AccountIdentityText}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
-                                </Border>
+                                    <Button Grid.Column="1"
+                                            Classes="auth-subtle-button"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding OpenAccountScreenCommand}"
+                                            Content="Открыть" />
+                                </Grid>
+                            </Border>
 
-                                <Button Classes="cta-button compact-button"
+                            <TextBlock Classes="auth-screen-overline" HorizontalAlignment="Left" Text="БЕЗОПАСНОСТЬ И ПОДКЛЮЧЕНИЕ" />
+                            <Border Classes="auth-soft-card" Padding="16">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#2D3748"
+                                                   Text="Автоподключение" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoConnectEnabled, Mode=TwoWay}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#2D3748"
+                                                   Text="Блокировка трафика" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding KillSwitchEnabled, Mode=TwoWay}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Classes="auth-screen-overline" HorizontalAlignment="Left" Text="ПРИЛОЖЕНИЕ" />
+                            <Border Classes="auth-soft-card" Padding="16">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#2D3748"
+                                                   Text="Работа из трея" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding LaunchToTrayEnabled, Mode=TwoWay}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#2D3748"
+                                                   Text="Уведомления" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotificationsEnabled, Mode=TwoWay}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Classes="auth-screen-overline" HorizontalAlignment="Left" Text="ПРОФИЛИ И ОБНОВЛЕНИЯ" />
+                            <Border Classes="auth-soft-card" Padding="16">
+                                <StackPanel Spacing="12"
+                                            HorizontalAlignment="Center">
+                                    <ComboBox ItemsSource="{Binding Profiles}"
+                                              SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                                              Width="240"
+                                              HorizontalAlignment="Center"
+                                              IsVisible="{Binding HasProfiles}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="models:ImportedServerProfile">
+                                                <TextBlock Text="{Binding DisplayName}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <Button Classes="auth-link-button"
+                                            HorizontalAlignment="Center"
+                                            Click="OnImportConfigClick"
+                                            Content="Импортировать конфиг" />
+                                    <Button Classes="auth-link-button"
+                                            HorizontalAlignment="Center"
+                                            Command="{Binding RunUpdateActionCommand}"
+                                            IsEnabled="{Binding CanRunUpdateAction}"
+                                            Content="{Binding SettingsUpdateActionText}" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Classes="auth-caption"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,-4,0,6"
+                                       Text="{Binding SettingsVersionText}" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <Grid IsVisible="{Binding ShowOnboardingScreen}">
+                <Grid Margin="24"
+                      RowDefinitions="*,Auto"
+                      RowSpacing="24">
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Spacing="18">
+                        <Border Classes="auth-logo-shell"
+                                Width="192"
+                                Height="224"
+                                Padding="28">
+                            <Grid>
+                                <Border Width="108"
+                                        Height="108"
+                                        Background="#DFF4E7"
+                                        CornerRadius="32"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                    <Image Width="52"
+                                           Height="52"
+                                           Source="avares://VpnClient.UI/Assets/shield.png"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                                </Border>
+                                <Border Width="28"
+                                        Height="28"
+                                        Background="#61E09C"
+                                        CornerRadius="14"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Bottom">
+                                    <Path Data="M6 14 L11 19 L22 7"
+                                          Stroke="#FFFFFF"
+                                          StrokeThickness="2.2"
+                                          StrokeLineCap="Round"
+                                          Stretch="None"
+                                          
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Classes="auth-screen-title"
+                                   Text="Дышите свободно." />
+                        <TextBlock Classes="auth-screen-copy"
+                                   MaxWidth="260"
+                                   Text="Ваша приватность защищена одним нажатием." />
+
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Spacing="8">
+                            <Ellipse Width="8" Height="8" Fill="#2D3748" />
+                            <Ellipse Width="8" Height="8" Fill="#C6D2D8" />
+                            <Ellipse Width="8" Height="8" Fill="#C6D2D8" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                Spacing="12">
+                        <Button Classes="auth-light-button"
+                                Command="{Binding OpenAccountScreenCommand}"
+                                Content="Начать" />
+                        <Button Classes="auth-link-button"
+                                Click="OnImportConfigClick"
+                                Content="У меня уже есть конфиг" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <Grid IsVisible="{Binding ShowAccountScreen}">
+                <Grid>
+                    <Canvas IsHitTestVisible="False">
+                        <Ellipse Width="273"
+                                 Height="273"
+                                 Fill="#DFF4E7"
+                                 Opacity="0.55"
+                                 Canvas.Left="-46"
+                                 Canvas.Top="-168" />
+                        <Ellipse Width="246"
+                                 Height="246"
+                                 Fill="#DCECF8"
+                                 Opacity="0.55"
+                                 Canvas.Left="252"
+                                 Canvas.Top="118" />
+                        <Ellipse Width="312"
+                                 Height="312"
+                                 Fill="#D9EBF7"
+                                 Opacity="0.62"
+                                 Canvas.Left="-18"
+                                 Canvas.Top="700" />
+                    </Canvas>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <Grid Margin="24,28,24,24">
+                            <Button Width="32"
+                                    Height="32"
+                                    IsVisible="{Binding CanDismissAccountScreen}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top"
+                                    Command="{Binding CloseAccountScreenCommand}">
+                                <Path Data="M18 6 L8 16 L18 26"
+                                      Stroke="#64748B"
+                                      StrokeThickness="1.8"
+                                      StrokeLineCap="Round" />
+                            </Button>
+
+                            <StackPanel Margin="0,78,0,24"
+                                        HorizontalAlignment="Center"
+                                        MaxWidth="342"
+                                        Spacing="0">
+                                <Grid Width="108"
+                                      Height="108"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,0,0,36">
+                                    <Ellipse Width="108"
+                                             Height="108"
+                                             Fill="#E3F6EA"
+                                             Opacity="0.92" />
+                                    <Border Width="88"
+                                            Height="88"
+                                            Background="#DFF4E7"
+                                            CornerRadius="28"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                        <Image Width="42"
+                                               Height="42"
+                                               Source="avares://VpnClient.UI/Assets/shield.png"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                    </Border>
+                                </Grid>
+
+                            <TextBlock Classes="login-title"
+                                       IsVisible="{Binding ShowAuthForm}"
+                                       Margin="0,0,0,12"
+                                       Text="С возвращением." />
+                            <TextBlock Classes="login-copy"
+                                       IsVisible="{Binding ShowAuthForm}"
+                                       Margin="0,0,0,30"
+                                       Text="Войдите, чтобы защитить подключение." />
+
+                            <StackPanel IsVisible="{Binding ShowAuthForm}"
+                                        Spacing="0">
+                                <TextBox Classes="auth-light-input"
+                                         Height="58"
+                                         FontSize="16"
+                                         Watermark="Email"
+                                         Text="{Binding AuthEmail, Mode=TwoWay}" />
+                                <TextBox Classes="auth-light-input"
+                                         Margin="0,12,0,0"
+                                         Height="58"
+                                         FontSize="16"
+                                         Watermark="Password"
+                                         PasswordChar="*"
+                                         Text="{Binding AuthPassword, Mode=TwoWay}" />
+                                <Button Classes="login-inline-button"
+                                        Margin="0,12,0,0"
+                                        HorizontalAlignment="Right"
+                                        Content="Забыли пароль?" />
+                                <TextBlock Classes="auth-error"
+                                           Margin="0,12,0,0"
+                                           TextAlignment="Center"
+                                           Text="{Binding AuthErrorMessage}" />
+                                <Button Classes="auth-light-button"
+                                        Margin="0,22,0,0"
+                                        Height="56"
+                                        Command="{Binding SignInCommand}"
+                                        IsEnabled="{Binding CanSignIn}"
+                                        Content="LogIn" />
+                                <StackPanel Orientation="Horizontal"
+                                            Margin="0,18,0,0"
+                                            HorizontalAlignment="Center"
+                                            Spacing="4">
+                                    <TextBlock Classes="login-inline-copy"
+                                               VerticalAlignment="Center"
+                                               Text="Нет аккаунта?" />
+                                    <Button Classes="login-inline-button"
+                                            Command="{Binding OpenRegistrationPortalCommand}"
+                                            Content="Создать" />
+                                </StackPanel>
+                                <Button Classes="login-inline-button"
+                                        Margin="0,16,0,0"
+                                        IsVisible="{Binding CanDismissAccountScreen}"
+                                        HorizontalAlignment="Center"
+                                        Click="OnImportConfigClick"
+                                        Content="Импортировать существующий конфиг" />
+                            </StackPanel>
+
+                            <StackPanel IsVisible="{Binding ShowAuthenticatedCard}"
+                                        Spacing="16">
+                                <Border Classes="auth-soft-card"
+                                        Padding="24,20">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Classes="login-title"
+                                                   FontSize="28"
+                                                   Text="Аккаунт готов." />
+                                        <TextBlock Classes="login-copy"
+                                                   Text="{Binding AccountIdentityText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Button Classes="auth-light-button"
+                                        Height="56"
+                                        IsVisible="{Binding HasNoProfiles}"
+                                        Click="OnPrimaryActionClick"
+                                        Content="Получить управляемый доступ" />
+                                <Button Classes="login-inline-button"
                                         Command="{Binding OpenCabinetPortalCommand}"
                                         Content="Открыть кабинет" />
-
-                                <Button Classes="secondary-button"
-                                        Click="OnImportConfigClick"
-                                        Content="Импортировать конфиг" />
-
-                                <Button Classes="secondary-button"
+                                <Button Classes="login-inline-button"
                                         Command="{Binding SignOutCommand}"
                                         Content="Выйти" />
-
-                                <TextBlock Classes="panel-copy"
-                                           Text="{Binding LegacyImportHintText}"
+                                <Button Classes="login-inline-button"
+                                        Click="OnImportConfigClick"
+                                        Content="Импортировать существующий конфиг" />
+                                <TextBlock Classes="auth-caption"
                                            TextAlignment="Center"
-                                           TextWrapping="Wrap" />
+                                           Text="{Binding LegacyImportHintText}" />
                             </StackPanel>
                         </StackPanel>
                     </Grid>
-                </Border>
-            </Border>
+                </ScrollViewer>
+            </Grid>
         </Grid>
-    </Border>
+            </Grid>
+    </ThemeVariantScope>
 </Window>
+
+

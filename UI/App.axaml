@@ -7,8 +7,9 @@
         <FluentTheme />
 
         <Style Selector="Window">
-            <Setter Property="Background" Value="#061018" />
-            <Setter Property="Foreground" Value="#E7F4F6" />
+            <Setter Property="Background" Value="#F4F7F6" />
+            <Setter Property="Foreground" Value="#2D3748" />
+            <Setter Property="FontFamily" Value="Inter, Segoe UI, Arial" />
         </Style>
 
         <Style Selector="Border.app-shell">
@@ -43,6 +44,32 @@
             <Setter Property="MaxWidth" Value="320" />
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Border.auth-login-shell">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0,0"
+                                     EndPoint="0,1">
+                    <GradientStop Color="#F6FAFA"
+                                  Offset="0" />
+                    <GradientStop Color="#EFF6F5"
+                                  Offset="1" />
+                </LinearGradientBrush>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.auth-soft-card">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#E4EEEC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="32" />
+        </Style>
+
+        <Style Selector="Border.auth-logo-shell">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderBrush" Value="#E5EFEA" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="36" />
         </Style>
 
         <Style Selector="Border.reticle-frame">
@@ -99,6 +126,63 @@
         <Style Selector="TextBlock.auth-error">
             <Setter Property="Foreground" Value="#FF8E8E" />
             <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style Selector="TextBlock.auth-screen-overline">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#8BA3A1" />
+            <Setter Property="LetterSpacing" Value="1.6" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.auth-screen-title">
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#2D3748" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.auth-screen-copy">
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="#A0AEC0" />
+            <Setter Property="LineHeight" Value="20" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.login-title">
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="FontSize" Value="30" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#0F172A" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.login-copy">
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="#64748B" />
+            <Setter Property="LineHeight" Value="20" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.login-inline-copy">
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="#64748B" />
+        </Style>
+
+        <Style Selector="TextBlock.auth-caption">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#A0AEC0" />
+        </Style>
+
+        <Style Selector="TextBlock.auth-link-inline">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#2D3748" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <Style Selector="TextBlock.status-line">
@@ -203,6 +287,176 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Padding" Value="12,10" />
+        </Style>
+
+        <Style Selector="TextBox.auth-light-input">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="Foreground" Value="#223341" />
+            <Setter Property="BorderBrush" Value="#E7EEEF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="29" />
+            <Setter Property="Padding" Value="18,18" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <Style Selector="TextBox.auth-light-input:pointerover">
+            <Setter Property="Background" Value="#FBFCFC" />
+            <Setter Property="BorderBrush" Value="#DDE8E7" />
+        </Style>
+
+        <Style Selector="TextBox.auth-light-input:focus">
+            <Setter Property="Background" Value="#F9FBFB" />
+            <Setter Property="BorderBrush" Value="#C9D8D6" />
+        </Style>
+
+        <Style Selector="TextBox.auth-light-input:focus-within">
+            <Setter Property="Background" Value="#F9FBFB" />
+            <Setter Property="BorderBrush" Value="#C9D8D6" />
+        </Style>
+
+        <Style Selector="Button.auth-light-button">
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="Background" Value="#5FE6A0" />
+            <Setter Property="Foreground" Value="#173421" />
+            <Setter Property="BorderBrush" Value="#5FE6A0" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="33" />
+            <Setter Property="Padding" Value="18,18" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.auth-subtle-button">
+            <Setter Property="Background" Value="#F8FBFA" />
+            <Setter Property="Foreground" Value="#23364B" />
+            <Setter Property="BorderBrush" Value="#DDE8E7" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.login-inline-button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#0F172A" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontFamily" Value="Work Sans, Inter, Segoe UI" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.auth-link-button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#23364B" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.location-row-button">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderBrush" Value="#E9EFEE" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.location-row-button:pointerover">
+            <Setter Property="Background" Value="#EAF9EF" />
+            <Setter Property="BorderBrush" Value="#D5EFDE" />
+        </Style>
+
+        <Style Selector="Button.location-row-button:pressed">
+            <Setter Property="Background" Value="#EAF9EF" />
+            <Setter Property="BorderBrush" Value="#CDEAD8" />
+        </Style>
+
+        <Style Selector="Border.light-card">
+            <Setter Property="Background" Value="#FCFEFD" />
+            <Setter Property="BorderBrush" Value="#E6EEEC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="24" />
+        </Style>
+
+        <Style Selector="Border.light-pill">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderBrush" Value="#E8EFEE" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="28" />
+        </Style>
+
+        <Style Selector="TextBlock.light-overline">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#9BA8B5" />
+            <Setter Property="LetterSpacing" Value="1.4" />
+        </Style>
+
+        <Style Selector="TextBlock.light-title">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#243544" />
+        </Style>
+
+        <Style Selector="TextBlock.light-copy">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#8FA0AE" />
+        </Style>
+
+        <Style Selector="Button.light-header-button">
+            <Setter Property="Background" Value="#FDFEFE" />
+            <Setter Property="BorderBrush" Value="#E3EBE8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.light-link-button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#243544" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.light-cta-button">
+            <Setter Property="Background" Value="#61E09C" />
+            <Setter Property="Foreground" Value="#163221" />
+            <Setter Property="BorderBrush" Value="#61E09C" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="28" />
+            <Setter Property="Padding" Value="18,16" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Button.light-row-button">
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderBrush" Value="#E7EEEC" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="26" />
+            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
     </Application.Styles>
 </Application>
