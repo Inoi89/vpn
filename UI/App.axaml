@@ -321,7 +321,7 @@
             <Setter Property="BorderBrush" Value="#5FE6A0" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="33" />
-            <Setter Property="Padding" Value="18,18" />
+            <Setter Property="Padding" Value="18,0" />
             <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />

@@ -632,20 +632,22 @@
                                          Watermark="Password"
                                          PasswordChar="*"
                                          Text="{Binding AuthPassword, Mode=TwoWay}" />
-                                <Button Classes="login-inline-button"
-                                        Margin="0,12,0,0"
-                                        HorizontalAlignment="Right"
-                                        Content="Забыли пароль?" />
                                 <TextBlock Classes="auth-error"
-                                           Margin="0,12,0,0"
+                                          Margin="0,12,0,0"
+                                           IsVisible="{Binding HasAuthErrorMessage}"
                                            TextAlignment="Center"
                                            Text="{Binding AuthErrorMessage}" />
                                 <Button Classes="auth-light-button"
-                                        Margin="0,22,0,0"
+                                        Margin="0,12,0,0"
                                         Height="56"
+                                        HorizontalAlignment="Stretch"
                                         Command="{Binding SignInCommand}"
                                         IsEnabled="{Binding CanSignIn}"
                                         Content="LogIn" />
+                                <Button Classes="login-inline-button"
+                                        Margin="0,12,0,0"
+                                        HorizontalAlignment="Center"
+                                        Content="Забыли пароль?" />
                                 <StackPanel Orientation="Horizontal"
                                             Margin="0,18,0,0"
                                             HorizontalAlignment="Center"
@@ -672,7 +674,7 @@
                                     <StackPanel Spacing="8">
                                         <TextBlock Classes="login-title"
                                                    FontSize="28"
-                                                   Text="Аккаунт готов." />
+                                                   Text="Вы авторизованы." />
                                         <TextBlock Classes="login-copy"
                                                    Text="{Binding AccountIdentityText}" />
                                     </StackPanel>
@@ -680,20 +682,18 @@
                                 <Button Classes="auth-light-button"
                                         Height="56"
                                         IsVisible="{Binding HasNoProfiles}"
+                                        HorizontalAlignment="Center"
+                                        Width="280"
                                         Click="OnPrimaryActionClick"
                                         Content="Получить управляемый доступ" />
                                 <Button Classes="login-inline-button"
+                                        HorizontalAlignment="Center"
                                         Command="{Binding OpenCabinetPortalCommand}"
                                         Content="Открыть кабинет" />
                                 <Button Classes="login-inline-button"
+                                        HorizontalAlignment="Center"
                                         Command="{Binding SignOutCommand}"
                                         Content="Выйти" />
-                                <Button Classes="login-inline-button"
-                                        Click="OnImportConfigClick"
-                                        Content="Импортировать существующий конфиг" />
-                                <TextBlock Classes="auth-caption"
-                                           TextAlignment="Center"
-                                           Text="{Binding LegacyImportHintText}" />
                             </StackPanel>
                         </StackPanel>
                     </Grid>

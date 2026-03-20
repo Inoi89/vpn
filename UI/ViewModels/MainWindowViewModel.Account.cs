@@ -45,6 +45,8 @@ public partial class MainWindowViewModel
 
     public bool ShowAccountShortcut => HasProfiles || IsAuthenticated;
 
+    public bool HasAuthErrorMessage => !string.IsNullOrWhiteSpace(AuthErrorMessage);
+
     public bool CanSignIn =>
         !IsBusy
         && !IsAuthenticating
@@ -184,6 +186,11 @@ public partial class MainWindowViewModel
     partial void OnAuthPasswordChanged(string value)
     {
         SignInCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnAuthErrorMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasAuthErrorMessage));
     }
 
     partial void OnIsAuthenticatingChanged(bool value)
