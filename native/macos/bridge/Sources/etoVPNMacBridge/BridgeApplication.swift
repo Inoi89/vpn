@@ -8,9 +8,11 @@ struct BridgeApplication {
         let socketPath = SocketPathResolver.defaultSocketURL()
         let statusStore = StatusSnapshotStore()
         let stagingStore = TunnelProfileStagingStore()
+        let managerStore = PacketTunnelManagerStore()
         let coordinator = PacketTunnelCoordinator(
             stagingStore: stagingStore,
-            statusStore: statusStore)
+            statusStore: statusStore,
+            managerStore: managerStore)
         let dispatcher = BridgeCommandDispatcher(
             socketPath: socketPath,
             coordinator: coordinator,

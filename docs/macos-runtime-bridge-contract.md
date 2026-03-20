@@ -212,6 +212,32 @@ For the first real implementation, the bridge should store a UTF-8 JSON payload
 under a stable provider-configuration key such as `wireguard`, derived from the
 desktop `TunnelProfilePayload`.
 
+Recommended provider-configuration keys:
+
+- `wireguard`: `Data` containing the UTF-8 JSON-encoded `TunnelProfilePayload`
+- `profileId`: `String`
+- `profileName`: `String`
+- `configFormat`: `String`
+
+Recommended bridge-side lifecycle:
+
+1. `NETunnelProviderManager.loadAllFromPreferences`
+2. find/create the manager for the current `profileId`
+3. populate `NETunnelProviderProtocol.providerBundleIdentifier`
+4. populate `NETunnelProviderProtocol.providerConfiguration`
+5. set `serverAddress`, `localizedDescription`, and `isEnabled`
+6. `saveToPreferences`
+7. `loadFromPreferences`
+8. `startVPNTunnel(options: nil)`
+
+Recommended status path after startup:
+
+1. observe `NEVPNStatusDidChangeNotification`
+2. map raw `NEVPNStatus` into `RuntimeTunnelState`
+3. while the tunnel is active, poll `sendProviderMessage` with a JSON request
+   such as `{"action":"status"}`
+4. let the packet tunnel return counters and handshake timestamps
+
 ## Current Phase 2 expectation
 
 This scaffold is not yet a real VPN runtime. Phase 2 is successful when:

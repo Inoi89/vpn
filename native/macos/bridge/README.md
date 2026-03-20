@@ -22,14 +22,14 @@ operations that should not live in the C# UI layer.
 - `Sources/etoVPNMacBridge/BridgeApplication.swift`
   Composition root for the helper.
 - `Sources/etoVPNMacBridge/BridgeServer.swift`
-  Socket listener placeholder.
-- `Sources/etoVPNMacBridge/BridgeLineProtocol.swift`
-  Newline-delimited JSON envelope decoding and dispatch skeleton.
+  Socket listener and newline-delimited request ingestion scaffold.
 - `Sources/etoVPNMacBridge/BridgeCommandDispatcher.swift`
   Command routing and response shaping.
+- `Sources/etoVPNMacBridge/PacketTunnelManagerStore.swift`
+  `NETunnelProviderManager` load/save/start/stop scaffold.
 - `Sources/etoVPNMacBridge/PacketTunnelCoordinator.swift`
-  Native orchestration boundary that will eventually talk to
-  `NETunnelProviderManager` and the packet tunnel extension.
+  Native orchestration boundary that stages manager configuration and packet
+  tunnel startup.
 
 ## Runtime contract
 
@@ -37,6 +37,7 @@ The bridge should implement the command surface documented in:
 
 - `docs/macos-runtime-bridge-contract.md`
 
-Today this scaffold is intentionally non-functional. It exists to freeze the
-shape of the native code and the responsibilities of each entry point before
-the actual `NetworkExtension` integration is written.
+Today this scaffold is still not a real VPN runtime, but it now mirrors the
+target Apple control path more closely: socket request handling, staged profile
+handoff, and `NETunnelProviderManager` orchestration all have explicit native
+boundaries ready for the real implementation.

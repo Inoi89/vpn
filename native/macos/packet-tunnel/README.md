@@ -10,11 +10,15 @@ request the system to start or stop this extension.
 
 - Receive a staged tunnel profile from the bridge.
 - Read that staged profile from the shared control-store location.
+- Prefer `NETunnelProviderProtocol.providerConfiguration` as the primary
+  startup handoff.
 - Materialize DNS, routes, MTU, and addresses into
   `NEPacketTunnelNetworkSettings`.
 - Start and stop the actual WireGuard/AWG tunnel engine.
 - Emit status, counters, and handshake information that the bridge can publish
   back to the desktop client.
+- Answer bridge-side `sendProviderMessage` status requests with a compact JSON
+  snapshot.
 
 ## Entry points
 

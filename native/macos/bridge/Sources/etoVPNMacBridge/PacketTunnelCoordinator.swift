@@ -1,17 +1,22 @@
 import Foundation
+import NetworkExtension
 import etoVPNMacShared
 
 final class PacketTunnelCoordinator {
     private let stagingStore: TunnelProfileStagingStore
     private let statusStore: StatusSnapshotStore
+    private let managerStore: PacketTunnelManagerStore
     private var stagedProfile: TunnelProfilePayload?
+    private var activeManager: NETunnelProviderManager?
 
     init(
         stagingStore: TunnelProfileStagingStore,
-        statusStore: StatusSnapshotStore)
+        statusStore: StatusSnapshotStore,
+        managerStore: PacketTunnelManagerStore)
     {
         self.stagingStore = stagingStore
         self.statusStore = statusStore
+        self.managerStore = managerStore
     }
 
     func stageProfile(_ profile: TunnelProfilePayload) {
@@ -51,26 +56,60 @@ final class PacketTunnelCoordinator {
 
         stagedProfile = profile
         stagingStore.save(profile)
-        // This staged-file path is only a scaffold fallback.
-        //
-        // The target Apple runtime flow should:
-        // - load or create `NETunnelProviderManager`
-        // - write the real tunnel payload into `NETunnelProviderProtocol.providerConfiguration`
-        // - save/load the manager from preferences
-        // - call `startVPNTunnel(options: nil)`
-        // - later poll the extension via `sendProviderMessage` for counters/handshake
         statusStore.update(
             makeStatusSnapshot(
                 profile: profile,
                 connected: false,
                 state: .connecting,
-                warnings: ["Packet tunnel activation is still scaffolded; the staged profile is ready for handoff."],
+                warnings: ["Activation request staged; configuring NETunnelProviderManager."],
                 lastError: nil))
+
+        Task {
+            do {
+                let manager = try await managerStore.loadOrCreateManager(for: profile)
+                try await managerStore.configure(manager, with: profile)
+                try managerStore.start(manager)
+                activeManager = manager
+
+                if let providerStatus = try await managerStore.requestStatus(from: manager) {
+                    statusStore.update(
+                        makeStatusSnapshot(
+                            profile: profile,
+                            connected: providerStatus.connected,
+                            state: providerStatus.state,
+                            warnings: providerStatus.warnings,
+                            lastError: providerStatus.lastError,
+                            rxBytes: providerStatus.rxBytes,
+                            txBytes: providerStatus.txBytes,
+                            latestHandshakeAtUtc: providerStatus.latestHandshakeAtUtc))
+                } else {
+                    statusStore.update(
+                        makeStatusSnapshot(
+                            profile: profile,
+                            connected: false,
+                            state: map(manager.connection.status),
+                            warnings: ["Tunnel manager configured; waiting for packet tunnel startup."],
+                            lastError: nil))
+                }
+            } catch {
+                statusStore.update(
+                    makeStatusSnapshot(
+                        profile: profile,
+                        connected: false,
+                        state: .failed,
+                        warnings: [],
+                        lastError: "Failed to configure packet tunnel manager: \(error.localizedDescription)"))
+            }
+        }
     }
 
     func requestDeactivation(profileId: String?) {
         stagedProfile = nil
         stagingStore.clear()
+        if let activeManager {
+            managerStore.stop(activeManager)
+            self.activeManager = nil
+        }
         statusStore.update(
             StatusResponsePayload(
                 connected: false,
@@ -96,7 +135,10 @@ final class PacketTunnelCoordinator {
         connected: Bool,
         state: RuntimeTunnelState,
         warnings: [String],
-        lastError: String?) -> StatusResponsePayload
+        lastError: String?,
+        rxBytes: Int64 = 0,
+        txBytes: Int64 = 0,
+        latestHandshakeAtUtc: String? = nil) -> StatusResponsePayload
     {
         StatusResponsePayload(
             connected: connected,
@@ -110,10 +152,28 @@ final class PacketTunnelCoordinator {
             mtu: profile.mtu,
             allowedIps: profile.allowedIps,
             routes: profile.allowedIps,
-            rxBytes: 0,
-            txBytes: 0,
-            latestHandshakeAtUtc: nil,
+            rxBytes: rxBytes,
+            txBytes: txBytes,
+            latestHandshakeAtUtc: latestHandshakeAtUtc,
             warnings: warnings,
             lastError: lastError)
+    }
+
+    private func map(_ status: NEVPNStatus) -> RuntimeTunnelState {
+        switch status
+        {
+            case .invalid, .disconnected:
+                return .disconnected
+            case .connecting:
+                return .connecting
+            case .connected:
+                return .connected
+            case .reasserting:
+                return .degraded
+            case .disconnecting:
+                return .degraded
+            @unknown default:
+                return .failed
+        }
     }
 }

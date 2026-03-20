@@ -16,6 +16,7 @@ the packet tunnel.
 - `Sources/etoVPNMacShared/RuntimeBridgePayloads.swift`
 - `Sources/etoVPNMacShared/TunnelProfilePayload.swift`
 - `Sources/etoVPNMacShared/RuntimeBridgeConstants.swift`
+- `Sources/etoVPNMacShared/TunnelProviderMessage.swift`
 
 The desktop-facing bridge contract is documented in:
 

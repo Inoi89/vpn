@@ -1,4 +1,5 @@
 import Foundation
+import NetworkExtension
 import etoVPNMacShared
 
 struct TunnelConfiguration {
@@ -37,6 +38,30 @@ final class TunnelControlStore {
     }
 
     func loadConfiguration() throws -> TunnelConfiguration {
+        throw TunnelControlStoreError.missingProfile
+    }
+
+    func loadConfiguration(from providerProtocol: NETunnelProviderProtocol?) throws -> TunnelConfiguration {
+        guard let providerProtocol,
+              let providerConfiguration = providerProtocol.providerConfiguration
+        else {
+            return try loadFallbackConfiguration()
+        }
+
+        if let data = providerConfiguration[RuntimeBridgeConstants.providerProfilePayloadKey] as? Data {
+            return try decodeConfiguration(from: data)
+        }
+
+        if let string = providerConfiguration[RuntimeBridgeConstants.providerProfilePayloadKey] as? String,
+           let data = string.data(using: .utf8)
+        {
+            return try decodeConfiguration(from: data)
+        }
+
+        return try loadFallbackConfiguration()
+    }
+
+    private func loadFallbackConfiguration() throws -> TunnelConfiguration {
         // Temporary scaffold fallback only.
         // The target path is to decode the profile payload from
         // `protocolConfiguration.providerConfiguration`.
@@ -44,10 +69,13 @@ final class TunnelControlStore {
             throw TunnelControlStoreError.missingProfile
         }
 
+        return try decodeConfiguration(from: data)
+    }
+
+    private func decodeConfiguration(from data: Data) throws -> TunnelConfiguration {
         guard let profile = try? decoder.decode(TunnelProfilePayload.self, from: data) else {
             throw TunnelControlStoreError.unreadableProfile
         }
-
         return TunnelConfiguration(profile: profile)
     }
 }
