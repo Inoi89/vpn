@@ -2,32 +2,30 @@ import Foundation
 import NetworkExtension
 
 enum PacketTunnelNetworkSettingsBuilder {
-    static func build(from configuration: TunnelConfiguration) throws -> NEPacketTunnelNetworkSettings {
-        let profile = configuration.profile
-        let remoteAddress = profile.endpoint ?? profile.profileName
-        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: remoteAddress)
+    static func build(from configuration: PacketTunnelConfiguration) throws -> NEPacketTunnelNetworkSettings {
+        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: configuration.tunnelRemoteAddress)
 
-        if let ipv4Settings = buildIPv4Settings(from: profile) {
+        if let ipv4Settings = buildIPv4Settings(from: configuration.interface.addresses, allowedIPs: configuration.peer.allowedIPs) {
             settings.ipv4Settings = ipv4Settings
         }
 
-        if let ipv6Settings = buildIPv6Settings(from: profile) {
+        if let ipv6Settings = buildIPv6Settings(from: configuration.interface.addresses, allowedIPs: configuration.peer.allowedIPs) {
             settings.ipv6Settings = ipv6Settings
         }
 
-        if !profile.dns.isEmpty {
-            settings.dnsSettings = NEDNSSettings(servers: profile.dns)
+        if !configuration.interface.dnsServers.isEmpty {
+            settings.dnsSettings = NEDNSSettings(servers: configuration.interface.dnsServers)
         }
 
-        if let mtu = profile.mtu {
+        if let mtu = configuration.interface.mtu {
             settings.mtu = NSNumber(value: mtu)
         }
 
         return settings
     }
 
-    private static func buildIPv4Settings(from profile: TunnelProfilePayload) -> NEIPv4Settings? {
-        let addresses = parseCidrs(profile.address).filter { !$0.isIPv6 }
+    private static func buildIPv4Settings(from addresses: [String], allowedIPs: [String]) -> NEIPv4Settings? {
+        let addresses = parseCidrs(addresses).filter { !$0.isIPv6 }
         guard !addresses.isEmpty else {
             return nil
         }
@@ -35,14 +33,14 @@ enum PacketTunnelNetworkSettingsBuilder {
         let settings = NEIPv4Settings(
             addresses: addresses.map(\.address),
             subnetMasks: addresses.map { subnetMask(forPrefixLength: $0.prefixLength) })
-        settings.includedRoutes = parseCidrs(profile.allowedIps)
+        settings.includedRoutes = parseCidrs(allowedIPs)
             .filter { !$0.isIPv6 }
             .map { route(for: $0) }
         return settings
     }
 
-    private static func buildIPv6Settings(from profile: TunnelProfilePayload) -> NEIPv6Settings? {
-        let addresses = parseCidrs(profile.address).filter(\.isIPv6)
+    private static func buildIPv6Settings(from addresses: [String], allowedIPs: [String]) -> NEIPv6Settings? {
+        let addresses = parseCidrs(addresses).filter(\.isIPv6)
         guard !addresses.isEmpty else {
             return nil
         }
@@ -50,21 +48,14 @@ enum PacketTunnelNetworkSettingsBuilder {
         let settings = NEIPv6Settings(
             addresses: addresses.map(\.address),
             networkPrefixLengths: addresses.map { NSNumber(value: $0.prefixLength) })
-        settings.includedRoutes = parseCidrs(profile.allowedIps)
+        settings.includedRoutes = parseCidrs(allowedIPs)
             .filter(\.isIPv6)
             .map { route(for: $0) }
         return settings
     }
 
-    private static func parseCidrs(_ raw: String?) -> [ParsedCidr] {
-        guard let raw else {
-            return []
-        }
-
-        return raw
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .compactMap(ParsedCidr.init)
+    private static func parseCidrs(_ rawValues: [String]) -> [ParsedCidr] {
+        rawValues.compactMap(ParsedCidr.init)
     }
 
     private static func subnetMask(forPrefixLength prefix: Int) -> String {

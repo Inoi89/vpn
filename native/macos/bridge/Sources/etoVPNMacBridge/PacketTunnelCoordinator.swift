@@ -32,7 +32,7 @@ final class PacketTunnelCoordinator {
             makeStatusSnapshot(
                 profile: profile,
                 connected: false,
-                state: .connecting,
+                state: .disconnected,
                 warnings: ["Staged profile persisted for packet tunnel handoff."],
                 lastError: nil))
     }
@@ -85,7 +85,7 @@ final class PacketTunnelCoordinator {
                         makeStatusSnapshot(
                             profile: profile,
                             connected: false,
-                            state: map(manager.connection.status),
+                            state: map(manager.connection.status, connected: false),
                             warnings: ["Tunnel manager configured; waiting for packet tunnel startup."],
                             lastError: nil))
                 }
@@ -140,18 +140,24 @@ final class PacketTunnelCoordinator {
         txBytes: Int64 = 0,
         latestHandshakeAtUtc: String? = nil) -> StatusResponsePayload
     {
+        let resolvedEndpoint = profile.tunnelConfig.endpoint ?? profile.endpoint
+        let resolvedAddress = profile.tunnelConfig.address ?? profile.address
+        let resolvedDns = profile.tunnelConfig.dns.isEmpty ? profile.dns : profile.tunnelConfig.dns
+        let resolvedMtu = profile.tunnelConfig.mtu ?? profile.mtu
+        let resolvedAllowedIps = profile.tunnelConfig.allowedIps.isEmpty ? profile.allowedIps : profile.tunnelConfig.allowedIps
+
         StatusResponsePayload(
             connected: connected,
             state: state,
             profileId: profile.profileId,
             profileName: profile.profileName,
-            serverEndpoint: profile.endpoint,
-            deviceIpv4Address: profile.address,
+            serverEndpoint: resolvedEndpoint,
+            deviceIpv4Address: resolvedAddress,
             deviceIpv6Address: nil,
-            dns: profile.dns,
-            mtu: profile.mtu,
-            allowedIps: profile.allowedIps,
-            routes: profile.allowedIps,
+            dns: resolvedDns,
+            mtu: resolvedMtu,
+            allowedIps: resolvedAllowedIps,
+            routes: resolvedAllowedIps,
             rxBytes: rxBytes,
             txBytes: txBytes,
             latestHandshakeAtUtc: latestHandshakeAtUtc,
@@ -168,7 +174,7 @@ final class PacketTunnelCoordinator {
                 self.makeStatusSnapshot(
                     profile: profile,
                     connected: current.connected,
-                    state: self.map(status),
+                    state: self.map(status, connected: current.connected),
                     warnings: current.warnings,
                     lastError: current.lastError,
                     rxBytes: current.rxBytes,
@@ -199,11 +205,18 @@ final class PacketTunnelCoordinator {
     }
 
     private func applyProviderStatus(_ providerStatus: TunnelProviderMessageStatusResponse, profile: TunnelProfilePayload) {
+        let normalizedState: RuntimeTunnelState
+        if providerStatus.state == .connected && !providerStatus.connected {
+            normalizedState = .degraded
+        } else {
+            normalizedState = providerStatus.state
+        }
+
         statusStore.update(
             makeStatusSnapshot(
                 profile: profile,
                 connected: providerStatus.connected,
-                state: providerStatus.state,
+                state: normalizedState,
                 warnings: providerStatus.warnings,
                 lastError: providerStatus.lastError,
                 rxBytes: providerStatus.rxBytes,
@@ -211,7 +224,7 @@ final class PacketTunnelCoordinator {
                 latestHandshakeAtUtc: providerStatus.latestHandshakeAtUtc))
     }
 
-    private func map(_ status: NEVPNStatus) -> RuntimeTunnelState {
+    private func map(_ status: NEVPNStatus, connected: Bool) -> RuntimeTunnelState {
         switch status
         {
             case .invalid, .disconnected:
@@ -219,7 +232,7 @@ final class PacketTunnelCoordinator {
             case .connecting:
                 return .connecting
             case .connected:
-                return .connected
+                return connected ? .connected : .degraded
             case .reasserting:
                 return .degraded
             case .disconnecting:

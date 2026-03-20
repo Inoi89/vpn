@@ -10,10 +10,13 @@ request the system to start or stop this extension.
 
 - Receive a staged tunnel profile from the bridge.
 - Read that staged profile from the shared control-store location.
+- Build a canonical packet-tunnel configuration object from the shared profile payload.
 - Prefer `NETunnelProviderProtocol.providerConfiguration` as the primary
   startup handoff.
 - Materialize DNS, routes, MTU, and addresses into
-  `NEPacketTunnelNetworkSettings`.
+  `NEPacketTunnelNetworkSettings` from the canonical config object.
+- Keep a redacted canonical `wg-quick` summary ready for the future native
+  WireGuard/AWG engine boundary.
 - Start and stop the actual WireGuard/AWG tunnel engine.
 - Emit status, counters, and handshake information that the bridge can publish
   back to the desktop client.
@@ -24,8 +27,11 @@ request the system to start or stop this extension.
 
 - `Sources/etoVPNPacketTunnel/PacketTunnelProvider.swift`
   Extension lifecycle entry point.
+- `Sources/etoVPNPacketTunnel/PacketTunnelConfiguration.swift`
+  Canonical packet-tunnel configuration models and builder from the shared
+  profile payload.
 - `Sources/etoVPNPacketTunnel/TunnelConfiguration.swift`
-  Placeholder typed configuration model for the staged profile.
+  Temporary staged profile store and provider-configuration decoder.
 - `Sources/etoVPNPacketTunnel/PacketTunnelNetworkSettingsBuilder.swift`
   Scaffold builder for `NEPacketTunnelNetworkSettings`.
 - `Sources/etoVPNPacketTunnel/TunnelRuntimeSnapshot.swift`

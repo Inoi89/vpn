@@ -3,9 +3,9 @@ import NetworkExtension
 import etoVPNMacShared
 
 final class PacketTunnelProvider: NEPacketTunnelProvider {
-    private let controlStore = TunnelControlStore()
+    private let profileStore = TunnelProfileStore()
     private let tunnelAdapter = WireGuardTunnelAdapter()
-    private var activeConfiguration: TunnelConfiguration?
+    private var activeConfiguration: PacketTunnelConfiguration?
 
     override func startTunnel(
         options: [String : NSObject]?,
@@ -13,7 +13,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     {
         do {
             let providerProtocol = protocolConfiguration as? NETunnelProviderProtocol
-            let configuration = try controlStore.loadConfiguration(from: providerProtocol)
+            let profile = try profileStore.loadProfile(from: providerProtocol)
+            let configuration = try PacketTunnelConfigurationBuilder.build(from: profile)
             activeConfiguration = configuration
             try applyScaffoldNetworkSettings(using: configuration, completionHandler: completionHandler)
         } catch {
@@ -28,7 +29,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     {
         tunnelAdapter.stop()
         activeConfiguration = nil
-        try? controlStore.clearConfiguration()
+        try? profileStore.clearProfile()
         completionHandler()
     }
 
@@ -54,7 +55,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     }
 
     private func applyScaffoldNetworkSettings(
-        using configuration: TunnelConfiguration,
+        using configuration: PacketTunnelConfiguration,
         completionHandler: @escaping (Error?) -> Void)
         throws
     {
@@ -72,11 +73,18 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             }
 
             self.tunnelAdapter.start(with: configuration)
-            completionHandler(PacketTunnelScaffoldError.notImplemented)
+            completionHandler(PacketTunnelScaffoldError.engineIntegrationNotImplemented)
         }
     }
 }
 
-private enum PacketTunnelScaffoldError: Error {
-    case notImplemented
+private enum PacketTunnelScaffoldError: Error, LocalizedError {
+    case engineIntegrationNotImplemented
+
+    var errorDescription: String? {
+        switch self {
+        case .engineIntegrationNotImplemented:
+            return "The macOS packet tunnel scaffold can apply network settings, but the native WireGuard/AWG engine integration is not implemented yet."
+        }
+    }
 }

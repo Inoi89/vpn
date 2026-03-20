@@ -259,3 +259,13 @@ This scaffold is not yet a real VPN runtime. Phase 2 is successful when:
 2. The native helper shape is explicit and ready for `NetworkExtension`.
 3. The desktop adapter can evolve against a stable bridge contract instead of
    inventing one later.
+
+## 2026-03-21 Scaffold update
+
+- The packet-tunnel scaffold now materializes a canonical WG/AWG runtime
+  configuration from the shared profile payload before applying network
+  settings.
+- The provider keeps a redacted `wg-quick` summary ready for the future native
+  WireGuard/AWG engine boundary.
+- The bridge/provider path should not report optimistic `connected` state
+  unless the packet tunnel explicitly confirms `connected = true`.

@@ -2,15 +2,7 @@ import Foundation
 import NetworkExtension
 import etoVPNMacShared
 
-struct TunnelConfiguration {
-    let profile: TunnelProfilePayload
-
-    init(profile: TunnelProfilePayload) {
-        self.profile = profile
-    }
-}
-
-final class TunnelControlStore {
+final class TunnelProfileStore {
     private let fileURL: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -25,62 +17,58 @@ final class TunnelControlStore {
         self.decoder = decoder
     }
 
-    func saveConfiguration(_ configuration: TunnelConfiguration) {
-        guard let data = try? encoder.encode(configuration.profile) else {
+    func saveProfile(_ profile: TunnelProfilePayload) {
+        guard let data = try? encoder.encode(profile) else {
             return
         }
 
         try? data.write(to: fileURL, options: .atomic)
     }
 
-    func clearConfiguration() throws {
+    func clearProfile() throws {
         try FileManager.default.removeItem(at: fileURL)
     }
 
-    func loadConfiguration() throws -> TunnelConfiguration {
-        throw TunnelControlStoreError.missingProfile
-    }
-
-    func loadConfiguration(from providerProtocol: NETunnelProviderProtocol?) throws -> TunnelConfiguration {
+    func loadProfile(from providerProtocol: NETunnelProviderProtocol?) throws -> TunnelProfilePayload {
         guard let providerProtocol,
               let providerConfiguration = providerProtocol.providerConfiguration
         else {
-            return try loadFallbackConfiguration()
+            return try loadFallbackProfile()
         }
 
         if let data = providerConfiguration[RuntimeBridgeConstants.providerProfilePayloadKey] as? Data {
-            return try decodeConfiguration(from: data)
+            return try decodeProfile(from: data)
         }
 
         if let string = providerConfiguration[RuntimeBridgeConstants.providerProfilePayloadKey] as? String,
            let data = string.data(using: .utf8)
         {
-            return try decodeConfiguration(from: data)
+            return try decodeProfile(from: data)
         }
 
-        return try loadFallbackConfiguration()
+        return try loadFallbackProfile()
     }
 
-    private func loadFallbackConfiguration() throws -> TunnelConfiguration {
+    private func loadFallbackProfile() throws -> TunnelProfilePayload {
         // Temporary scaffold fallback only.
         // The target path is to decode the profile payload from
         // `protocolConfiguration.providerConfiguration`.
         guard let data = try? Data(contentsOf: fileURL) else {
-            throw TunnelControlStoreError.missingProfile
+            throw TunnelProfileStoreError.missingProfile
         }
 
-        return try decodeConfiguration(from: data)
+        return try decodeProfile(from: data)
     }
 
-    private func decodeConfiguration(from data: Data) throws -> TunnelConfiguration {
+    private func decodeProfile(from data: Data) throws -> TunnelProfilePayload {
         guard let profile = try? decoder.decode(TunnelProfilePayload.self, from: data) else {
-            throw TunnelControlStoreError.unreadableProfile
+            throw TunnelProfileStoreError.unreadableProfile
         }
-        return TunnelConfiguration(profile: profile)
+        return profile
     }
 }
 
-private enum TunnelControlStoreError: Error, LocalizedError {
+private enum TunnelProfileStoreError: Error, LocalizedError {
     case missingProfile
     case unreadableProfile
 
