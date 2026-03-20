@@ -38,6 +38,10 @@ operations that should not live in the C# UI layer.
   `NEVPNStatusDidChangeNotification` observer scaffold.
 - `Sources/etoVPNMacBridge/TunnelStatusPoller.swift`
   `sendProviderMessage` status polling scaffold.
+- `Info.plist`
+  macOS helper bundle metadata for the generated Xcode project.
+- `etoVPNMacBridge.entitlements`
+  Bridge app sandbox and VPN/network entitlements scaffold.
 
 ## Runtime contract
 

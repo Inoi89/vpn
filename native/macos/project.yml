@@ -1,0 +1,60 @@
+name: etoVPNMac
+
+options:
+  bundleIdPrefix: com.etovpn
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MACOSX_DEPLOYMENT_TARGET: 11.0
+    SWIFT_VERSION: 5.0
+
+targets:
+  etoVPNMacShared:
+    type: framework
+    platform: macOS
+    sources:
+      - path: shared/Sources/etoVPNMacShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.etovpn.shared
+        PRODUCT_NAME: etoVPNMacShared
+        GENERATE_INFOPLIST_FILE: YES
+
+  etoVPNMacBridge:
+    type: application
+    platform: macOS
+    sources:
+      - path: bridge/Sources/etoVPNMacBridge
+    info:
+      path: bridge/Info.plist
+    entitlements:
+      path: bridge/etoVPNMacBridge.entitlements
+    dependencies:
+      - target: etoVPNMacShared
+      - target: etoVPNPacketTunnel
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.etovpn.bridge
+        PRODUCT_NAME: etoVPNMacBridge
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+
+  etoVPNPacketTunnel:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: packet-tunnel/Sources/etoVPNPacketTunnel
+    info:
+      path: packet-tunnel/Info.plist
+    entitlements:
+      path: packet-tunnel/etoVPNPacketTunnel.entitlements
+    dependencies:
+      - target: etoVPNMacShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.etovpn.packet-tunnel
+        PRODUCT_NAME: etoVPNPacketTunnel
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic

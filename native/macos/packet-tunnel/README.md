@@ -50,3 +50,6 @@ request the system to start or stop this extension.
   Temporary no-op engine that preserves the intended lifecycle surface.
 - `Info.plist`
   Packet tunnel bundle metadata.
+- `etoVPNPacketTunnel.entitlements`
+  NetworkExtension and app-group entitlements scaffold for the generated Xcode
+  project.
