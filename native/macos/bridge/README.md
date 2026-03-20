@@ -23,6 +23,8 @@ operations that should not live in the C# UI layer.
   Composition root for the helper.
 - `Sources/etoVPNMacBridge/BridgeServer.swift`
   Socket listener placeholder.
+- `Sources/etoVPNMacBridge/BridgeLineProtocol.swift`
+  Newline-delimited JSON envelope decoding and dispatch skeleton.
 - `Sources/etoVPNMacBridge/BridgeCommandDispatcher.swift`
   Command routing and response shaping.
 - `Sources/etoVPNMacBridge/PacketTunnelCoordinator.swift`

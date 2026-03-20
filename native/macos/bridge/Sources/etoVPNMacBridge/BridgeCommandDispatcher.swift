@@ -2,63 +2,113 @@ import Foundation
 import etoVPNMacShared
 
 final class BridgeCommandDispatcher {
+    private let socketPath: URL
     private let coordinator: PacketTunnelCoordinator
     private let statusStore: StatusSnapshotStore
 
     init(
+        socketPath: URL,
         coordinator: PacketTunnelCoordinator,
         statusStore: StatusSnapshotStore)
     {
+        self.socketPath = socketPath
         self.coordinator = coordinator
         self.statusStore = statusStore
     }
 
-    func handleHello(_ payload: HelloRequestPayload) -> RuntimeBridgeSuccessEnvelope<HealthResponsePayload> {
-        RuntimeBridgeSuccessEnvelope(
+    func dispatchLine(_ request: RuntimeBridgeRequest) -> String {
+        do {
+            switch (request.command, request.payload) {
+            case (.hello, .hello(let payload)):
+                return try RuntimeBridgeWireCodec.encodeLine(handleHello(requestId: request.id, payload: payload))
+            case (.health, .empty):
+                return try RuntimeBridgeWireCodec.encodeLine(handleHealth(requestId: request.id))
+            case (.configure, .configure(let payload)):
+                return try RuntimeBridgeWireCodec.encodeLine(handleConfigure(requestId: request.id, payload: payload))
+            case (.activate, .activate(let payload)):
+                return try RuntimeBridgeWireCodec.encodeLine(handleActivate(requestId: request.id, payload: payload))
+            case (.deactivate, .deactivate(let payload)):
+                return try RuntimeBridgeWireCodec.encodeLine(handleDeactivate(requestId: request.id, payload: payload))
+            case (.status, .empty):
+                return try RuntimeBridgeWireCodec.encodeLine(handleStatus(requestId: request.id))
+            case (.logs, .empty):
+                return try RuntimeBridgeWireCodec.encodeLine(handleLogs(requestId: request.id))
+            case (.quit, .empty):
+                return try RuntimeBridgeWireCodec.encodeLine(handleQuit(requestId: request.id))
+            default:
+                return RuntimeBridgeWireCodec.encodeFailureLine(
+                    id: request.id,
+                    code: "invalid_request",
+                    message: "The request envelope did not match the declared command.",
+                    details: "Command: \(request.command.rawValue)")
+            }
+        } catch {
+            return RuntimeBridgeWireCodec.encodeFailureLine(
+                id: request.id,
+                code: "internal_error",
+                message: "The bridge could not encode a response.",
+                details: error.localizedDescription)
+        }
+    }
+
+    func handleHello(
+        requestId: String,
+        payload: HelloRequestPayload) -> RuntimeBridgeSuccessEnvelope<HealthResponsePayload>
+    {
+        _ = payload
+        return RuntimeBridgeSuccessEnvelope(
+            id: requestId,
             payload: HealthResponsePayload(
                 helperVersion: "0.0.0-scaffold",
                 protocolVersion: RuntimeBridgeConstants.protocolVersion,
-                socketPath: SocketPathResolver.defaultSocketURL().path,
+                socketPath: socketPath.path,
                 capabilities: RuntimeBridgeConstants.capabilities))
     }
 
-    func handleHealth() -> RuntimeBridgeSuccessEnvelope<HealthResponsePayload> {
+    func handleHealth(requestId: String) -> RuntimeBridgeSuccessEnvelope<HealthResponsePayload> {
         RuntimeBridgeSuccessEnvelope(
+            id: requestId,
             payload: HealthResponsePayload(
                 helperVersion: "0.0.0-scaffold",
                 protocolVersion: RuntimeBridgeConstants.protocolVersion,
-                socketPath: SocketPathResolver.defaultSocketURL().path,
+                socketPath: socketPath.path,
                 capabilities: RuntimeBridgeConstants.capabilities))
     }
 
-    func handleConfigure(_ payload: ConfigureRequestPayload) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload> {
+    func handleConfigure(
+        requestId: String,
+        payload: ConfigureRequestPayload) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload>
+    {
         coordinator.stageProfile(payload)
-        let snapshot = statusStore.snapshot()
-        return RuntimeBridgeSuccessEnvelope(payload: snapshot)
+        return RuntimeBridgeSuccessEnvelope(id: requestId, payload: statusStore.snapshot())
     }
 
-    func handleActivate(_ payload: ActivateRequestPayload) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload> {
+    func handleActivate(
+        requestId: String,
+        payload: ActivateRequestPayload) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload>
+    {
         coordinator.stageProfile(payload)
         coordinator.requestActivation()
-        let snapshot = statusStore.snapshot()
-        return RuntimeBridgeSuccessEnvelope(payload: snapshot)
+        return RuntimeBridgeSuccessEnvelope(id: requestId, payload: statusStore.snapshot())
     }
 
-    func handleDeactivate(_ payload: DeactivateRequestPayload?) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload> {
+    func handleDeactivate(
+        requestId: String,
+        payload: DeactivateRequestPayload?) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload>
+    {
         coordinator.requestDeactivation(profileId: payload?.profileId)
-        let snapshot = statusStore.snapshot()
-        return RuntimeBridgeSuccessEnvelope(payload: snapshot)
+        return RuntimeBridgeSuccessEnvelope(id: requestId, payload: statusStore.snapshot())
     }
 
-    func handleStatus() -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload> {
-        RuntimeBridgeSuccessEnvelope(payload: statusStore.snapshot())
+    func handleStatus(requestId: String) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload> {
+        RuntimeBridgeSuccessEnvelope(id: requestId, payload: statusStore.snapshot())
     }
 
-    func handleLogs() -> RuntimeBridgeSuccessEnvelope<LogsResponsePayload> {
-        RuntimeBridgeSuccessEnvelope(payload: LogsResponsePayload(entries: []))
+    func handleLogs(requestId: String) -> RuntimeBridgeSuccessEnvelope<LogsResponsePayload> {
+        RuntimeBridgeSuccessEnvelope(id: requestId, payload: LogsResponsePayload(entries: []))
     }
 
-    func handleQuit() -> RuntimeBridgeSuccessEnvelope<QuitResponsePayload> {
-        RuntimeBridgeSuccessEnvelope(payload: QuitResponsePayload(accepted: true))
+    func handleQuit(requestId: String) -> RuntimeBridgeSuccessEnvelope<QuitResponsePayload> {
+        RuntimeBridgeSuccessEnvelope(id: requestId, payload: QuitResponsePayload(accepted: true))
     }
 }

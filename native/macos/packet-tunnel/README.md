@@ -9,6 +9,7 @@ request the system to start or stop this extension.
 ## Responsibilities
 
 - Receive a staged tunnel profile from the bridge.
+- Read that staged profile from the shared control-store location.
 - Materialize DNS, routes, MTU, and addresses into
   `NEPacketTunnelNetworkSettings`.
 - Start and stop the actual WireGuard/AWG tunnel engine.

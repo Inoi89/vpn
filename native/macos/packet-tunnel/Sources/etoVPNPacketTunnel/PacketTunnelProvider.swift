@@ -25,15 +25,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         completionHandler: @escaping () -> Void)
     {
         tunnelAdapter.stop()
+        try? controlStore.clearConfiguration()
         completionHandler()
     }
 
     private func applyScaffoldNetworkSettings(using configuration: TunnelConfiguration) {
         // Placeholder only.
         //
-        // The real implementation should build `NEPacketTunnelNetworkSettings`
-        // from `configuration`, apply DNS/routes/MTU, and then start the tunnel
-        // backend before calling the completion handler.
+        // The real implementation should:
+        // - prefer `protocolConfiguration.providerConfiguration` as the primary handoff
+        // - fall back to the staged control-store only while the scaffold exists
+        // - build `NEPacketTunnelNetworkSettings` from `configuration`
+        // - apply DNS/routes/MTU
+        // - start the tunnel backend before calling the completion handler
         _ = configuration
     }
 }
