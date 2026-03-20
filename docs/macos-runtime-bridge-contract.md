@@ -273,3 +273,6 @@ This scaffold is not yet a real VPN runtime. Phase 2 is successful when:
   WireGuard/AWG engine boundary.
 - The bridge/provider path should not report optimistic `connected` state
   unless the packet tunnel explicitly confirms `connected = true`.
+- The packet tunnel now also exposes a provider-side
+  `runtimeConfiguration` app-message path for future engine debug/runtime
+  inspection, even though the bridge does not consume it yet.

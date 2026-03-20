@@ -3,10 +3,12 @@ import Foundation
 public struct TunnelProviderMessageRequest: Codable {
     public let action: String
     public let tunnelId: String?
+    public let configuration: String?
 
-    public init(action: String, tunnelId: String? = nil) {
+    public init(action: String, tunnelId: String? = nil, configuration: String? = nil) {
         self.action = action
         self.tunnelId = tunnelId
+        self.configuration = configuration
     }
 }
 
@@ -35,5 +37,15 @@ public struct TunnelProviderMessageStatusResponse: Codable {
         self.latestHandshakeAtUtc = latestHandshakeAtUtc
         self.warnings = warnings
         self.lastError = lastError
+    }
+}
+
+public struct TunnelProviderMessageRuntimeConfigurationResponse: Codable {
+    public let interfaceName: String?
+    public let configuration: String?
+
+    public init(interfaceName: String?, configuration: String?) {
+        self.interfaceName = interfaceName
+        self.configuration = configuration
     }
 }

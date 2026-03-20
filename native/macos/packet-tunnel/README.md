@@ -18,6 +18,8 @@ request the system to start or stop this extension.
 - Keep a redacted canonical `wg-quick` summary ready for the future native
   WireGuard/AWG engine boundary.
 - Start and stop the actual WireGuard/AWG tunnel engine.
+- Expose a provider-side runtime-configuration/debug surface that can later map
+  to the real engine runtime configuration.
 - Emit status, counters, and handshake information that the bridge can publish
   back to the desktop client.
 - Answer bridge-side `sendProviderMessage` status requests with a compact JSON
@@ -38,5 +40,9 @@ request the system to start or stop this extension.
   Provider-side runtime snapshot surfaced through `handleAppMessage`.
 - `Sources/etoVPNPacketTunnel/WireGuardTunnelAdapter.swift`
   Placeholder boundary where the tunnel engine integration should live.
+- `Sources/etoVPNPacketTunnel/PacketTunnelEngine.swift`
+  Engine protocol modeled after the future WireGuardKit/AWG boundary.
+- `Sources/etoVPNPacketTunnel/ScaffoldWireGuardEngine.swift`
+  Temporary no-op engine that preserves the intended lifecycle surface.
 - `Info.plist`
   Packet tunnel bundle metadata.

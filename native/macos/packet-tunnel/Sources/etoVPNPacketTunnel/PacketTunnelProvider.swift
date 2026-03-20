@@ -26,10 +26,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         with reason: NEProviderStopReason,
         completionHandler: @escaping () -> Void)
     {
-        tunnelAdapter.stop()
-        activeConfiguration = nil
-        try? profileStore.clearProfile()
-        completionHandler()
+        tunnelAdapter.stop { [weak self] _ in
+            self?.activeConfiguration = nil
+            try? self?.profileStore.clearProfile()
+            completionHandler()
+        }
     }
 
     override func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)? = nil) {
@@ -46,6 +47,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         {
             case "status":
                 let response = tunnelAdapter.currentSnapshot().asProviderMessage()
+                completionHandler?(try? encoder.encode(response))
+
+            case "runtimeConfiguration":
+                let response = TunnelProviderMessageRuntimeConfigurationResponse(
+                    interfaceName: tunnelAdapter.interfaceName(),
+                    configuration: tunnelAdapter.preparedConfigurationSummary())
                 completionHandler?(try? encoder.encode(response))
 
             default:
@@ -71,19 +78,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 return
             }
 
-            self.tunnelAdapter.start(with: configuration)
-            completionHandler(PacketTunnelScaffoldError.engineIntegrationNotImplemented)
-        }
-    }
-}
-
-private enum PacketTunnelScaffoldError: Error, LocalizedError {
-    case engineIntegrationNotImplemented
-
-    var errorDescription: String? {
-        switch self {
-        case .engineIntegrationNotImplemented:
-            return "The macOS packet tunnel scaffold can apply network settings, but the native WireGuard/AWG engine integration is not implemented yet."
+            self.tunnelAdapter.start(with: configuration) { engineError in
+                completionHandler(engineError)
+            }
         }
     }
 }
