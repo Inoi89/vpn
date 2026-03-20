@@ -1,11 +1,11 @@
 import Foundation
-import Dispatch
 import NetworkExtension
 import etoVPNMacShared
 
 final class PacketTunnelCoordinator {
     private let stagingStore: TunnelProfileStagingStore
     private let statusStore: StatusSnapshotStore
+    private let diagnosticsStore: ProviderDiagnosticsStore
     private let managerStore: PacketTunnelManagerStore
     private let statusObserver: TunnelManagerStatusObserver
     private let statusPoller: TunnelStatusPoller
@@ -15,12 +15,14 @@ final class PacketTunnelCoordinator {
     init(
         stagingStore: TunnelProfileStagingStore,
         statusStore: StatusSnapshotStore,
+        diagnosticsStore: ProviderDiagnosticsStore,
         managerStore: PacketTunnelManagerStore,
         statusObserver: TunnelManagerStatusObserver,
         statusPoller: TunnelStatusPoller)
     {
         self.stagingStore = stagingStore
         self.statusStore = statusStore
+        self.diagnosticsStore = diagnosticsStore
         self.managerStore = managerStore
         self.statusObserver = statusObserver
         self.statusPoller = statusPoller
@@ -63,6 +65,7 @@ final class PacketTunnelCoordinator {
 
         stagedProfile = profile
         stagingStore.save(profile)
+        diagnosticsStore.clear()
         statusStore.update(
             makeStatusSnapshot(
                 profile: profile,
@@ -75,12 +78,42 @@ final class PacketTunnelCoordinator {
             do {
                 let manager = try await managerStore.loadOrCreateManager(for: profile)
                 try await managerStore.configure(manager, with: profile)
-                try managerStore.start(manager)
                 activeManager = manager
                 beginObserving(manager: manager, profile: profile)
 
+                let providerConfiguration = try WireGuardProviderConfiguration.from(profile: profile)
+                let shouldAttemptUpdate = manager.connection.status != .invalid
+                    && manager.connection.status != .disconnected
+                    && manager.connection.status != .disconnecting
+
+                var updatedInPlace = false
+                if shouldAttemptUpdate {
+                    do {
+                        if let updateResponse = try await managerStore.requestUpdate(
+                            from: manager,
+                            configuration: providerConfiguration.wgQuickConfig())
+                        {
+                            diagnosticsStore.update(
+                                logs: nil,
+                                runtimeConfigurationSummary: updateResponse.configuration,
+                                engineName: updateResponse.engineName,
+                                interfaceName: updateResponse.interfaceName)
+                            diagnosticsStore.markRefreshed()
+                            updatedInPlace = true
+                        }
+                    } catch {
+                        updatedInPlace = false
+                    }
+                }
+
+                if !updatedInPlace {
+                    try managerStore.start(manager)
+                }
+
                 if let providerStatus = try await managerStore.requestStatus(from: manager) {
                     applyProviderStatus(providerStatus, profile: profile)
+                    diagnosticsStore.update(from: providerStatus)
+                    await refreshProviderDiagnostics(manager: manager)
                 } else {
                     statusStore.update(
                         makeStatusSnapshot(
@@ -105,6 +138,7 @@ final class PacketTunnelCoordinator {
     func requestDeactivation(profileId: String?) {
         stagedProfile = nil
         stagingStore.clear()
+        diagnosticsStore.clear()
         statusObserver.stop()
         statusPoller.stop()
         if let activeManager {
@@ -132,29 +166,7 @@ final class PacketTunnelCoordinator {
     }
 
     func requestLogs() -> [String] {
-        guard let activeManager else {
-            return []
-        }
-
-        let semaphore = DispatchSemaphore(value: 0)
-        var entries: [String] = []
-
-        Task {
-            defer { semaphore.signal() }
-
-            do {
-                if let response = try await managerStore.requestLogs(from: activeManager) {
-                    entries = response.entries
-                }
-            } catch {
-                entries = ["Provider log request failed: \(error.localizedDescription)"]
-            }
-        }
-
-        guard semaphore.wait(timeout: .now() + 3) == .success else {
-            return ["Provider log request timed out."]
-        }
-        return entries
+        diagnosticsStore.logs()
     }
 
     private func makeStatusSnapshot(
@@ -213,7 +225,13 @@ final class PacketTunnelCoordinator {
             manager: manager,
             onStatus: { [weak self] providerStatus in
                 guard let self else { return }
+                self.diagnosticsStore.update(from: providerStatus)
                 self.applyProviderStatus(providerStatus, profile: profile)
+                if self.diagnosticsStore.shouldRefresh() {
+                    Task {
+                        await self.refreshProviderDiagnostics(manager: manager)
+                    }
+                }
             },
             onFailure: { [weak self] error in
                 guard let self else { return }
@@ -229,6 +247,43 @@ final class PacketTunnelCoordinator {
                         txBytes: current.txBytes,
                         latestHandshakeAtUtc: current.latestHandshakeAtUtc))
             })
+    }
+
+    private func refreshProviderDiagnostics(manager: NETunnelProviderManager) async {
+        var logEntries: [String]?
+        var runtimeConfigurationSummary: String?
+        var engineName: String?
+        var interfaceName: String?
+        var failureMessage: String?
+
+        do {
+            if let response = try await managerStore.requestLogs(from: manager) {
+                logEntries = response.entries
+            }
+        } catch {
+            failureMessage = error.localizedDescription
+        }
+
+        do {
+            if let response = try await managerStore.requestRuntimeConfiguration(from: manager) {
+                runtimeConfigurationSummary = response.configuration
+                engineName = response.engineName
+                interfaceName = response.interfaceName
+            }
+        } catch {
+            failureMessage = failureMessage ?? error.localizedDescription
+        }
+
+        if logEntries == nil, !diagnosticsStore.hasLogs(), let failureMessage {
+            logEntries = ["Provider diagnostics request failed: \(failureMessage)"]
+        }
+
+        diagnosticsStore.update(
+            logs: logEntries,
+            runtimeConfigurationSummary: runtimeConfigurationSummary,
+            engineName: engineName,
+            interfaceName: interfaceName)
+        diagnosticsStore.markRefreshed()
     }
 
     private func applyProviderStatus(_ providerStatus: TunnelProviderMessageStatusResponse, profile: TunnelProfilePayload) {

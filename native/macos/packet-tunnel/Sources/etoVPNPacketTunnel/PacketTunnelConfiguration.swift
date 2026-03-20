@@ -51,6 +51,19 @@ struct PacketTunnelPeerConfiguration: Codable {
 }
 
 enum PacketTunnelConfigurationBuilder {
+    static func build(
+        fromWgQuickConfig wgQuickConfig: String,
+        profileId: String,
+        profileName: String,
+        format: String) throws -> PacketTunnelConfiguration
+    {
+        try WgQuickConfigurationParser.parse(
+            wgQuickConfig,
+            profileId: profileId,
+            profileName: profileName,
+            format: format)
+    }
+
     static func build(from profile: TunnelProfilePayload) throws -> PacketTunnelConfiguration {
         let tunnelConfig = profile.tunnelConfig
         let interfaceAddresses = parseDelimitedValues(tunnelConfig.address ?? profile.address)

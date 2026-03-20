@@ -5,15 +5,18 @@ final class BridgeCommandDispatcher {
     private let socketPath: URL
     private let coordinator: PacketTunnelCoordinator
     private let statusStore: StatusSnapshotStore
+    private let diagnosticsStore: ProviderDiagnosticsStore
 
     init(
         socketPath: URL,
         coordinator: PacketTunnelCoordinator,
-        statusStore: StatusSnapshotStore)
+        statusStore: StatusSnapshotStore,
+        diagnosticsStore: ProviderDiagnosticsStore)
     {
         self.socketPath = socketPath
         self.coordinator = coordinator
         self.statusStore = statusStore
+        self.diagnosticsStore = diagnosticsStore
     }
 
     func dispatchLine(_ request: RuntimeBridgeRequest) -> String {
@@ -101,7 +104,31 @@ final class BridgeCommandDispatcher {
     }
 
     func handleStatus(requestId: String) -> RuntimeBridgeSuccessEnvelope<StatusResponsePayload> {
-        RuntimeBridgeSuccessEnvelope(id: requestId, payload: statusStore.snapshot())
+        let snapshot = statusStore.snapshot()
+        let diagnosticsWarnings = diagnosticsStore.warningLines()
+        guard !diagnosticsWarnings.isEmpty else {
+            return RuntimeBridgeSuccessEnvelope(id: requestId, payload: snapshot)
+        }
+
+        return RuntimeBridgeSuccessEnvelope(
+            id: requestId,
+            payload: StatusResponsePayload(
+                connected: snapshot.connected,
+                state: snapshot.state,
+                profileId: snapshot.profileId,
+                profileName: snapshot.profileName,
+                serverEndpoint: snapshot.serverEndpoint,
+                deviceIpv4Address: snapshot.deviceIpv4Address,
+                deviceIpv6Address: snapshot.deviceIpv6Address,
+                dns: snapshot.dns,
+                mtu: snapshot.mtu,
+                allowedIps: snapshot.allowedIps,
+                routes: snapshot.routes,
+                rxBytes: snapshot.rxBytes,
+                txBytes: snapshot.txBytes,
+                latestHandshakeAtUtc: snapshot.latestHandshakeAtUtc,
+                warnings: snapshot.warnings + diagnosticsWarnings,
+                lastError: snapshot.lastError))
     }
 
     func handleLogs(requestId: String) -> RuntimeBridgeSuccessEnvelope<LogsResponsePayload> {

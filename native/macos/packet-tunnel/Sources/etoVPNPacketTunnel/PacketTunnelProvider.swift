@@ -49,6 +49,43 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 let response = tunnelAdapter.currentSnapshot().asProviderMessage()
                 completionHandler?(try? encoder.encode(response))
 
+            case "update":
+                guard let activeConfiguration,
+                      let configString = request.configuration?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !configString.isEmpty
+                else {
+                    completionHandler?(nil)
+                    return
+                }
+
+                do {
+                    let updatedConfiguration = try PacketTunnelConfigurationBuilder.build(
+                        fromWgQuickConfig: configString,
+                        profileId: activeConfiguration.profileId,
+                        profileName: activeConfiguration.profileName,
+                        format: activeConfiguration.format)
+                    tunnelAdapter.update(with: updatedConfiguration) { [weak self] engineError in
+                        guard let self else {
+                            completionHandler?(nil)
+                            return
+                        }
+
+                        guard engineError == nil else {
+                            completionHandler?(nil)
+                            return
+                        }
+
+                        self.activeConfiguration = updatedConfiguration
+                        let response = TunnelProviderMessageRuntimeConfigurationResponse(
+                            interfaceName: self.tunnelAdapter.interfaceName(),
+                            engineName: self.tunnelAdapter.currentSnapshot().engineName,
+                            configuration: self.tunnelAdapter.preparedConfigurationSummary())
+                        completionHandler?(try? encoder.encode(response))
+                    }
+                } catch {
+                    completionHandler?(nil)
+                }
+
             case "logs":
                 let response = TunnelProviderMessageLogsResponse(entries: tunnelAdapter.logEntries())
                 completionHandler?(try? encoder.encode(response))

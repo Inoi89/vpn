@@ -60,6 +60,17 @@ final class PacketTunnelManagerStore {
             as: TunnelProviderMessageRuntimeConfigurationResponse.self)
     }
 
+    func requestUpdate(
+        from manager: NETunnelProviderManager,
+        configuration: String) async throws -> TunnelProviderMessageRuntimeConfigurationResponse?
+    {
+        try await requestProviderMessage(
+            from: manager,
+            action: "update",
+            configuration: configuration,
+            as: TunnelProviderMessageRuntimeConfigurationResponse.self)
+    }
+
     func stop(_ manager: NETunnelProviderManager) {
         guard let session = manager.connection as? NETunnelProviderSession else {
             return
@@ -121,13 +132,14 @@ final class PacketTunnelManagerStore {
     private func requestProviderMessage<Response: Decodable>(
         from manager: NETunnelProviderManager,
         action: String,
+        configuration: String? = nil,
         as responseType: Response.Type) async throws -> Response?
     {
         guard let session = manager.connection as? NETunnelProviderSession else {
             throw PacketTunnelManagerStoreError.unexpectedSessionType
         }
 
-        let request = TunnelProviderMessageRequest(action: action)
+        let request = TunnelProviderMessageRequest(action: action, configuration: configuration)
         let encoder = JSONEncoder()
         let payload = try encoder.encode(request)
 

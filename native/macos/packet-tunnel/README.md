@@ -22,6 +22,8 @@ request the system to start or stop this extension.
 - Start and stop the actual WireGuard/AWG tunnel engine.
 - Expose a provider-side runtime-configuration/debug surface that can later map
   to the real engine runtime configuration.
+- Accept in-place `wg-quick` updates through `handleAppMessage` so the bridge
+  can prefer hot reconfiguration over a full tunnel restart.
 - Emit status, counters, and handshake information that the bridge can publish
   back to the desktop client.
 - Answer bridge-side `sendProviderMessage` status requests with a compact JSON

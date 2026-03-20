@@ -13,6 +13,8 @@ operations that should not live in the C# UI layer.
 - Dispatch `hello`, `health`, `configure`, `activate`, `deactivate`, `status`, `logs`, and `quit`.
 - Stage tunnel configuration for the packet tunnel extension.
 - Start or stop the tunnel through native macOS APIs.
+- Prefer in-place packet-tunnel updates through provider messages when the
+  tunnel is already active, instead of always forcing a fresh start.
 - Publish a stable status snapshot back to the desktop client.
 - Proxy provider-side `logs` and runtime-configuration requests through the
   tunnel manager when the packet tunnel exposes them.

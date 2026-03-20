@@ -7,6 +7,7 @@ struct BridgeApplication {
     static func `default`() -> BridgeApplication {
         let socketPath = SocketPathResolver.defaultSocketURL()
         let statusStore = StatusSnapshotStore()
+        let diagnosticsStore = ProviderDiagnosticsStore()
         let stagingStore = TunnelProfileStagingStore()
         let managerStore = PacketTunnelManagerStore()
         let statusObserver = TunnelManagerStatusObserver()
@@ -14,13 +15,15 @@ struct BridgeApplication {
         let coordinator = PacketTunnelCoordinator(
             stagingStore: stagingStore,
             statusStore: statusStore,
+            diagnosticsStore: diagnosticsStore,
             managerStore: managerStore,
             statusObserver: statusObserver,
             statusPoller: statusPoller)
         let dispatcher = BridgeCommandDispatcher(
             socketPath: socketPath,
             coordinator: coordinator,
-            statusStore: statusStore)
+            statusStore: statusStore,
+            diagnosticsStore: diagnosticsStore)
         let server = BridgeServer(
             socketPath: socketPath,
             dispatcher: dispatcher)
