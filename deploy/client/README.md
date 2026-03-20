@@ -117,3 +117,19 @@ Current infrastructure note:
 
 - `37.1.197.163` already serves the update payloads over HTTP
 - `vpn.udni.ru` now serves the update payloads over HTTPS
+
+## macOS smoke publish
+
+The repo now also contains the first macOS publish scaffold:
+
+- publish profiles:
+  - `UI/Properties/PublishProfiles/osx-arm64-selfcontained.pubxml`
+  - `UI/Properties/PublishProfiles/osx-x64-selfcontained.pubxml`
+- desktop publish entry point:
+  - `deploy/client/publish-macos.sh`
+- native handoff:
+  - `native/macos/build-native.sh`
+
+The end-to-end notes live in:
+
+- `docs/macos-build-and-test.md`

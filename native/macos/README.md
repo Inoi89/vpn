@@ -54,6 +54,13 @@ xcodebuild -project etoVPNMac.xcodeproj -scheme etoVPNMacBridge -configuration D
 xcodebuild -project etoVPNMac.xcodeproj -scheme etoVPNPacketTunnel -configuration Debug build
 ```
 
+Or use the repo-level helper that stages the native outputs exactly where the
+desktop publish script expects them:
+
+```bash
+./native/macos/build-native.sh --configuration Release --runtime osx-arm64
+```
+
 The bridge app target embeds the packet tunnel extension, so building or
 archiving `etoVPNMacBridge` is the path to a full macOS helper bundle.
 

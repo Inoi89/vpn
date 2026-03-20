@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONFIGURATION="${CONFIGURATION:-Release}"
+RUNTIME_IDENTIFIER="${RUNTIME_IDENTIFIER:-osx-arm64}"
+VERSION="${VERSION:-0.1.9}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-artifacts/client-publish}"
+ZIP_PACKAGE="${ZIP_PACKAGE:-0}"
+SKIP_NATIVE_BUILD="${SKIP_NATIVE_BUILD:-0}"
+NATIVE_OUTPUT_DIR="${NATIVE_OUTPUT_DIR:-}"
+BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-com.etovpn.desktop}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_PATH="${REPO_ROOT}/UI/VpnClient.UI.csproj"
+PUBLISH_DIR="${REPO_ROOT}/${OUTPUT_ROOT}/${RUNTIME_IDENTIFIER}"
+STAGING_DIR="${PUBLISH_DIR}/.publish"
+APP_BUNDLE_DIR="${PUBLISH_DIR}/etoVPN.app"
+APP_CONTENTS_DIR="${APP_BUNDLE_DIR}/Contents"
+APP_MACOS_DIR="${APP_CONTENTS_DIR}/MacOS"
+APP_RESOURCES_DIR="${APP_CONTENTS_DIR}/Resources"
+APP_HELPERS_DIR="${APP_CONTENTS_DIR}/Helpers"
+APP_PLUGINS_DIR="${APP_CONTENTS_DIR}/PlugIns"
+PUBLISH_PROFILE="${RUNTIME_IDENTIFIER}-selfcontained"
+INFO_PLIST_TEMPLATE="${REPO_ROOT}/deploy/client/macos/Info.plist"
+ICON_SOURCE="${REPO_ROOT}/UI/Assets/shield.png"
+NATIVE_BUILD_SCRIPT="${REPO_ROOT}/native/macos/build-native.sh"
+
+if [[ -d "${PUBLISH_DIR}" ]]; then
+  rm -rf "${PUBLISH_DIR}"
+fi
+
+mkdir -p "${STAGING_DIR}"
+
+dotnet publish "${PROJECT_PATH}" \
+  -c "${CONFIGURATION}" \
+  -r "${RUNTIME_IDENTIFIER}" \
+  /p:PublishProfile="${PUBLISH_PROFILE}" \
+  /p:Version="${VERSION}" \
+  -o "${STAGING_DIR}"
+
+if [[ "${SKIP_NATIVE_BUILD}" != "1" ]]; then
+  if [[ ! -x "${NATIVE_BUILD_SCRIPT}" ]]; then
+    echo "native build script is missing or not executable: ${NATIVE_BUILD_SCRIPT}" >&2
+    echo "Set SKIP_NATIVE_BUILD=1 to package only the Avalonia desktop publish output." >&2
+    exit 1
+  fi
+
+  "${NATIVE_BUILD_SCRIPT}" \
+    --configuration "${CONFIGURATION}" \
+    --runtime "${RUNTIME_IDENTIFIER}"
+fi
+
+if [[ -z "${NATIVE_OUTPUT_DIR}" ]]; then
+  NATIVE_OUTPUT_DIR="${REPO_ROOT}/artifacts/macos-native/${RUNTIME_IDENTIFIER}"
+fi
+
+mkdir -p "${APP_MACOS_DIR}" "${APP_RESOURCES_DIR}" "${APP_HELPERS_DIR}" "${APP_PLUGINS_DIR}"
+
+find "${STAGING_DIR}" -mindepth 1 -maxdepth 1 -print0 | while IFS= read -r -d '' entry; do
+  cp -R "${entry}" "${APP_MACOS_DIR}/"
+done
+
+sed \
+  -e "s|__BUNDLE_IDENTIFIER__|${BUNDLE_IDENTIFIER}|g" \
+  -e "s|__SHORT_VERSION__|${VERSION}|g" \
+  -e "s|__BUNDLE_VERSION__|${VERSION}|g" \
+  "${INFO_PLIST_TEMPLATE}" > "${APP_CONTENTS_DIR}/Info.plist"
+
+if [[ -f "${ICON_SOURCE}" ]]; then
+  cp "${ICON_SOURCE}" "${APP_RESOURCES_DIR}/shield.png"
+fi
+
+if command -v iconutil >/dev/null 2>&1 && command -v sips >/dev/null 2>&1 && [[ -f "${ICON_SOURCE}" ]]; then
+  ICONSET_DIR="${PUBLISH_DIR}/.iconset"
+  mkdir -p "${ICONSET_DIR}"
+
+  sips -z 16 16 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_16x16.png" >/dev/null
+  sips -z 32 32 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_16x16@2x.png" >/dev/null
+  sips -z 32 32 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_32x32.png" >/dev/null
+  sips -z 64 64 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_32x32@2x.png" >/dev/null
+  sips -z 128 128 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_128x128.png" >/dev/null
+  sips -z 256 256 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_128x128@2x.png" >/dev/null
+  sips -z 256 256 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_256x256.png" >/dev/null
+  sips -z 512 512 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_256x256@2x.png" >/dev/null
+  sips -z 512 512 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_512x512.png" >/dev/null
+  cp "${ICON_SOURCE}" "${ICONSET_DIR}/icon_512x512@2x.png"
+  iconutil -c icns "${ICONSET_DIR}" -o "${APP_RESOURCES_DIR}/etoVPN.icns"
+  rm -rf "${ICONSET_DIR}"
+fi
+
+if [[ -f "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" ]]; then
+  cp "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" "${APP_HELPERS_DIR}/etoVPNMacBridge"
+  chmod +x "${APP_HELPERS_DIR}/etoVPNMacBridge"
+else
+  echo "warning: native helper was not found at ${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" >&2
+fi
+
+if [[ -d "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" ]]; then
+  cp -R "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex"
+else
+  echo "warning: packet tunnel extension was not found at ${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" >&2
+fi
+
+rm -rf "${STAGING_DIR}"
+
+echo ""
+echo "Published macOS desktop app bundle: ${APP_BUNDLE_DIR}"
+echo "Native artifact source: ${NATIVE_OUTPUT_DIR}"
+
+if [[ "${ZIP_PACKAGE}" == "1" ]]; then
+  ZIP_PATH="${REPO_ROOT}/${OUTPUT_ROOT}/etoVPN-${RUNTIME_IDENTIFIER}.zip"
+  rm -f "${ZIP_PATH}"
+  ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE_DIR}" "${ZIP_PATH}"
+  echo "Created zip package: ${ZIP_PATH}"
+fi
