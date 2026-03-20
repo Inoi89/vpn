@@ -49,9 +49,14 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 let response = tunnelAdapter.currentSnapshot().asProviderMessage()
                 completionHandler?(try? encoder.encode(response))
 
+            case "logs":
+                let response = TunnelProviderMessageLogsResponse(entries: tunnelAdapter.logEntries())
+                completionHandler?(try? encoder.encode(response))
+
             case "runtimeConfiguration":
                 let response = TunnelProviderMessageRuntimeConfigurationResponse(
                     interfaceName: tunnelAdapter.interfaceName(),
+                    engineName: tunnelAdapter.currentSnapshot().engineName,
                     configuration: tunnelAdapter.preparedConfigurationSummary())
                 completionHandler?(try? encoder.encode(response))
 

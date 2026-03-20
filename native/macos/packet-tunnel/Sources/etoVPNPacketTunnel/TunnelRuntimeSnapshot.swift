@@ -7,6 +7,9 @@ struct TunnelRuntimeSnapshot {
     let rxBytes: Int64
     let txBytes: Int64
     let latestHandshakeAtUtc: String?
+    let engineName: String?
+    let interfaceName: String?
+    let runtimeConfigurationSummary: String?
     let warnings: [String]
     let lastError: String?
 
@@ -17,6 +20,9 @@ struct TunnelRuntimeSnapshot {
             rxBytes: 0,
             txBytes: 0,
             latestHandshakeAtUtc: nil,
+            engineName: nil,
+            interfaceName: nil,
+            runtimeConfigurationSummary: nil,
             warnings: [],
             lastError: nil)
     }
@@ -28,6 +34,9 @@ struct TunnelRuntimeSnapshot {
             rxBytes: rxBytes,
             txBytes: txBytes,
             latestHandshakeAtUtc: latestHandshakeAtUtc,
+            engineName: engineName,
+            interfaceName: interfaceName,
+            runtimeConfigurationSummary: runtimeConfigurationSummary,
             warnings: warnings,
             lastError: lastError)
     }

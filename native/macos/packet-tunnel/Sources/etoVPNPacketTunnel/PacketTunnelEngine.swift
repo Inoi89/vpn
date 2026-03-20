@@ -21,6 +21,9 @@ enum PacketTunnelEngineError: Error, LocalizedError {
 }
 
 protocol PacketTunnelEngine {
+    var engineName: String { get }
+    var interfaceName: String? { get }
+
     func start(
         configuration: PacketTunnelConfiguration,
         completion: @escaping (Result<TunnelRuntimeSnapshot, PacketTunnelEngineError>) -> Void)
@@ -33,6 +36,5 @@ protocol PacketTunnelEngine {
         completion: @escaping (Result<Void, PacketTunnelEngineError>) -> Void)
 
     func runtimeConfiguration() -> String?
-
-    var interfaceName: String? { get }
+    func logEntries() -> [String]
 }

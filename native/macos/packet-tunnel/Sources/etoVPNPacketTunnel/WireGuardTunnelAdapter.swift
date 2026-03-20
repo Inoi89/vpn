@@ -31,6 +31,9 @@ final class WireGuardTunnelAdapter {
                     rxBytes: 0,
                     txBytes: 0,
                     latestHandshakeAtUtc: nil,
+                    engineName: self.engine.engineName,
+                    interfaceName: self.engine.interfaceName,
+                    runtimeConfigurationSummary: self.engine.runtimeConfiguration() ?? configuration.redactedSummary,
                     warnings: [
                         "Prepared canonical \(configuration.format.uppercased()) runtime configuration for \(configuration.tunnelRemoteAddress).",
                         "The packet tunnel scaffold can apply network settings, but the native WireGuard/AWG engine is not attached yet."
@@ -61,6 +64,9 @@ final class WireGuardTunnelAdapter {
                     rxBytes: 0,
                     txBytes: 0,
                     latestHandshakeAtUtc: nil,
+                    engineName: self.engine.engineName,
+                    interfaceName: self.engine.interfaceName,
+                    runtimeConfigurationSummary: self.engine.runtimeConfiguration() ?? self.activeConfiguration?.redactedSummary,
                     warnings: [],
                     lastError: error.localizedDescription)
                 completion(error)
@@ -90,6 +96,9 @@ final class WireGuardTunnelAdapter {
                     rxBytes: 0,
                     txBytes: 0,
                     latestHandshakeAtUtc: nil,
+                    engineName: self.engine.engineName,
+                    interfaceName: self.engine.interfaceName,
+                    runtimeConfigurationSummary: self.engine.runtimeConfiguration() ?? configuration.redactedSummary,
                     warnings: ["The macOS packet tunnel engine rejected an in-place configuration update."],
                     lastError: error.localizedDescription)
                 completion(error)
@@ -104,6 +113,9 @@ final class WireGuardTunnelAdapter {
             rxBytes: 0,
             txBytes: 0,
             latestHandshakeAtUtc: nil,
+            engineName: engine.engineName,
+            interfaceName: engine.interfaceName,
+            runtimeConfigurationSummary: engine.runtimeConfiguration() ?? activeConfiguration?.redactedSummary,
             warnings: [],
             lastError: error)
     }
@@ -118,5 +130,9 @@ final class WireGuardTunnelAdapter {
 
     func interfaceName() -> String? {
         engine.interfaceName
+    }
+
+    func logEntries() -> [String] {
+        engine.logEntries()
     }
 }
