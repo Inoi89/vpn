@@ -238,6 +238,12 @@ Recommended status path after startup:
    such as `{"action":"status"}`
 4. let the packet tunnel return counters and handshake timestamps
 
+The bridge-side scaffold now follows that shape conceptually:
+
+- `PacketTunnelManagerStore` owns `startVPNTunnel` and `sendProviderMessage`
+- `TunnelManagerStatusObserver` owns `NEVPNStatusDidChangeNotification`
+- `TunnelStatusPoller` owns periodic provider status polling
+
 ## Current Phase 2 expectation
 
 This scaffold is not yet a real VPN runtime. Phase 2 is successful when:

@@ -6,17 +6,23 @@ final class PacketTunnelCoordinator {
     private let stagingStore: TunnelProfileStagingStore
     private let statusStore: StatusSnapshotStore
     private let managerStore: PacketTunnelManagerStore
+    private let statusObserver: TunnelManagerStatusObserver
+    private let statusPoller: TunnelStatusPoller
     private var stagedProfile: TunnelProfilePayload?
     private var activeManager: NETunnelProviderManager?
 
     init(
         stagingStore: TunnelProfileStagingStore,
         statusStore: StatusSnapshotStore,
-        managerStore: PacketTunnelManagerStore)
+        managerStore: PacketTunnelManagerStore,
+        statusObserver: TunnelManagerStatusObserver,
+        statusPoller: TunnelStatusPoller)
     {
         self.stagingStore = stagingStore
         self.statusStore = statusStore
         self.managerStore = managerStore
+        self.statusObserver = statusObserver
+        self.statusPoller = statusPoller
     }
 
     func stageProfile(_ profile: TunnelProfilePayload) {
@@ -70,18 +76,10 @@ final class PacketTunnelCoordinator {
                 try await managerStore.configure(manager, with: profile)
                 try managerStore.start(manager)
                 activeManager = manager
+                beginObserving(manager: manager, profile: profile)
 
                 if let providerStatus = try await managerStore.requestStatus(from: manager) {
-                    statusStore.update(
-                        makeStatusSnapshot(
-                            profile: profile,
-                            connected: providerStatus.connected,
-                            state: providerStatus.state,
-                            warnings: providerStatus.warnings,
-                            lastError: providerStatus.lastError,
-                            rxBytes: providerStatus.rxBytes,
-                            txBytes: providerStatus.txBytes,
-                            latestHandshakeAtUtc: providerStatus.latestHandshakeAtUtc))
+                    applyProviderStatus(providerStatus, profile: profile)
                 } else {
                     statusStore.update(
                         makeStatusSnapshot(
@@ -106,6 +104,8 @@ final class PacketTunnelCoordinator {
     func requestDeactivation(profileId: String?) {
         stagedProfile = nil
         stagingStore.clear()
+        statusObserver.stop()
+        statusPoller.stop()
         if let activeManager {
             managerStore.stop(activeManager)
             self.activeManager = nil
@@ -157,6 +157,58 @@ final class PacketTunnelCoordinator {
             latestHandshakeAtUtc: latestHandshakeAtUtc,
             warnings: warnings,
             lastError: lastError)
+    }
+
+    private func beginObserving(manager: NETunnelProviderManager, profile: TunnelProfilePayload) {
+        statusObserver.start(observing: manager) { [weak self] status in
+            guard let self else { return }
+
+            let current = self.statusStore.snapshot()
+            self.statusStore.update(
+                self.makeStatusSnapshot(
+                    profile: profile,
+                    connected: current.connected,
+                    state: self.map(status),
+                    warnings: current.warnings,
+                    lastError: current.lastError,
+                    rxBytes: current.rxBytes,
+                    txBytes: current.txBytes,
+                    latestHandshakeAtUtc: current.latestHandshakeAtUtc))
+        }
+
+        statusPoller.start(
+            manager: manager,
+            onStatus: { [weak self] providerStatus in
+                guard let self else { return }
+                self.applyProviderStatus(providerStatus, profile: profile)
+            },
+            onFailure: { [weak self] error in
+                guard let self else { return }
+                let current = self.statusStore.snapshot()
+                self.statusStore.update(
+                    self.makeStatusSnapshot(
+                        profile: profile,
+                        connected: current.connected,
+                        state: current.state,
+                        warnings: current.warnings,
+                        lastError: "Provider status request failed: \(error.localizedDescription)",
+                        rxBytes: current.rxBytes,
+                        txBytes: current.txBytes,
+                        latestHandshakeAtUtc: current.latestHandshakeAtUtc))
+            })
+    }
+
+    private func applyProviderStatus(_ providerStatus: TunnelProviderMessageStatusResponse, profile: TunnelProfilePayload) {
+        statusStore.update(
+            makeStatusSnapshot(
+                profile: profile,
+                connected: providerStatus.connected,
+                state: providerStatus.state,
+                warnings: providerStatus.warnings,
+                lastError: providerStatus.lastError,
+                rxBytes: providerStatus.rxBytes,
+                txBytes: providerStatus.txBytes,
+                latestHandshakeAtUtc: providerStatus.latestHandshakeAtUtc))
     }
 
     private func map(_ status: NEVPNStatus) -> RuntimeTunnelState {

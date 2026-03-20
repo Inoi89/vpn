@@ -9,10 +9,14 @@ struct BridgeApplication {
         let statusStore = StatusSnapshotStore()
         let stagingStore = TunnelProfileStagingStore()
         let managerStore = PacketTunnelManagerStore()
+        let statusObserver = TunnelManagerStatusObserver()
+        let statusPoller = TunnelStatusPoller(managerStore: managerStore)
         let coordinator = PacketTunnelCoordinator(
             stagingStore: stagingStore,
             statusStore: statusStore,
-            managerStore: managerStore)
+            managerStore: managerStore,
+            statusObserver: statusObserver,
+            statusPoller: statusPoller)
         let dispatcher = BridgeCommandDispatcher(
             socketPath: socketPath,
             coordinator: coordinator,

@@ -30,6 +30,10 @@ operations that should not live in the C# UI layer.
 - `Sources/etoVPNMacBridge/PacketTunnelCoordinator.swift`
   Native orchestration boundary that stages manager configuration and packet
   tunnel startup.
+- `Sources/etoVPNMacBridge/TunnelManagerStatusObserver.swift`
+  `NEVPNStatusDidChangeNotification` observer scaffold.
+- `Sources/etoVPNMacBridge/TunnelStatusPoller.swift`
+  `sendProviderMessage` status polling scaffold.
 
 ## Runtime contract
 
