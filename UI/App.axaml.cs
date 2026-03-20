@@ -114,7 +114,7 @@ public partial class App : Avalonia.Application
             _trayIcon = new TrayIcon
             {
                 Icon = CreateWindowIcon() ?? new WindowIcon(Environment.ProcessPath!),
-                ToolTipText = "etojeVPN",
+                ToolTipText = "etoVPN",
                 Menu = menu,
                 IsVisible = true
             };

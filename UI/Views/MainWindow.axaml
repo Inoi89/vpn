@@ -8,7 +8,7 @@
         x:Class="VpnClient.UI.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         x:Name="RootWindow"
-        Title="etojeVPN"
+        Title="etoVPN"
         Width="390"
         Height="844"
         MinWidth="360"
@@ -79,7 +79,7 @@
                                    FontSize="18"
                                    FontWeight="SemiBold"
                                    Foreground="#2D3748"
-                                   Text="etojeVPN" />
+                                   Text="etoVPN" />
 
                         <Button Grid.Column="2"
                                 Width="48"
