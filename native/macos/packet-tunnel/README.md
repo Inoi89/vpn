@@ -11,6 +11,8 @@ request the system to start or stop this extension.
 - Receive a staged tunnel profile from the bridge.
 - Read that staged profile from the shared control-store location.
 - Build a canonical packet-tunnel configuration object from the shared profile payload.
+- Preserve optional split-tunnel mode and site lists through the canonical
+  config so the network settings builder can apply include/exclude routes.
 - Prefer `NETunnelProviderProtocol.providerConfiguration` as the primary
   startup handoff.
 - Materialize DNS, routes, MTU, and addresses into

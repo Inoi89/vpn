@@ -6,6 +6,8 @@ struct PacketTunnelConfiguration: Codable {
     let profileName: String
     let format: String
     let tunnelRemoteAddress: String
+    let splitTunnelType: Int
+    let splitTunnelSites: [String]
     let interface: PacketTunnelInterfaceConfiguration
     let peer: PacketTunnelPeerConfiguration
     let privateKey: String
@@ -22,12 +24,30 @@ struct PacketTunnelInterfaceConfiguration: Codable {
 
 struct PacketTunnelPeerConfiguration: Codable {
     let allowedIPs: [String]
+    let splitTunnelType: Int
+    let splitTunnelSites: [String]
     let endpoint: String?
     let publicKey: String?
     let presharedKey: String?
     let persistentKeepalive: Int?
     let peerValues: [String: String]
     let awgValues: [String: String]
+
+    var effectiveAllowedIPs: [String] {
+        if splitTunnelType == 1 && !splitTunnelSites.isEmpty {
+            return splitTunnelSites
+        }
+
+        return allowedIPs
+    }
+
+    var excludedIPs: [String] {
+        guard splitTunnelType == 2 else {
+            return []
+        }
+
+        return splitTunnelSites
+    }
 }
 
 enum PacketTunnelConfigurationBuilder {
@@ -40,7 +60,10 @@ enum PacketTunnelConfigurationBuilder {
 
         let dnsServers = normalizeValues(tunnelConfig.dns.isEmpty ? profile.dns : tunnelConfig.dns)
         let mtu = tunnelConfig.mtu ?? profile.mtu
-        let allowedIPs = normalizeValues(tunnelConfig.allowedIps.isEmpty ? profile.allowedIps : tunnelConfig.allowedIps)
+        let baseAllowedIPs = normalizeValues(tunnelConfig.allowedIps.isEmpty ? profile.allowedIps : tunnelConfig.allowedIps)
+        let splitTunnelType = tunnelConfig.splitTunnelType ?? 0
+        let splitTunnelSites = normalizeValues(tunnelConfig.splitTunnelSites ?? [])
+        let allowedIPs = splitTunnelType == 1 && !splitTunnelSites.isEmpty ? splitTunnelSites : baseAllowedIPs
         guard !allowedIPs.isEmpty else {
             throw PacketTunnelConfigurationError.missingAllowedIps
         }
@@ -92,6 +115,8 @@ enum PacketTunnelConfigurationBuilder {
             profileName: profile.profileName,
             format: format,
             tunnelRemoteAddress: endpoint,
+            splitTunnelType: splitTunnelType,
+            splitTunnelSites: splitTunnelSites,
             interface: PacketTunnelInterfaceConfiguration(
                 addresses: interfaceAddresses,
                 dnsServers: dnsServers,
@@ -99,6 +124,8 @@ enum PacketTunnelConfigurationBuilder {
                 interfaceValues: interfaceValues),
             peer: PacketTunnelPeerConfiguration(
                 allowedIPs: allowedIPs,
+                splitTunnelType: splitTunnelType,
+                splitTunnelSites: splitTunnelSites,
                 endpoint: endpoint,
                 publicKey: publicKey,
                 presharedKey: presharedKey,
@@ -116,12 +143,15 @@ enum PacketTunnelConfigurationBuilder {
             .filter { !$0.isEmpty }
         let awgValues = providerConfiguration.awgValues()
         let wgQuickConfig = providerConfiguration.wgQuickConfig()
+        let splitTunnelSites = normalizeValues(providerConfiguration.splitTunnelSites)
 
         return PacketTunnelConfiguration(
             profileId: providerConfiguration.profileId,
             profileName: providerConfiguration.profileName,
             format: providerConfiguration.format,
             tunnelRemoteAddress: providerConfiguration.endpointString(),
+            splitTunnelType: providerConfiguration.splitTunnelType,
+            splitTunnelSites: splitTunnelSites,
             interface: PacketTunnelInterfaceConfiguration(
                 addresses: parseDelimitedValues(providerConfiguration.clientIP),
                 dnsServers: dnsServers,
@@ -129,6 +159,8 @@ enum PacketTunnelConfigurationBuilder {
                 interfaceValues: providerConfiguration.interfaceValues),
             peer: PacketTunnelPeerConfiguration(
                 allowedIPs: providerConfiguration.allowedIPs,
+                splitTunnelType: providerConfiguration.splitTunnelType,
+                splitTunnelSites: splitTunnelSites,
                 endpoint: providerConfiguration.endpointString(),
                 publicKey: providerConfiguration.serverPublicKey,
                 presharedKey: providerConfiguration.presharedKey,

@@ -61,6 +61,8 @@ public struct TunnelConfigurationPayload: Codable {
     public let dns: [String]
     public let mtu: Int?
     public let allowedIps: [String]
+    public let splitTunnelType: Int?
+    public let splitTunnelSites: [String]?
     public let endpoint: String?
     public let publicKey: String?
     public let presharedKey: String?
@@ -75,6 +77,8 @@ public struct TunnelConfigurationPayload: Codable {
         dns: [String],
         mtu: Int?,
         allowedIps: [String],
+        splitTunnelType: Int? = nil,
+        splitTunnelSites: [String]? = nil,
         endpoint: String?,
         publicKey: String?,
         presharedKey: String?,
@@ -88,6 +92,8 @@ public struct TunnelConfigurationPayload: Codable {
         self.dns = dns
         self.mtu = mtu
         self.allowedIps = allowedIps
+        self.splitTunnelType = splitTunnelType
+        self.splitTunnelSites = splitTunnelSites
         self.endpoint = endpoint
         self.publicKey = publicKey
         self.presharedKey = presharedKey

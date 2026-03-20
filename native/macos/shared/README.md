@@ -7,6 +7,8 @@ the packet tunnel.
 
 - Hold the bridge command and payload types.
 - Freeze the helper-to-extension profile shape.
+- Carry optional split-tunnel routing metadata through the shared tunnel
+  payload without breaking older staged profiles.
 - Expose constants that must stay aligned with the desktop macOS runtime
   adapter.
 

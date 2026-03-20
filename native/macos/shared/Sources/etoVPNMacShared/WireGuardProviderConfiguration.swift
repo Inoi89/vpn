@@ -176,6 +176,10 @@ public struct WireGuardProviderConfiguration: Codable {
         guard !allowedIPs.isEmpty else {
             throw WireGuardProviderConfigurationError.missingAllowedIps
         }
+        let splitTunnelType = tunnelConfig.splitTunnelType ?? 0
+        let splitTunnelSites = normalizedList(tunnelConfig.splitTunnelSites ?? [])
+        let resolvedAllowedIPs = splitTunnelType == 1 && !splitTunnelSites.isEmpty ? splitTunnelSites : allowedIPs
+        let resolvedSplitTunnelSites = splitTunnelSites
 
         let dnsServers = normalizedList(tunnelConfig.dns.isEmpty ? profile.dns : tunnelConfig.dns)
         let persistentKeepAlive = tunnelConfig.persistentKeepalive
@@ -204,10 +208,10 @@ public struct WireGuardProviderConfiguration: Codable {
             clientPrivateKey: privateKey,
             serverPublicKey: publicKey,
             presharedKey: firstNonEmpty(tunnelConfig.presharedKey, profile.presharedKey, tunnelConfig.peerValues["PresharedKey"]),
-            allowedIPs: allowedIPs,
+            allowedIPs: resolvedAllowedIPs,
             persistentKeepAlive: persistentKeepAlive,
-            splitTunnelType: 0,
-            splitTunnelSites: [],
+            splitTunnelType: splitTunnelType,
+            splitTunnelSites: resolvedSplitTunnelSites,
             interfaceValues: interfaceValues,
             peerValues: peerValues,
             h1: awgValues["H1"],

@@ -4,12 +4,22 @@ import NetworkExtension
 enum PacketTunnelNetworkSettingsBuilder {
     static func build(from configuration: PacketTunnelConfiguration) throws -> NEPacketTunnelNetworkSettings {
         let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: configuration.tunnelRemoteAddress)
+        let includedRoutes = configuration.peer.effectiveAllowedIPs
+        let excludedRoutes = configuration.peer.excludedIPs
 
-        if let ipv4Settings = buildIPv4Settings(from: configuration.interface.addresses, allowedIPs: configuration.peer.allowedIPs) {
+        if let ipv4Settings = buildIPv4Settings(
+            from: configuration.interface.addresses,
+            allowedIPs: includedRoutes,
+            excludedIPs: excludedRoutes)
+        {
             settings.ipv4Settings = ipv4Settings
         }
 
-        if let ipv6Settings = buildIPv6Settings(from: configuration.interface.addresses, allowedIPs: configuration.peer.allowedIPs) {
+        if let ipv6Settings = buildIPv6Settings(
+            from: configuration.interface.addresses,
+            allowedIPs: includedRoutes,
+            excludedIPs: excludedRoutes)
+        {
             settings.ipv6Settings = ipv6Settings
         }
 
@@ -24,7 +34,11 @@ enum PacketTunnelNetworkSettingsBuilder {
         return settings
     }
 
-    private static func buildIPv4Settings(from addresses: [String], allowedIPs: [String]) -> NEIPv4Settings? {
+    private static func buildIPv4Settings(
+        from addresses: [String],
+        allowedIPs: [String],
+        excludedIPs: [String]) -> NEIPv4Settings?
+    {
         let addresses = parseCidrs(addresses).filter { !$0.isIPv6 }
         guard !addresses.isEmpty else {
             return nil
@@ -36,10 +50,19 @@ enum PacketTunnelNetworkSettingsBuilder {
         settings.includedRoutes = parseCidrs(allowedIPs)
             .filter { !$0.isIPv6 }
             .map { route(for: $0) }
+        if !excludedIPs.isEmpty {
+            settings.excludedRoutes = parseCidrs(excludedIPs)
+                .filter { !$0.isIPv6 }
+                .map { route(for: $0) }
+        }
         return settings
     }
 
-    private static func buildIPv6Settings(from addresses: [String], allowedIPs: [String]) -> NEIPv6Settings? {
+    private static func buildIPv6Settings(
+        from addresses: [String],
+        allowedIPs: [String],
+        excludedIPs: [String]) -> NEIPv6Settings?
+    {
         let addresses = parseCidrs(addresses).filter(\.isIPv6)
         guard !addresses.isEmpty else {
             return nil
@@ -51,6 +74,11 @@ enum PacketTunnelNetworkSettingsBuilder {
         settings.includedRoutes = parseCidrs(allowedIPs)
             .filter(\.isIPv6)
             .map { route(for: $0) }
+        if !excludedIPs.isEmpty {
+            settings.excludedRoutes = parseCidrs(excludedIPs)
+                .filter(\.isIPv6)
+                .map { route(for: $0) }
+        }
         return settings
     }
 
