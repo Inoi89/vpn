@@ -193,6 +193,25 @@ Desktop lookup order for compatibility:
 - Shared native models:
   own the typed bridge payloads and shared constants
 
+## Target Apple runtime handoff
+
+The current scaffold uses a staged profile file only as a temporary placeholder.
+It is not the intended final Apple runtime path.
+
+The target handoff should mirror the upstream Amnezia Apple flow:
+
+- the bridge owns `NETunnelProviderManager`
+- the bridge persists tunnel configuration into
+  `NETunnelProviderProtocol.providerConfiguration`
+- the packet tunnel reads `protocolConfiguration.providerConfiguration`
+  on startup
+- `startVPNTunnel(options:)` stays a lifecycle trigger, not the primary config
+  transport
+
+For the first real implementation, the bridge should store a UTF-8 JSON payload
+under a stable provider-configuration key such as `wireguard`, derived from the
+desktop `TunnelProfilePayload`.
+
 ## Current Phase 2 expectation
 
 This scaffold is not yet a real VPN runtime. Phase 2 is successful when:

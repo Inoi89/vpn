@@ -28,6 +28,9 @@ Phase 2 is now started in the source tree:
 - The desktop macOS adapter now speaks a stable bridge envelope instead of ad-hoc JSON commands.
 - The macOS bridge contract is documented in `docs/macos-runtime-bridge-contract.md`.
 - A native `native/macos/` scaffold now exists for the bridge helper, packet tunnel, and shared models.
+- The native bridge now has a newline-delimited request/response processing skeleton.
+- The bridge and packet tunnel now share a staged profile handoff path through a common control-store filename.
+- The next real runtime step is to replace that temporary staged-file handoff with `NETunnelProviderProtocol.providerConfiguration`, matching the upstream Apple path.
 
 ## Что уже можно переиспользовать
 
