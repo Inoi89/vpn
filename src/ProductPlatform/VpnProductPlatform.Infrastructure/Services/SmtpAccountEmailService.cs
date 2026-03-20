@@ -115,7 +115,7 @@ public sealed class SmtpAccountEmailService(
     private static string BuildVerificationUrl(string baseUrl, string verificationToken)
     {
         var trimmedBaseUrl = string.IsNullOrWhiteSpace(baseUrl)
-            ? "http://5.61.37.29"
+            ? "https://etovpn.com"
             : baseUrl.Trim().TrimEnd('/');
         var encodedToken = Uri.EscapeDataString(verificationToken);
         return $"{trimmedBaseUrl}/?verify={encodedToken}";

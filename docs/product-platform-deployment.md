@@ -7,7 +7,7 @@ Snapshot date: `2026-03-19`
 The recommended layout is:
 
 - `192.168.1.2`: `VpnControlPlane` plus `VpnProductPlatform.Api`
-- `5.61.37.29`: public cabinet/static web host
+- `5.61.37.29`: public cabinet/static web host for `etovpn.com`
 
 ## Current nginx Findings on `192.168.1.2`
 
@@ -82,7 +82,7 @@ Current live state:
 - verification mail is sent from `vpn@udni.ru`
 - live smoke confirmed:
   - resend produces a fresh verification email
-  - the email contains a link to `http://5.61.37.29/?verify=...`
+  - the email contains a link to `https://etovpn.com/?verify=...`
   - `POST /api/auth/verify-email` returns the account to `Active`
   - pending accounts are blocked from device registration
   - `POST /api/access-grants` now successfully provisions a device-bound access through `VpnControlPlane`
@@ -101,11 +101,11 @@ The product API does not talk to node agents directly. It always goes through `V
 
 ## Frontend Deployment
 
-The cabinet is a separate static React build on `5.61.37.29`.
+The cabinet is a separate static React build on `5.61.37.29` and is published publicly as `https://etovpn.com`.
 
 Recommended behavior:
 
-- browser talks to the cabinet host by IP or domain
+- browser talks to the cabinet host by domain
 - cabinet host serves the SPA
 - cabinet host proxies `/api/` to `https://api.etojesim.com`
 
@@ -125,8 +125,10 @@ Current live state:
 - `5.61.37.29` does not have `docker compose`
 - the cabinet is deployed there via plain `docker run` on top of a prebuilt static bundle
 - container name: `product-platform-web`
-- public entrypoint: `http://5.61.37.29/`
+- public entrypoint: `https://etovpn.com/`
 - the SPA proxies `/api/` server-side to the API origin
+- TLS is terminated directly in the web container with Let's Encrypt certificates mounted from `/root/letsencrypt`
+- the cabinet serves the same shield favicon used by the desktop client
 
 If we want to tighten the public surface further, the API host can additionally be firewalled so that inbound 443 is allowed only from the cabinet host public IP. The browser would still talk only to the cabinet host; the cabinet host would be the sole server-side caller of `api.etojesim.com`.
 
@@ -158,14 +160,8 @@ For the first deploy, the preferred production path is still:
 - the cabinet is currently updated through manual static bundle replacement
 - this should be turned into a small scripted deploy flow next
 
-Another current limitation is external TLS for `api.etojesim.com`:
+Current TLS notes:
 
-- the origin API is already running on `192.168.1.2`
-- a clean HTTP-only nginx vhost exists on the origin
-- but Let's Encrypt `HTTP-01` currently fails because `api.etojesim.com` is proxied through Cloudflare and challenge traffic is not reaching the origin webroot as-is
-
-Until Cloudflare proxying is relaxed or DNS-based validation is introduced, the safe MVP path is:
-
-- keep the API origin on HTTP behind the new host vhost
-- let the cabinet host proxy server-side to that HTTP origin
-- do not expose the raw API to browsers directly
+- the cabinet itself now has a working Let's Encrypt certificate on `etovpn.com`
+- renewal is handled on `5.61.37.29` by a small `cron` job that runs `certbot renew` and restarts `product-platform-web`
+- `api.etojesim.com` still remains an internal origin behind the cabinet proxy; browsers should continue talking only to `etovpn.com`

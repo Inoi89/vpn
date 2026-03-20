@@ -6,6 +6,7 @@ This folder contains the deployable product-layer stack that sits above `VpnCont
 
 - API host: `192.168.1.2`
 - public API hostname: `api.etojesim.com`
+- public cabinet hostname: `etovpn.com`
 - web host for the personal cabinet: `5.61.37.29`
 
 ## Current API Container
@@ -28,7 +29,7 @@ For the current MVP, there is also a temporary Docker-based web deployment:
 - [docker-compose.web.yml](./docker-compose.web.yml)
 - [nginx.proxy.conf](/c:/Users/rrese/source/repos/vpn/frontend/product-platform-web/nginx.proxy.conf)
 
-This setup serves the cabinet on `5.61.37.29:80` and proxies `/api/` to `http://93.100.54.80/` with `Host: api.etojesim.com`.
+This setup serves the cabinet on `https://etovpn.com` and proxies `/api/` to `http://93.100.54.80/` with `Host: api.etojesim.com`.
 
 Current live rollout uses plain Docker on `5.61.37.29`, not `docker compose`, because that host currently has Docker installed without the compose plugin.
 
@@ -65,3 +66,4 @@ Copy [`.env.example`](./.env.example) to `.env` and set:
 - Keep the product platform stack isolated from the existing control-plane stack.
 - The live `api.etojesim.com` origin on `192.168.1.2` is already restricted to `5.61.37.29` and `127.0.0.1`.
 - Registration verification mail is best-effort: account creation should not fail if SMTP is temporarily unavailable.
+- The live cabinet now terminates HTTPS on `etovpn.com` with Let's Encrypt and serves the product favicon from `frontend/product-platform-web/public/favicon.ico`.

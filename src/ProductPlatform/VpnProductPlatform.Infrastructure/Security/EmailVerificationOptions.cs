@@ -8,5 +8,5 @@ public sealed class EmailVerificationOptions
     public string Audience { get; set; } = "VpnProductPlatform.EmailVerification";
     public string SigningKey { get; set; } = string.Empty;
     public int LifetimeHours { get; set; } = 24;
-    public string CabinetBaseUrl { get; set; } = "http://5.61.37.29";
+    public string CabinetBaseUrl { get; set; } = "https://etovpn.com";
 }

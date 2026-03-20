@@ -47,7 +47,7 @@ public static class DependencyInjection
             Audience = emailVerificationSection["Audience"] ?? "VpnProductPlatform.EmailVerification",
             SigningKey = string.IsNullOrWhiteSpace(emailVerificationSection["SigningKey"]) ? jwtOptions.SigningKey : emailVerificationSection["SigningKey"]!,
             LifetimeHours = int.TryParse(emailVerificationSection["LifetimeHours"], out var verificationLifetimeHours) ? verificationLifetimeHours : 24,
-            CabinetBaseUrl = emailVerificationSection["CabinetBaseUrl"] ?? "http://5.61.37.29"
+            CabinetBaseUrl = emailVerificationSection["CabinetBaseUrl"] ?? "https://etovpn.com"
         };
         services.AddSingleton<IOptions<EmailVerificationOptions>>(Options.Create(emailVerificationOptions));
 
