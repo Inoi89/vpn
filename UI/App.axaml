@@ -7,165 +7,202 @@
         <FluentTheme />
 
         <Style Selector="Window">
-            <Setter Property="Background" Value="#1A0F45" />
-            <Setter Property="Foreground" Value="#F9F5FF" />
+            <Setter Property="Background" Value="#061018" />
+            <Setter Property="Foreground" Value="#E7F4F6" />
         </Style>
 
-        <Style Selector="Border.phone-shell">
-            <Setter Property="Background" Value="#1A0F45" />
-            <Setter Property="BorderThickness" Value="0" />
+        <Style Selector="Border.app-shell">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0,0"
+                                     EndPoint="1,1">
+                    <GradientStop Color="#09131D"
+                                  Offset="0" />
+                    <GradientStop Color="#0D1822"
+                                  Offset="0.55" />
+                    <GradientStop Color="#0A121B"
+                                  Offset="1" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#152838" />
+            <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="0" />
         </Style>
 
-        <Style Selector="Border.glass-card">
-            <Setter Property="Background" Value="#211251" />
-            <Setter Property="BorderBrush" Value="#3A2A72" />
+        <Style Selector="Border.surface-panel">
+            <Setter Property="Background" Value="#6B0D1822" />
+            <Setter Property="BorderBrush" Value="#21384A" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="CornerRadius" Value="0" />
         </Style>
 
-        <Style Selector="Border.auth-card">
-            <Setter Property="MaxWidth" Value="304" />
+        <Style Selector="Border.account-shell">
+            <Setter Property="Background" Value="#D60A131B" />
+            <Setter Property="BorderBrush" Value="#1F3546" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="MaxWidth" Value="320" />
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <Style Selector="TextBlock.app-title">
-            <Setter Property="FontSize" Value="22" />
+        <Style Selector="Border.reticle-frame">
+            <Setter Property="BorderBrush" Value="#1A2F3E" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Background" Value="#0B151D" />
+        </Style>
+
+        <Style Selector="TextBlock.header-title">
+            <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="LetterSpacing" Value="0.6" />
         </Style>
 
-        <Style Selector="TextBlock.time-value">
-            <Setter Property="FontSize" Value="44" />
+        <Style Selector="TextBlock.eyebrow">
+            <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#4DE7D3" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="LetterSpacing" Value="2.2" />
         </Style>
 
-        <Style Selector="TextBlock.status-value">
-            <Setter Property="FontSize" Value="22" />
+        <Style Selector="TextBlock.hero-title">
+            <Setter Property="FontSize" Value="30" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="LetterSpacing" Value="0.4" />
         </Style>
 
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="#BCB2E3" />
-        </Style>
-
-        <Style Selector="TextBlock.card-label">
-            <Setter Property="Foreground" Value="#B2A8DB" />
+        <Style Selector="TextBlock.hero-copy">
             <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#8DA2B2" />
+            <Setter Property="LineHeight" Value="18" />
         </Style>
 
-        <Style Selector="TextBlock.card-value">
-            <Setter Property="FontSize" Value="24" />
+        <Style Selector="TextBlock.panel-label">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#4DE7D3" />
+            <Setter Property="LetterSpacing" Value="1.8" />
+        </Style>
+
+        <Style Selector="TextBlock.panel-copy">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#7E95A8" />
+            <Setter Property="LineHeight" Value="17" />
+        </Style>
+
+        <Style Selector="TextBlock.identity-copy">
+            <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <Style Selector="TextBlock.auth-error">
-            <Setter Property="Foreground" Value="#FCA5A5" />
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#FF8E8E" />
+            <Setter Property="FontSize" Value="12" />
         </Style>
 
-        <Style Selector="TextBlock.power-glyph">
-            <Setter Property="FontSize" Value="56" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="TextAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,-4,0,0" />
+        <Style Selector="TextBlock.status-line">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="LetterSpacing" Value="0.3" />
+        </Style>
+
+        <Style Selector="TextBlock.status-copy">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#7E95A8" />
         </Style>
 
         <Style Selector="Button.icon-button">
-            <Setter Property="Background" Value="#28175D" />
-            <Setter Property="Foreground" Value="#F9F5FF" />
-            <Setter Property="BorderBrush" Value="#44307C" />
+            <Setter Property="Background" Value="#7A0E1A24" />
+            <Setter Property="Foreground" Value="#E7F4F6" />
+            <Setter Property="BorderBrush" Value="#203647" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Width" Value="44" />
             <Setter Property="Height" Value="44" />
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
         <Style Selector="Button.alert-button">
-            <Setter Property="Background" Value="#3C155A" />
-            <Setter Property="Foreground" Value="#1FE3D5" />
-            <Setter Property="BorderBrush" Value="#6B3FB7" />
-            <Setter Property="FontSize" Value="22" />
-            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Background" Value="#7A101D28" />
+            <Setter Property="BorderBrush" Value="#2B4F66" />
         </Style>
 
         <Style Selector="Button.cta-button">
-            <Setter Property="Background" Value="#1FE3D5" />
-            <Setter Property="Foreground" Value="#0D1030" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="22" />
-            <Setter Property="Padding" Value="18,16" />
-            <Setter Property="FontSize" Value="24" />
+            <Setter Property="Background" Value="#4DE7D3" />
+            <Setter Property="Foreground" Value="#071018" />
+            <Setter Property="BorderBrush" Value="#4DE7D3" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <Style Selector="Button.ring-button">
-            <Setter Property="Background" Value="#211251" />
-            <Setter Property="Foreground" Value="#F6F3FF" />
-            <Setter Property="BorderBrush" Value="#61F2E5" />
-            <Setter Property="BorderThickness" Value="3" />
-            <Setter Property="CornerRadius" Value="999" />
-            <Setter Property="Width" Value="148" />
-            <Setter Property="Height" Value="148" />
-            <Setter Property="FontSize" Value="56" />
-            <Setter Property="Padding" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
         <Style Selector="Button.compact-button">
-            <Setter Property="FontSize" Value="18" />
-            <Setter Property="Padding" Value="16,13" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Padding" Value="15,12" />
         </Style>
 
-        <Style Selector="Button.update-button">
-            <Setter Property="Background" Value="#2A1662" />
-            <Setter Property="Foreground" Value="#F9F5FF" />
-            <Setter Property="BorderBrush" Value="#4C2E96" />
+        <Style Selector="Button.secondary-button">
+            <Setter Property="Background" Value="#7A0E1A24" />
+            <Setter Property="Foreground" Value="#E7F4F6" />
+            <Setter Property="BorderBrush" Value="#203647" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="14,12" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
-        <Style Selector="Button.secondary-button">
-            <Setter Property="Background" Value="#28175D" />
-            <Setter Property="Foreground" Value="#F9F5FF" />
-            <Setter Property="BorderBrush" Value="#44307C" />
+        <Style Selector="Button.inline-action-button">
+            <Setter Property="Background" Value="#101922" />
+            <Setter Property="Foreground" Value="#7FE7DA" />
+            <Setter Property="BorderBrush" Value="#203647" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Padding" Value="14,12" />
-            <Setter Property="FontSize" Value="15" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
+        <Style Selector="Button.ring-button">
+            <Setter Property="Background" Value="#0C1620" />
+            <Setter Property="Foreground" Value="#4DE7D3" />
+            <Setter Property="BorderBrush" Value="#4DE7D3" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Width" Value="164" />
+            <Setter Property="Height" Value="164" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
         <Style Selector="ComboBox.profile-combo">
-            <Setter Property="Background" Value="#25145A" />
-            <Setter Property="Foreground" Value="#F9F5FF" />
-            <Setter Property="BorderBrush" Value="#433173" />
+            <Setter Property="Background" Value="#7A0E1A24" />
+            <Setter Property="Foreground" Value="#E7F4F6" />
+            <Setter Property="BorderBrush" Value="#203647" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="12,10" />
         </Style>
 
         <Style Selector="TextBox.auth-input">
-            <Setter Property="Background" Value="#25145A" />
-            <Setter Property="Foreground" Value="#F9F5FF" />
-            <Setter Property="BorderBrush" Value="#433173" />
+            <Setter Property="Background" Value="#7A0E1A24" />
+            <Setter Property="Foreground" Value="#E7F4F6" />
+            <Setter Property="BorderBrush" Value="#203647" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="12,10" />
         </Style>
     </Application.Styles>
 </Application>

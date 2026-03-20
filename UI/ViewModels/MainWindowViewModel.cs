@@ -510,6 +510,9 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedProfileChanged(ImportedServerProfile? value)
     {
         RenameDraft = value?.DisplayName ?? string.Empty;
+        OnPropertyChanged(nameof(ShellProfileLabel));
+        OnPropertyChanged(nameof(ShellEndpointText));
+        OnPropertyChanged(nameof(ShellEndpointHostText));
         NotifyViewStateChanged();
 
         if (_applyingSnapshot || value is null)
@@ -1107,6 +1110,10 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedProfileCaption));
         OnPropertyChanged(nameof(EndpointText));
         OnPropertyChanged(nameof(EndpointHostText));
+        OnPropertyChanged(nameof(ShellProfileLabel));
+        OnPropertyChanged(nameof(ShellEndpointText));
+        OnPropertyChanged(nameof(ShellEndpointHostText));
+        OnPropertyChanged(nameof(ServerPanelUpdateText));
         OnPropertyChanged(nameof(AddressText));
         OnPropertyChanged(nameof(DnsText));
         OnPropertyChanged(nameof(AllowedIpsText));

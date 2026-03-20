@@ -8,44 +8,110 @@
         x:Class="VpnClient.UI.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="VPN"
-        Width="380"
-        Height="760"
-        MinWidth="340"
-        MinHeight="620">
+        Width="356"
+        Height="676"
+        MinWidth="324"
+        MinHeight="560">
 
-    <Border Classes="phone-shell"
-            Padding="18,16,18,22">
+    <Border Classes="app-shell">
         <Grid>
-            <Grid RowDefinitions="Auto,*,Auto">
-                <Grid ColumnDefinitions="44,*,Auto" ColumnSpacing="12">
+            <Canvas IsHitTestVisible="False"
+                    Opacity="0.28">
+                <Rectangle Width="1"
+                           Height="920"
+                           Fill="#224055"
+                           Canvas.Left="18"
+                           Canvas.Top="-120" />
+                <Rectangle Width="1"
+                           Height="920"
+                           Fill="#183243"
+                           Canvas.Left="88"
+                           Canvas.Top="-120" />
+                <Rectangle Width="1"
+                           Height="920"
+                           Fill="#183243"
+                           Canvas.Left="268"
+                           Canvas.Top="-120" />
+                <Rectangle Width="1"
+                           Height="920"
+                           Fill="#224055"
+                           Canvas.Left="334"
+                           Canvas.Top="-120" />
+                <Rectangle Width="420"
+                           Height="1"
+                           Fill="#183243"
+                           Canvas.Left="-32"
+                           Canvas.Top="124" />
+                <Rectangle Width="420"
+                           Height="1"
+                           Fill="#183243"
+                           Canvas.Left="-32"
+                           Canvas.Top="432" />
+                <Rectangle Width="180"
+                           Height="180"
+                           Fill="#102535"
+                           Opacity="0.35"
+                           Canvas.Left="208"
+                           Canvas.Top="40" />
+                <Rectangle Width="140"
+                           Height="140"
+                           Fill="#102535"
+                           Opacity="0.25"
+                           Canvas.Left="-12"
+                           Canvas.Top="468" />
+            </Canvas>
+
+            <Grid Margin="18,16,18,18"
+                  RowDefinitions="Auto,*,Auto">
+                <Grid ColumnDefinitions="44,*,Auto"
+                      ColumnSpacing="12">
                     <Button Classes="icon-button"
-                            Content="+"
                             IsVisible="{Binding ShowImportShortcut}"
-                            Click="OnImportConfigClick" />
+                            Click="OnImportConfigClick">
+                        <Grid Width="16"
+                              Height="16">
+                            <Border Width="16"
+                                    Height="2"
+                                    Background="#E7F4F6"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                            <Border Width="2"
+                                    Height="16"
+                                    Background="#E7F4F6"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
 
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
-                                Spacing="8"
+                                Spacing="10"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
                         <Image Width="18"
                                Height="18"
                                Source="avares://VpnClient.UI/Assets/shield.png" />
-
-                        <TextBlock Classes="app-title"
+                        <TextBlock Classes="header-title"
                                    VerticalAlignment="Center"
-                                   Text="VPN" />
+                                   Text="etojeVPN" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
                                 Spacing="8">
                         <Button Classes="icon-button alert-button"
-                                Content="!"
                                 IsVisible="{Binding ShowUpdateAction}"
                                 IsEnabled="{Binding CanRunUpdateAction}"
                                 Command="{Binding RunUpdateActionCommand}"
-                                ToolTip.Tip="{Binding UpdateActionText}" />
+                                ToolTip.Tip="{Binding UpdateActionText}">
+                            <Grid Width="18"
+                                  Height="18">
+                                <Path Data="M9 2 L9 10 M5 7 L9 11 L13 7 M3 15 H15"
+                                      Stroke="#4DE7D3"
+                                      StrokeThickness="1.8"
+                                      StrokeLineCap="Square" />
+                            </Grid>
+                        </Button>
 
                         <Button Classes="icon-button"
                                 Command="{Binding OpenAccountScreenCommand}"
@@ -54,66 +120,142 @@
                                   Height="18">
                                 <Canvas Width="18"
                                         Height="18">
-                                    <Ellipse Canvas.Left="5.3"
-                                             Canvas.Top="1.8"
-                                             Width="7.4"
-                                             Height="7.4"
-                                             Stroke="#F9F5FF"
-                                             StrokeThickness="1.6" />
-                                    <Path Canvas.Left="0"
-                                          Canvas.Top="0"
-                                          Data="M3,16 C4.1,13.3 6.8,11.8 9,11.8 C11.2,11.8 13.9,13.3 15,16"
-                                          Stroke="#F9F5FF"
-                                          StrokeThickness="1.6"
-                                          StrokeLineCap="Round" />
-                                    <Ellipse Canvas.Left="12.6"
-                                             Canvas.Top="1.2"
-                                             Width="4"
-                                             Height="4"
-                                             Fill="#1FE3D5"
-                                             IsVisible="{Binding IsAuthenticated}" />
+                                    <Ellipse Canvas.Left="5.1"
+                                             Canvas.Top="1.6"
+                                             Width="7.8"
+                                             Height="7.8"
+                                             Stroke="#E7F4F6"
+                                             StrokeThickness="1.5" />
+                                    <Path Canvas.Left="2"
+                                          Canvas.Top="8.6"
+                                          Data="M1,7 C2.8,3.8 5.8,2.2 7,2.2 C8.2,2.2 11.2,3.8 13,7"
+                                          Stroke="#E7F4F6"
+                                          StrokeThickness="1.5"
+                                          StrokeLineCap="Square" />
+                                    <Rectangle Canvas.Left="13"
+                                               Canvas.Top="1"
+                                               Width="4"
+                                               Height="4"
+                                               Fill="#4DE7D3"
+                                               IsVisible="{Binding IsAuthenticated}" />
                                 </Canvas>
                             </Grid>
                         </Button>
                     </StackPanel>
                 </Grid>
 
-                <StackPanel Grid.Row="1"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="18">
-                    <TextBlock Classes="muted"
-                               MaxWidth="260"
-                               HorizontalAlignment="Center"
-                               IsVisible="{Binding HasNoProfiles}"
-                               Text="{Binding EmptyStateText}"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
+                <Grid Grid.Row="1"
+                      RowDefinitions="Auto,*,Auto"
+                      Margin="0,18,0,18">
+                    <StackPanel HorizontalAlignment="Stretch"
+                                Spacing="8">
+                        <TextBlock Classes="eyebrow"
+                                   IsVisible="{Binding HasProfiles}"
+                                   Text="{Binding ShellProfileLabel}" />
+                        <TextBlock Classes="eyebrow"
+                                   IsVisible="{Binding HasNoProfiles}"
+                                   Text="{Binding EmptyStateTitle}" />
 
-                    <Button Classes="ring-button"
-                            HorizontalAlignment="Center"
-                            BorderBrush="{Binding RingAccentBrush}"
-                            Foreground="{Binding RingAccentBrush}"
-                            Click="OnPrimaryActionClick">
-                        <TextBlock Classes="power-glyph" Text="вЏ»" />
-                    </Button>
+                        <TextBlock Classes="hero-title"
+                                   HorizontalAlignment="Center"
+                                   Text="{Binding ConnectionLabelText}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
 
-                    <TextBlock Classes="status-value"
-                               HorizontalAlignment="Center"
-                               Foreground="{Binding RingAccentBrush}"
-                               Text="{Binding ConnectionLabelText}"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
-                </StackPanel>
+                        <TextBlock Classes="hero-copy"
+                                   HorizontalAlignment="Center"
+                                   IsVisible="{Binding HasProfiles}"
+                                   MaxWidth="280"
+                                   Text="{Binding StatusTitle}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+
+                        <TextBlock Classes="hero-copy"
+                                   HorizontalAlignment="Center"
+                                   IsVisible="{Binding HasNoProfiles}"
+                                   MaxWidth="280"
+                                   Text="{Binding EmptyStateText}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Grid Grid.Row="1"
+                          Width="248"
+                          Height="248"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center">
+                        <Border Classes="reticle-frame"
+                                Width="248"
+                                Height="248" />
+                        <Rectangle Width="1"
+                                   Height="248"
+                                   Fill="#173040"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                        <Rectangle Width="248"
+                                   Height="1"
+                                   Fill="#173040"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                        <Border Width="206"
+                                Height="206"
+                                BorderBrush="#122633"
+                                BorderThickness="1"
+                                Background="#101923"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+
+                        <Button Classes="ring-button"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                BorderBrush="{Binding RingAccentBrush}"
+                                Foreground="{Binding RingAccentBrush}"
+                                Click="OnPrimaryActionClick">
+                            <Canvas Width="52"
+                                    Height="52">
+                                <Ellipse Width="52"
+                                         Height="52"
+                                         Stroke="{Binding RingAccentBrush}"
+                                         StrokeThickness="4" />
+                                <Path Data="M26 6 L26 24"
+                                      Stroke="{Binding RingAccentBrush}"
+                                      StrokeThickness="4"
+                                      StrokeLineCap="Round" />
+                            </Canvas>
+                        </Button>
+                    </Grid>
+
+                    <StackPanel Grid.Row="2"
+                                HorizontalAlignment="Center"
+                                Spacing="6">
+                        <TextBlock Classes="status-copy"
+                                   HorizontalAlignment="Center"
+                                   MaxWidth="280"
+                                   Text="{Binding ShellEndpointHostText}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
 
                 <Border Grid.Row="2"
                         IsVisible="{Binding HasProfiles}"
-                        Padding="16"
-                        Classes="glass-card">
-                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-                        <TextBlock Grid.Row="0"
-                                   Classes="card-label"
-                                   Text="Сервер" />
+                        Classes="surface-panel"
+                        Padding="14">
+                    <Grid RowDefinitions="Auto,Auto,Auto"
+                          RowSpacing="10">
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="10">
+                            <TextBlock Classes="panel-label"
+                                       VerticalAlignment="Center"
+                                       Text="ACTIVE SERVER" />
+                            <Button Grid.Column="1"
+                                    Classes="inline-action-button"
+                                    IsVisible="{Binding UpdatesEnabled}"
+                                    IsEnabled="{Binding CanRunUpdateAction}"
+                                    Command="{Binding RunUpdateActionCommand}"
+                                    Content="{Binding ServerPanelUpdateText}" />
+                        </Grid>
 
                         <ComboBox Grid.Row="1"
                                   Classes="profile-combo"
@@ -127,57 +269,81 @@
                         </ComboBox>
 
                         <TextBlock Grid.Row="2"
-                                   Classes="muted"
-                                   Text="{Binding EndpointText}"
+                                   Classes="panel-copy"
+                                   Text="{Binding ShellEndpointText}"
                                    TextWrapping="Wrap" />
                     </Grid>
                 </Border>
             </Grid>
 
             <Border IsVisible="{Binding ShowAccountScreen}"
-                    Background="#D9120A31"
-                    Padding="6">
-                <Border Classes="glass-card auth-card"
-                        Padding="18">
+                    Background="#D9081016">
+                <Border Classes="account-shell"
+                        Padding="16">
                     <Grid RowDefinitions="Auto,Auto,*"
                           RowSpacing="16">
                         <Grid ColumnDefinitions="44,*,44"
                               ColumnSpacing="12">
                             <Button Classes="icon-button"
-                                    Content="←"
                                     IsVisible="{Binding CanDismissAccountScreen}"
-                                    Command="{Binding CloseAccountScreenCommand}" />
+                                    Command="{Binding CloseAccountScreenCommand}">
+                                <Grid Width="16"
+                                      Height="16">
+                                    <Path Data="M12 2 L4 8 L12 14"
+                                          Stroke="#E7F4F6"
+                                          StrokeThickness="1.8"
+                                          StrokeLineCap="Square" />
+                                </Grid>
+                            </Button>
 
-                            <TextBlock Grid.Column="1"
-                                       Classes="app-title"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Text="{Binding AccountTitle}" />
+                            <StackPanel Grid.Column="1"
+                                        Spacing="2"
+                                        HorizontalAlignment="Center">
+                                <TextBlock Classes="header-title"
+                                           HorizontalAlignment="Center"
+                                           Text="{Binding AccountTitle}" />
+                                <TextBlock Classes="header-subtitle"
+                                           HorizontalAlignment="Center"
+                                           Text="identity" />
+                            </StackPanel>
 
                             <Button Grid.Column="2"
                                     Classes="icon-button"
-                                    Content="+"
                                     Click="OnImportConfigClick"
-                                    ToolTip.Tip="Импортировать конфиг" />
+                                    ToolTip.Tip="Импортировать конфиг">
+                                <Grid Width="16"
+                                      Height="16">
+                                    <Border Width="16"
+                                            Height="2"
+                                            Background="#E7F4F6"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center" />
+                                    <Border Width="2"
+                                            Height="16"
+                                            Background="#E7F4F6"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
                         </Grid>
 
                         <TextBlock Grid.Row="1"
-                                   Classes="muted"
-                                   MaxWidth="260"
+                                   Classes="hero-copy"
                                    HorizontalAlignment="Center"
+                                   MaxWidth="280"
                                    Text="{Binding AccountSubtitle}"
                                    TextAlignment="Center"
                                    TextWrapping="Wrap" />
 
                         <StackPanel Grid.Row="2"
-                                    Spacing="14">
+                                    Spacing="12">
                             <StackPanel Spacing="12"
                                         IsVisible="{Binding ShowAuthForm}">
-                                <Border Classes="glass-card"
-                                        Padding="16">
-                                    <StackPanel Spacing="12">
-                                        <TextBlock Classes="card-label"
-                                                   Text="Авторизация" />
+                                <Border Classes="surface-panel"
+                                        Padding="14">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Classes="panel-label"
+                                                   Text="SIGN IN" />
 
                                         <TextBox Classes="auth-input"
                                                  Watermark="Email"
@@ -191,23 +357,23 @@
                                         <TextBlock Classes="auth-error"
                                                    Text="{Binding AuthErrorMessage}"
                                                    TextWrapping="Wrap" />
-
-                                        <Button Classes="cta-button compact-button"
-                                                Command="{Binding SignInCommand}"
-                                                IsEnabled="{Binding CanSignIn}"
-                                                Content="Войти" />
                                     </StackPanel>
                                 </Border>
 
+                                <Button Classes="cta-button compact-button"
+                                        Command="{Binding SignInCommand}"
+                                        IsEnabled="{Binding CanSignIn}"
+                                        Content="Войти" />
+
                                 <Button Classes="secondary-button"
                                         Command="{Binding OpenRegistrationPortalCommand}"
-                                        Content="Зарегистрироваться" />
+                                        Content="Регистрация" />
 
                                 <Button Classes="secondary-button"
                                         Click="OnImportConfigClick"
-                                        Content="У меня уже есть конфиг" />
+                                        Content="Импортировать конфиг" />
 
-                                <TextBlock Classes="muted"
+                                <TextBlock Classes="panel-copy"
                                            Text="{Binding LegacyImportHintText}"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap" />
@@ -215,12 +381,12 @@
 
                             <StackPanel Spacing="12"
                                         IsVisible="{Binding ShowAuthenticatedCard}">
-                                <Border Classes="glass-card"
-                                        Padding="18">
+                                <Border Classes="surface-panel"
+                                        Padding="14">
                                     <StackPanel Spacing="10">
-                                        <TextBlock Classes="card-label"
-                                                   Text="Текущий аккаунт" />
-                                        <TextBlock Classes="status-value"
+                                        <TextBlock Classes="panel-label"
+                                                   Text="CURRENT ACCOUNT" />
+                                        <TextBlock Classes="identity-copy"
                                                    Text="{Binding AccountIdentityText}"
                                                    TextWrapping="Wrap" />
                                     </StackPanel>
@@ -238,7 +404,7 @@
                                         Command="{Binding SignOutCommand}"
                                         Content="Выйти" />
 
-                                <TextBlock Classes="muted"
+                                <TextBlock Classes="panel-copy"
                                            Text="{Binding LegacyImportHintText}"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap" />
