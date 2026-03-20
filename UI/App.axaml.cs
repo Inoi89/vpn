@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.IO;
-using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -10,11 +9,11 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using VpnClient.Core.Models;
+using VpnClient.UI.Platform;
 using VpnClient.UI.ViewModels;
 
 namespace VpnClient.UI;
 
-[SupportedOSPlatform("windows")]
 public partial class App : Avalonia.Application
 {
     private static readonly Uri ShieldIconUri = new("avares://VpnClient.UI/Assets/shield.ico");
@@ -69,7 +68,7 @@ public partial class App : Avalonia.Application
                 _lastNotifiedConnectionStatus = _viewModel.ConnectionState.Status;
             }
 
-            if (Program.SingleInstance is not null)
+            if (OperatingSystem.IsWindows() && Program.SingleInstance is not null)
             {
                 Program.SingleInstance.ActivationRequested += OnActivationRequested;
             }
@@ -83,7 +82,7 @@ public partial class App : Avalonia.Application
 
     private void TryCreateTrayIcon()
     {
-        if (_mainWindow is null)
+        if (_mainWindow is null || !DesktopBootstrap.IsWindows)
         {
             return;
         }
@@ -253,7 +252,7 @@ public partial class App : Avalonia.Application
             _viewModel.NotificationRequested -= OnNotificationRequested;
         }
 
-        if (Program.SingleInstance is not null)
+        if (OperatingSystem.IsWindows() && Program.SingleInstance is not null)
         {
             Program.SingleInstance.ActivationRequested -= OnActivationRequested;
         }
