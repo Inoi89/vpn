@@ -26,18 +26,35 @@ INFO_PLIST_TEMPLATE="${REPO_ROOT}/deploy/client/macos/Info.plist"
 ICON_SOURCE="${REPO_ROOT}/UI/Assets/shield.png"
 NATIVE_BUILD_SCRIPT="${REPO_ROOT}/native/macos/build-native.sh"
 
+if command -v dotnet >/dev/null 2>&1; then
+  DOTNET_BIN="dotnet"
+elif command -v dotnet.exe >/dev/null 2>&1; then
+  DOTNET_BIN="dotnet.exe"
+else
+  echo "dotnet is required but was not found in PATH." >&2
+  exit 1
+fi
+
+DOTNET_PROJECT_PATH="${PROJECT_PATH}"
+DOTNET_PUBLISH_DIR="${STAGING_DIR}"
+
+if [[ "${DOTNET_BIN}" == "dotnet.exe" ]] && command -v cygpath >/dev/null 2>&1; then
+  DOTNET_PROJECT_PATH="$(cygpath -w "${PROJECT_PATH}")"
+  DOTNET_PUBLISH_DIR="$(cygpath -w "${STAGING_DIR}")"
+fi
+
 if [[ -d "${PUBLISH_DIR}" ]]; then
   rm -rf "${PUBLISH_DIR}"
 fi
 
 mkdir -p "${STAGING_DIR}"
 
-dotnet publish "${PROJECT_PATH}" \
+"${DOTNET_BIN}" publish "${DOTNET_PROJECT_PATH}" \
   -c "${CONFIGURATION}" \
   -r "${RUNTIME_IDENTIFIER}" \
   /p:PublishProfile="${PUBLISH_PROFILE}" \
   /p:Version="${VERSION}" \
-  -o "${STAGING_DIR}"
+  -o "${DOTNET_PUBLISH_DIR}"
 
 if [[ "${SKIP_NATIVE_BUILD}" != "1" ]]; then
   if [[ ! -x "${NATIVE_BUILD_SCRIPT}" ]]; then
