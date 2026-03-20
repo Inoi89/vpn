@@ -45,6 +45,7 @@ class Program
 
             builder.Services.AddSingleton<IImportService, AmneziaImportService>();
             builder.Services.AddSingleton<IProfileRepository, JsonProfileRepository>();
+            builder.Services.AddSingleton<IClientSettingsService, JsonClientSettingsService>();
             builder.Services.AddSingleton<ImportTunnelConfigUseCase>();
             builder.Services.AddSingleton<ImportProfileUseCase>();
             builder.Services.AddSingleton<AddProfileUseCase>();
@@ -62,6 +63,7 @@ class Program
             builder.Services.AddSingleton<IWindowsRuntimeAssetLocator, WindowsRuntimeAssetLocator>();
             builder.Services.AddSingleton<IAmneziaRuntimeConfigStore, ProgramDataAmneziaRuntimeConfigStore>();
             builder.Services.AddSingleton<IAmneziaDaemonTransport, NamedPipeAmneziaDaemonTransport>();
+            builder.Services.AddSingleton<IKillSwitchService, WindowsKillSwitchService>();
             builder.Services.AddSingleton<BundledAmneziaRuntimeAdapter>();
             builder.Services.AddSingleton<WindowsFirstVpnRuntimeAdapter>();
             builder.Services.AddSingleton<AmneziaDaemonRuntimeAdapter>();

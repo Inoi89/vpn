@@ -28,6 +28,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly PrepareAppUpdateUseCase _prepareAppUpdateUseCase;
     private readonly LaunchPreparedAppUpdateUseCase _launchPreparedAppUpdateUseCase;
     private readonly IVpnRuntimeAdapter _runtimeAdapter;
+    private readonly IClientSettingsService _clientSettingsService;
+    private readonly IKillSwitchService _killSwitchService;
     private readonly IVpnDiagnosticsService _diagnosticsService;
     private readonly IProductPlatformEnrollmentService _productPlatformEnrollmentService;
     private readonly ILogger<MainWindowViewModel> _logger;
@@ -55,6 +57,8 @@ public partial class MainWindowViewModel : ObservableObject
         PrepareAppUpdateUseCase prepareAppUpdateUseCase,
         LaunchPreparedAppUpdateUseCase launchPreparedAppUpdateUseCase,
         IVpnRuntimeAdapter runtimeAdapter,
+        IClientSettingsService clientSettingsService,
+        IKillSwitchService killSwitchService,
         IVpnDiagnosticsService diagnosticsService,
         IProductPlatformEnrollmentService productPlatformEnrollmentService,
         IProductPlatformAuthService productPlatformAuthService,
@@ -72,6 +76,8 @@ public partial class MainWindowViewModel : ObservableObject
         _prepareAppUpdateUseCase = prepareAppUpdateUseCase;
         _launchPreparedAppUpdateUseCase = launchPreparedAppUpdateUseCase;
         _runtimeAdapter = runtimeAdapter;
+        _clientSettingsService = clientSettingsService;
+        _killSwitchService = killSwitchService;
         _diagnosticsService = diagnosticsService;
         _productPlatformEnrollmentService = productPlatformEnrollmentService;
         _productPlatformAuthService = productPlatformAuthService;
@@ -85,6 +91,7 @@ public partial class MainWindowViewModel : ObservableObject
             Interval = TimeSpan.FromSeconds(2)
         };
         _refreshTimer.Tick += async (_, _) => await RefreshDiagnosticsAsync();
+        _runtimeAdapter.StateChanged += state => _ = HandleRuntimeStateChangedAsync(state);
     }
 
     public ObservableCollection<ImportedServerProfile> Profiles { get; }
@@ -403,7 +410,7 @@ public partial class MainWindowViewModel : ObservableObject
                     "connect",
                     "UI");
 
-                await _runtimeAdapter.DisconnectAsync();
+                await DisconnectRuntimeAsync(releaseKillSwitch: true);
                 LastOperationMessage = $"Соединение с '{activeProfileName}' завершено.";
                 await RefreshDiagnosticsAsync();
             }
@@ -532,6 +539,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         _initialized = true;
         UpdateState = _appUpdateService.CurrentState;
+        await LoadClientSettingsAsync();
         await RestoreAccountSessionAsync();
 
         var snapshot = await _listProfilesUseCase.ExecuteAsync();
@@ -560,7 +568,18 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         await RefreshDiagnosticsAsync();
+        await EnsureKillSwitchStateAsync(ConnectionState, releaseWhenInactive: true);
         _refreshTimer.Start();
+
+        if (AutoConnectEnabled
+            && SelectedProfile is not null
+            && !HasLiveConnection
+            && (ConnectionState.Status is RuntimeConnectionStatus.Disconnected
+                or RuntimeConnectionStatus.Degraded
+                or RuntimeConnectionStatus.Failed))
+        {
+            await ToggleConnectionAsync(isAutomatic: true);
+        }
 
         if (UpdatesEnabled)
         {
@@ -572,15 +591,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _refreshTimer.Stop();
 
-        if (_runtimeAdapter.CurrentState.Status is RuntimeConnectionStatus.Disconnected
-            or RuntimeConnectionStatus.Unsupported)
-        {
-            return;
-        }
-
         try
         {
-            await _runtimeAdapter.DisconnectAsync();
+            await DisconnectRuntimeAsync(releaseKillSwitch: true);
         }
         catch (Exception exception)
         {
@@ -644,6 +657,8 @@ public partial class MainWindowViewModel : ObservableObject
 
             LastOperationMessage = $"Управляемый доступ '{profile.DisplayName}' сохранён.";
             ApplySnapshot(snapshot, profile.Id);
+            IsAccountScreenOpen = false;
+            CurrentScreen = ShellScreen.Home;
             await RefreshDiagnosticsAsync();
         }
         catch (Exception exception)
@@ -719,7 +734,7 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ToggleConnectionAsync()
+    private async Task ToggleConnectionAsync(bool isAutomatic = false)
     {
         if (SelectedProfile is null || IsBusy)
         {
@@ -743,7 +758,7 @@ public partial class MainWindowViewModel : ObservableObject
                     "connect",
                     "UI");
 
-                await _runtimeAdapter.DisconnectAsync();
+                await DisconnectRuntimeAsync(releaseKillSwitch: true);
                 LastOperationMessage = $"Соединение с '{SelectedProfile.DisplayName}' завершено.";
                 await RefreshDiagnosticsAsync();
                 return;
@@ -757,7 +772,7 @@ public partial class MainWindowViewModel : ObservableObject
                     "connect",
                     "UI");
 
-                await _runtimeAdapter.DisconnectAsync();
+                await DisconnectRuntimeAsync(releaseKillSwitch: true);
             }
             else
             {
@@ -860,7 +875,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (ConnectionState.ProfileId == SelectedProfile.Id
                 && ConnectionState.Status is RuntimeConnectionStatus.Connected or RuntimeConnectionStatus.Degraded or RuntimeConnectionStatus.Connecting)
             {
-                await _runtimeAdapter.DisconnectAsync();
+                await DisconnectRuntimeAsync(releaseKillSwitch: true);
             }
 
             var deletedProfileId = SelectedProfile.Id;
@@ -1068,10 +1083,13 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasNoProfiles));
         OnPropertyChanged(nameof(HasSelectedProfile));
         OnPropertyChanged(nameof(IsAuthenticated));
+        OnPropertyChanged(nameof(ShowOnboardingScreen));
         OnPropertyChanged(nameof(ShowAccountScreen));
+        OnPropertyChanged(nameof(ShowMainShell));
         OnPropertyChanged(nameof(CanDismissAccountScreen));
         OnPropertyChanged(nameof(ShowAuthForm));
         OnPropertyChanged(nameof(ShowAuthenticatedCard));
+        OnPropertyChanged(nameof(ShowAccountShortcut));
         OnPropertyChanged(nameof(CanSignIn));
         OnPropertyChanged(nameof(AccountTitle));
         OnPropertyChanged(nameof(AccountSubtitle));
@@ -1114,6 +1132,21 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ShellEndpointText));
         OnPropertyChanged(nameof(ShellEndpointHostText));
         OnPropertyChanged(nameof(ServerPanelUpdateText));
+        OnPropertyChanged(nameof(IsHomeScreen));
+        OnPropertyChanged(nameof(IsServerSelectionScreen));
+        OnPropertyChanged(nameof(IsSettingsScreen));
+        OnPropertyChanged(nameof(VisibleMockLocations));
+        OnPropertyChanged(nameof(CurrentLocationName));
+        OnPropertyChanged(nameof(CurrentLocationSubtitle));
+        OnPropertyChanged(nameof(HomeStatusLabel));
+        OnPropertyChanged(nameof(ShowHomeSessionLabel));
+        OnPropertyChanged(nameof(HomeSessionLabel));
+        OnPropertyChanged(nameof(ShowHomeUpdateAlert));
+        OnPropertyChanged(nameof(ShowHomeFooterText));
+        OnPropertyChanged(nameof(HomeFooterText));
+        OnPropertyChanged(nameof(HomeUpdateAlertText));
+        OnPropertyChanged(nameof(SettingsVersionText));
+        OnPropertyChanged(nameof(SettingsUpdateActionText));
         OnPropertyChanged(nameof(AddressText));
         OnPropertyChanged(nameof(DnsText));
         OnPropertyChanged(nameof(AllowedIpsText));
