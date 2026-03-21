@@ -64,6 +64,8 @@ strip_macos_detritus() {
   fi
 
   find "${path}" -name '._*' -delete >/dev/null 2>&1 || true
+  find "${path}" -name '.DS_Store' -delete >/dev/null 2>&1 || true
+  find "${path}" -name $'Icon\r' -delete >/dev/null 2>&1 || true
 }
 
 copy_clean() {
@@ -120,6 +122,19 @@ manual_codesign_target() {
     args+=(--entitlements "${entitlements_path}")
   fi
 
+  if codesign "${args[@]}" "${target_path}"; then
+    return
+  fi
+
+  if [[ -d "${target_path}" ]] && command -v ditto >/dev/null 2>&1; then
+    local normalized_target="${target_path}.normalized"
+    rm -rf "${normalized_target}"
+    ditto --noextattr --noqtn --norsrc "${target_path}" "${normalized_target}"
+    rm -rf "${target_path}"
+    mv "${normalized_target}" "${target_path}"
+  fi
+
+  strip_macos_detritus "${target_path}"
   codesign "${args[@]}" "${target_path}"
 }
 
@@ -165,7 +180,7 @@ sed \
   "${INFO_PLIST_TEMPLATE}" > "${APP_CONTENTS_DIR}/Info.plist"
 
 if [[ -f "${ICON_SOURCE}" ]]; then
-  cp "${ICON_SOURCE}" "${APP_RESOURCES_DIR}/shield.png"
+  copy_clean "${ICON_SOURCE}" "${APP_RESOURCES_DIR}/shield.png"
 fi
 
 strip_macos_detritus "${APP_BUNDLE_DIR}"
