@@ -12,6 +12,8 @@ ZIP_PACKAGE="${ZIP_PACKAGE:-0}"
 SKIP_NATIVE_BUILD="${SKIP_NATIVE_BUILD:-0}"
 NATIVE_OUTPUT_DIR="${NATIVE_OUTPUT_DIR:-}"
 BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-com.etovpn.desktop}"
+PRESERVE_NATIVE_SIGNATURES="${PRESERVE_NATIVE_SIGNATURES:-}"
+DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -32,6 +34,14 @@ PUBLISH_PROFILE="${RUNTIME_IDENTIFIER}-selfcontained"
 INFO_PLIST_TEMPLATE="${REPO_ROOT}/deploy/client/macos/Info.plist"
 ICON_SOURCE="${REPO_ROOT}/UI/Assets/shield.png"
 NATIVE_BUILD_SCRIPT="${REPO_ROOT}/native/macos/build-native.sh"
+
+if [[ -z "${PRESERVE_NATIVE_SIGNATURES}" ]]; then
+  if [[ -n "${DEVELOPMENT_TEAM}" ]]; then
+    PRESERVE_NATIVE_SIGNATURES="1"
+  else
+    PRESERVE_NATIVE_SIGNATURES="0"
+  fi
+fi
 
 if command -v dotnet >/dev/null 2>&1; then
   DOTNET_BIN="dotnet"
@@ -360,9 +370,9 @@ else
   echo "warning: native helper was not found at ${NATIVE_OUTPUT_DIR}/etoVPNMacBridge(.app)" >&2
 fi
 
-if [[ -d "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" ]]; then
+if [[ "${PRESERVE_NATIVE_SIGNATURES}" != "1" ]] && [[ -d "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" ]]; then
   copy_clean "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex"
-else
+elif [[ "${PRESERVE_NATIVE_SIGNATURES}" != "1" ]]; then
   echo "warning: packet tunnel extension was not found at ${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" >&2
 fi
 
@@ -378,19 +388,21 @@ fi
 normalize_app_bundle
 normalize_app_macos_permissions
 sign_app_macos_binaries
-if [[ -d "${APP_HELPER_BUNDLE_DIR}/Contents/Frameworks" ]]; then
-  while IFS= read -r framework_path; do
-    manual_codesign_target "${framework_path}"
-  done < <(find "${APP_HELPER_BUNDLE_DIR}/Contents/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \))
-fi
+if [[ "${PRESERVE_NATIVE_SIGNATURES}" != "1" ]]; then
+  if [[ -d "${APP_HELPER_BUNDLE_DIR}/Contents/Frameworks" ]]; then
+    while IFS= read -r framework_path; do
+      manual_codesign_target "${framework_path}"
+    done < <(find "${APP_HELPER_BUNDLE_DIR}/Contents/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \))
+  fi
 
-if [[ -d "${APP_HELPER_BUNDLE_DIR}/Contents/PlugIns/etoVPNPacketTunnel.appex" ]]; then
-  manual_codesign_target "${APP_HELPER_BUNDLE_DIR}/Contents/PlugIns/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
-fi
+  if [[ -d "${APP_HELPER_BUNDLE_DIR}/Contents/PlugIns/etoVPNPacketTunnel.appex" ]]; then
+    manual_codesign_target "${APP_HELPER_BUNDLE_DIR}/Contents/PlugIns/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
+  fi
 
-manual_codesign_target "${APP_HELPER_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
-manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge" "${BRIDGE_ENTITLEMENTS}"
-manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
+  manual_codesign_target "${APP_HELPER_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
+  manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge" "${BRIDGE_ENTITLEMENTS}"
+  manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
+fi
 strip_path_node_metadata "${APP_BUNDLE_DIR}"
 manual_codesign_target "${APP_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
 

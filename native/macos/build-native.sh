@@ -8,6 +8,7 @@ DERIVED_DATA_PATH=""
 SKIP_GENERATE="0"
 DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}"
 CODE_SIGN_STYLE="${CODE_SIGN_STYLE:-Automatic}"
+ALLOW_PROVISIONING_UPDATES="${ALLOW_PROVISIONING_UPDATES:-1}"
 AMNEZIAWG_APPLE_REF="${AMNEZIAWG_APPLE_REF:-cf63135331d33b2a684cca5a2b213d851cb79e77}"
 
 while [[ $# -gt 0 ]]; do
@@ -71,6 +72,11 @@ PREBUILT_WIREGUARD_LIB="${UPSTREAM_ROOT}/client/3rd-prebuilt/3rd-prebuilt/wiregu
 PREBUILT_WIREGUARD_VERSION_HEADER="${UPSTREAM_ROOT}/client/macos/gobridge/wireguard-go-version.h"
 BRIDGE_ENTITLEMENTS_PATH="${SCRIPT_DIR}/bridge/etoVPNMacBridge.entitlements"
 PACKET_TUNNEL_ENTITLEMENTS_PATH="${SCRIPT_DIR}/packet-tunnel/etoVPNPacketTunnel.entitlements"
+USE_NATIVE_TEAM_SIGNING="0"
+
+if [[ -n "${DEVELOPMENT_TEAM}" ]]; then
+  USE_NATIVE_TEAM_SIGNING="1"
+fi
 
 if [[ -z "${DERIVED_DATA_PATH}" ]]; then
   DERIVED_DATA_PATH="${REPO_ROOT}/${OUTPUT_ROOT}/.derived/${RUNTIME_IDENTIFIER}"
@@ -229,11 +235,17 @@ if [[ -n "${CODE_SIGN_STYLE}" ]]; then
   XCODEBUILD_ARGS+=("CODE_SIGN_STYLE=${CODE_SIGN_STYLE}")
 fi
 
-XCODEBUILD_ARGS+=(
-  "CODE_SIGNING_ALLOWED=NO"
-  "CODE_SIGNING_REQUIRED=NO"
-  "AD_HOC_CODE_SIGNING_ALLOWED=NO"
-)
+if [[ "${USE_NATIVE_TEAM_SIGNING}" == "1" ]]; then
+  if [[ "${ALLOW_PROVISIONING_UPDATES}" == "1" ]]; then
+    XCODEBUILD_ARGS+=(-allowProvisioningUpdates)
+  fi
+else
+  XCODEBUILD_ARGS+=(
+    "CODE_SIGNING_ALLOWED=NO"
+    "CODE_SIGNING_REQUIRED=NO"
+    "AD_HOC_CODE_SIGNING_ALLOWED=NO"
+  )
+fi
 
 COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=1 xcodebuild "${XCODEBUILD_ARGS[@]}"
 
@@ -263,17 +275,19 @@ else
   echo "warning: etoVPNPacketTunnel.appex was not found in build products." >&2
 fi
 
-manual_codesign_target "${OUTPUT_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS_PATH}"
-manual_codesign_target "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/PlugIns/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS_PATH}"
+if [[ "${USE_NATIVE_TEAM_SIGNING}" != "1" ]]; then
+  manual_codesign_target "${OUTPUT_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS_PATH}"
+  manual_codesign_target "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/PlugIns/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS_PATH}"
 
-if [[ -d "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/Frameworks" ]]; then
-  while IFS= read -r framework_path; do
-    manual_codesign_target "${framework_path}"
-  done < <(find "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \))
+  if [[ -d "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/Frameworks" ]]; then
+    while IFS= read -r framework_path; do
+      manual_codesign_target "${framework_path}"
+    done < <(find "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \))
+  fi
+
+  manual_codesign_target "${OUTPUT_DIR}/etoVPNMacBridge.app" "${BRIDGE_ENTITLEMENTS_PATH}"
+  manual_codesign_target "${OUTPUT_DIR}/etoVPNMacBridge"
 fi
-
-manual_codesign_target "${OUTPUT_DIR}/etoVPNMacBridge.app" "${BRIDGE_ENTITLEMENTS_PATH}"
-manual_codesign_target "${OUTPUT_DIR}/etoVPNMacBridge"
 
 echo ""
 echo "Built native macOS artifacts:"
