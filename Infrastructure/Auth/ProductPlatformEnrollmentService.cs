@@ -25,10 +25,7 @@ public sealed class ProductPlatformEnrollmentService : IProductPlatformEnrollmen
         ILocalDeviceIdentityService localDeviceIdentityService,
         IImportService importService)
     {
-        _httpClient = new HttpClient
-        {
-            BaseAddress = BuildBaseUri(options.ApiBaseUrl)
-        };
+        _httpClient = ProductPlatformHttpClientFactory.Create(options.ApiBaseUrl);
         _authService = authService;
         _localDeviceIdentityService = localDeviceIdentityService;
         _importService = importService;
@@ -105,33 +102,37 @@ public sealed class ProductPlatformEnrollmentService : IProductPlatformEnrollmen
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(method, relativePath);
+        ProductPlatformHttpClientFactory.PrepareJsonRequest(request);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         if (payload is not null)
         {
             request.Content = JsonContent.Create(payload);
         }
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        if (response.IsSuccessStatusCode)
+        HttpResponseMessage response;
+        try
         {
-            var model = await response.Content.ReadFromJsonAsync<T>(SerializerOptions, cancellationToken);
-            return model ?? throw new InvalidOperationException("Product platform returned an empty response.");
+            response = await _httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new InvalidOperationException(
+                ProductPlatformHttpClientFactory.FormatTransportError(exception),
+                exception);
         }
 
-        var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-        throw new InvalidOperationException(TryExtractError(errorBody)
-            ?? $"Product platform request failed with status {(int)response.StatusCode}.");
-    }
-
-    private static Uri BuildBaseUri(string apiBaseUrl)
-    {
-        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        using (response)
         {
-            throw new InvalidOperationException("ProductPlatform:ApiBaseUrl is not configured.");
-        }
+            if (response.IsSuccessStatusCode)
+            {
+                var model = await response.Content.ReadFromJsonAsync<T>(SerializerOptions, cancellationToken);
+                return model ?? throw new InvalidOperationException("Product platform returned an empty response.");
+            }
 
-        return new Uri(apiBaseUrl.Trim().TrimEnd('/') + "/", UriKind.Absolute);
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(TryExtractError(errorBody)
+                ?? $"Product platform request failed with status {(int)response.StatusCode}.");
+        }
     }
 
     private static string? TryExtractError(string body)
