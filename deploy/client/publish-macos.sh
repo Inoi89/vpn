@@ -97,6 +97,20 @@ normalize_app_bundle() {
   strip_macos_detritus "${APP_BUNDLE_DIR}"
 }
 
+sign_app_macos_binaries() {
+  if [[ ! -d "${APP_MACOS_DIR}" ]]; then
+    return
+  fi
+
+  while IFS= read -r binary_path; do
+    manual_codesign_target "${binary_path}"
+  done < <(
+    find "${APP_MACOS_DIR}" -maxdepth 1 -type f \
+      \( -name "*.dll" -o -name "*.dylib" -o -name "*.so" -o -name "VpnClient.UI" -o -name "createdump" \) \
+      | sort
+  )
+}
+
 manual_codesign_target() {
   local target_path="$1"
   local entitlements_path="${2:-}"
@@ -227,9 +241,10 @@ if [[ -d "${APP_CONTENTS_DIR}/Frameworks" ]]; then
   done < <(find "${APP_CONTENTS_DIR}/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \))
 fi
 
+normalize_app_bundle
+sign_app_macos_binaries
 manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge"
 manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
-normalize_app_bundle
 strip_macos_detritus "${APP_BUNDLE_DIR}"
 manual_codesign_target "${APP_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
 
