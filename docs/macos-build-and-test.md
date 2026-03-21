@@ -8,10 +8,11 @@ test.
 On the Mac machine, install:
 
 - .NET 8 SDK
-- Go 1.25+
 - Xcode
 - Xcode command line tools
 - XcodeGen
+- Go 1.25+ only if you are building without the repo's hydrated `.research`
+  folder or without the prebuilt `libwg-go.a`
 
 You will also need an Apple signing context that can build a packet tunnel
 extension.
@@ -25,7 +26,8 @@ From the repo root:
 ```
 
 This generates the Xcode project from [project.yml](/c:/Users/rrese/source/repos/vpn/native/macos/project.yml),
-hydrates the upstream `amneziawg-apple` sources if needed, builds `libwg-go.a`
+hydrates the upstream `amneziawg-apple` sources if needed, prefers the repo's
+prebuilt macOS `libwg-go.a` when present, otherwise falls back to building it
 from `WireGuardKitGo`, then builds the helper app plus packet tunnel and stages
 the outputs under:
 
@@ -80,5 +82,18 @@ SKIP_NATIVE_BUILD=1 ./deploy/client/publish-macos.sh
 - The Windows updater/MSI path is unrelated to this flow.
 - The macOS packet tunnel is now wired to the real Apple `WireGuardAdapter`
   path from `amneziawg-apple`.
+- If you hand the Mac tester a full repo snapshot that already includes
+  `.research/amnezia-client`, they usually do not need `git` and do not need
+  `go` just for the first smoke build.
+- If Gatekeeper blocks the unsigned app bundle, the shortest workaround for a
+  smoke test is:
+
+  ```bash
+  xattr -dr com.apple.quarantine artifacts/client-publish/<runtime>/etoVPN.app
+  open artifacts/client-publish/<runtime>/etoVPN.app
+  ```
+
 - The remaining blocker is no longer engine integration, but running the native
   Xcode build and smoke-testing it on a real Mac with entitlements/signing.
+- For a non-developer tester handoff, use:
+  [macos-tester-handoff.md](/c:/Users/rrese/source/repos/vpn/docs/macos-tester-handoff.md)

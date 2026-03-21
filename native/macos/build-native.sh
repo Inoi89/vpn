@@ -46,21 +46,13 @@ fi
 
 if ! command -v xcodebuild >/dev/null 2>&1; then
   echo "xcodebuild is required but not installed." >&2
+  echo "Install Xcode and Xcode Command Line Tools first." >&2
   exit 1
 fi
 
 if ! command -v xcodegen >/dev/null 2>&1; then
   echo "xcodegen is required but not installed." >&2
-  exit 1
-fi
-
-if ! command -v git >/dev/null 2>&1; then
-  echo "git is required but not installed." >&2
-  exit 1
-fi
-
-if ! command -v go >/dev/null 2>&1; then
-  echo "go is required to build libwg-go.a for the macOS packet tunnel." >&2
+  echo "Install it with: brew install xcodegen" >&2
   exit 1
 fi
 
@@ -75,6 +67,8 @@ WG_APPLE_WIREGUARD_ADAPTER="${WG_APPLE_DIR}/Sources/WireGuardKit/WireGuardAdapte
 WIREGUARD_GO_DIR="${WG_APPLE_DIR}/Sources/WireGuardKitGo"
 WIREGUARD_GENERATED_DIR="${SCRIPT_DIR}/.generated/wireguard-go"
 WIREGUARD_GO_TEMP_DIR="${SCRIPT_DIR}/.generated/.tmp/wireguard-go"
+PREBUILT_WIREGUARD_LIB="${UPSTREAM_ROOT}/client/3rd-prebuilt/3rd-prebuilt/wireguard/macos/universal2/libwg-go.a"
+PREBUILT_WIREGUARD_VERSION_HEADER="${UPSTREAM_ROOT}/client/macos/gobridge/wireguard-go-version.h"
 
 if [[ -z "${DERIVED_DATA_PATH}" ]]; then
   DERIVED_DATA_PATH="${REPO_ROOT}/${OUTPUT_ROOT}/.derived/${RUNTIME_IDENTIFIER}"
@@ -86,6 +80,12 @@ mkdir -p "${OUTPUT_DIR}"
 hydrate_amneziawg_apple() {
   if [[ -f "${WG_APPLE_WIREGUARD_ADAPTER}" ]]; then
     return
+  fi
+
+  if ! command -v git >/dev/null 2>&1; then
+    echo "git is required only when amneziawg-apple sources are missing." >&2
+    echo "Either install git or provide the repo archive with .research/amnezia-client already included." >&2
+    exit 1
   fi
 
   if [[ -d "${UPSTREAM_ROOT}/.git" ]]; then
@@ -111,6 +111,26 @@ hydrate_amneziawg_apple() {
 
 prepare_wireguard_go_artifacts() {
   mkdir -p "${WIREGUARD_GENERATED_DIR}" "${WIREGUARD_GO_TEMP_DIR}"
+
+  if [[ -f "${PREBUILT_WIREGUARD_LIB}" ]]; then
+    cp "${PREBUILT_WIREGUARD_LIB}" "${WIREGUARD_GENERATED_DIR}/libwg-go.a"
+
+    if [[ -f "${PREBUILT_WIREGUARD_VERSION_HEADER}" ]]; then
+      cp "${PREBUILT_WIREGUARD_VERSION_HEADER}" "${WIREGUARD_GENERATED_DIR}/wireguard-go-version.h"
+    else
+      cat > "${WIREGUARD_GENERATED_DIR}/wireguard-go-version.h" <<'EOF'
+#define WIREGUARD_GO_VERSION "0.0.0"
+EOF
+    fi
+
+    return
+  fi
+
+  if ! command -v go >/dev/null 2>&1; then
+    echo "go is required to build libwg-go.a when no prebuilt macOS WireGuard library is present." >&2
+    exit 1
+  fi
+
   make -C "${WIREGUARD_GO_DIR}" clean >/dev/null 2>&1 || true
   make -C "${WIREGUARD_GO_DIR}" \
     build \

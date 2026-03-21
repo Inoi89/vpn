@@ -66,8 +66,9 @@ archiving `etoVPNMacBridge` is the path to a full macOS helper bundle.
 
 The native path is still pre-smoke, but it is no longer just a placeholder:
 `build-native.sh` now hydrates the upstream `amneziawg-apple` sources if
-needed, builds `libwg-go.a` from `WireGuardKitGo`, and wires the packet tunnel
-target to the real Apple `WireGuardAdapter` code path.
+needed, prefers the repo's prebuilt macOS `libwg-go.a` when present, falls
+back to building it from `WireGuardKitGo` only when necessary, and wires the
+packet tunnel target to the real Apple `WireGuardAdapter` code path.
 
 ## Layout
 
