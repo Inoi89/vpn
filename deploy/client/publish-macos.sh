@@ -83,13 +83,38 @@ strip_macos_detritus() {
   fi
 }
 
+rewrite_clean_file() {
+  local source_path="$1"
+  local destination_path="$2"
+  local permissions=""
+
+  rm -f "${destination_path}"
+  mkdir -p "$(dirname "${destination_path}")"
+
+  cat "${source_path}" > "${destination_path}"
+
+  if command -v stat >/dev/null 2>&1; then
+    permissions="$(stat -f %Lp "${source_path}" 2>/dev/null || true)"
+  fi
+
+  if [[ -n "${permissions}" ]]; then
+    chmod "${permissions}" "${destination_path}" >/dev/null 2>&1 || true
+  elif [[ -x "${source_path}" ]]; then
+    chmod +x "${destination_path}" >/dev/null 2>&1 || true
+  fi
+
+  strip_macos_detritus "${destination_path}"
+}
+
 copy_clean() {
   local source_path="$1"
   local destination_path="$2"
 
   rm -rf "${destination_path}"
 
-  if command -v ditto >/dev/null 2>&1; then
+  if [[ -f "${source_path}" ]]; then
+    rewrite_clean_file "${source_path}" "${destination_path}"
+  elif command -v ditto >/dev/null 2>&1; then
     ditto --noextattr --noqtn --norsrc "${source_path}" "${destination_path}"
   else
     cp -R "${source_path}" "${destination_path}"
@@ -155,10 +180,19 @@ manual_codesign_target() {
     return
   fi
 
-  if command -v ditto >/dev/null 2>&1; then
-    local normalized_target="${target_path}.normalized"
+  local normalized_target="${target_path}.normalized"
+
+  if [[ -f "${target_path}" ]]; then
+    rewrite_clean_file "${target_path}" "${normalized_target}"
+  elif command -v ditto >/dev/null 2>&1; then
     rm -rf "${normalized_target}"
     ditto --noextattr --noqtn --norsrc "${target_path}" "${normalized_target}"
+  else
+    rm -rf "${normalized_target}"
+    cp -R "${target_path}" "${normalized_target}"
+  fi
+
+  if [[ -e "${normalized_target}" ]]; then
     rm -rf "${target_path}"
     mv "${normalized_target}" "${target_path}"
   fi
