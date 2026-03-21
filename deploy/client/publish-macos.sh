@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export COPYFILE_DISABLE=1
+export COPY_EXTENDED_ATTRIBUTES_DISABLE=1
+
 CONFIGURATION="${CONFIGURATION:-Release}"
 RUNTIME_IDENTIFIER="${RUNTIME_IDENTIFIER:-osx-arm64}"
 VERSION="${VERSION:-0.1.9}"
@@ -90,6 +93,26 @@ if [[ -f "${ICON_SOURCE}" ]]; then
   cp "${ICON_SOURCE}" "${APP_RESOURCES_DIR}/shield.png"
 fi
 
+strip_macos_detritus() {
+  local path="$1"
+
+  if [[ ! -e "${path}" ]]; then
+    return
+  fi
+
+  if command -v xattr >/dev/null 2>&1; then
+    xattr -cr "${path}" >/dev/null 2>&1 || true
+  fi
+
+  if command -v dot_clean >/dev/null 2>&1; then
+    dot_clean -m "${path}" >/dev/null 2>&1 || true
+  fi
+
+  find "${path}" -name '._*' -delete >/dev/null 2>&1 || true
+}
+
+strip_macos_detritus "${APP_BUNDLE_DIR}"
+
 manual_codesign_target() {
   local target_path="$1"
   local entitlements_path="${2:-}"
@@ -102,10 +125,7 @@ manual_codesign_target() {
     return
   fi
 
-  if command -v xattr >/dev/null 2>&1; then
-    xattr -cr "${target_path}" >/dev/null 2>&1 || true
-  fi
-  find "${target_path}" -name '._*' -delete >/dev/null 2>&1 || true
+  strip_macos_detritus "${target_path}"
 
   local args=(
     --force
@@ -155,6 +175,8 @@ else
   echo "warning: packet tunnel extension was not found at ${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" >&2
 fi
 
+strip_macos_detritus "${APP_BUNDLE_DIR}"
+
 if [[ -d "${APP_CONTENTS_DIR}/Frameworks" ]]; then
   while IFS= read -r framework_path; do
     manual_codesign_target "${framework_path}"
@@ -163,6 +185,7 @@ fi
 
 manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge"
 manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
+strip_macos_detritus "${APP_BUNDLE_DIR}"
 manual_codesign_target "${APP_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
 
 rm -rf "${STAGING_DIR}"
