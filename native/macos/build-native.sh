@@ -155,9 +155,31 @@ EOF
 hydrate_amneziawg_apple
 prepare_wireguard_go_artifacts
 
+strip_macos_detritus() {
+  if ! command -v xattr >/dev/null 2>&1; then
+    return
+  fi
+
+  local path
+  for path in \
+    "${SCRIPT_DIR}" \
+    "${WG_APPLE_DIR}" \
+    "${WIREGUARD_GENERATED_DIR}" \
+    "${DERIVED_DATA_PATH}"
+  do
+    if [[ -e "${path}" ]]; then
+      xattr -cr "${path}" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
+strip_macos_detritus
+
 if [[ "${SKIP_GENERATE}" != "1" ]]; then
   xcodegen generate --spec "${PROJECT_SPEC}"
 fi
+
+strip_macos_detritus
 
 XCODEBUILD_ARGS=(
   -project "${PROJECT_PATH}"
