@@ -134,8 +134,11 @@ if command -v iconutil >/dev/null 2>&1 && command -v sips >/dev/null 2>&1 && [[ 
   sips -z 256 256 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_256x256.png" >/dev/null
   sips -z 512 512 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_256x256@2x.png" >/dev/null
   sips -z 512 512 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_512x512.png" >/dev/null
-  cp "${ICON_SOURCE}" "${ICONSET_DIR}/icon_512x512@2x.png"
-  iconutil -c icns "${ICONSET_DIR}" -o "${APP_RESOURCES_DIR}/etoVPN.icns"
+  sips -z 1024 1024 "${ICON_SOURCE}" --out "${ICONSET_DIR}/icon_512x512@2x.png" >/dev/null
+  if ! iconutil -c icns "${ICONSET_DIR}" -o "${APP_RESOURCES_DIR}/etoVPN.icns"; then
+    echo "warning: iconutil failed to build etoVPN.icns; continuing without .icns bundle icon" >&2
+    rm -f "${APP_RESOURCES_DIR}/etoVPN.icns"
+  fi
   rm -rf "${ICONSET_DIR}"
 fi
 
