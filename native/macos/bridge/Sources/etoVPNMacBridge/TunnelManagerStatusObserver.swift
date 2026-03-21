@@ -13,10 +13,12 @@ final class TunnelManagerStatusObserver {
         token = NotificationCenter.default.addObserver(
             forName: .NEVPNStatusDidChange,
             object: manager.connection,
-            queue: .main)
+            queue: nil)
         { _ in
             onStatusChanged(manager.connection.status)
         }
+
+        onStatusChanged(manager.connection.status)
     }
 
     func stop() {

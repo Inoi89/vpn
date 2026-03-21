@@ -1,4 +1,5 @@
 import Foundation
+import CoreFoundation
 
 struct BridgeApplication {
     let socketPath: URL
@@ -34,6 +35,11 @@ struct BridgeApplication {
     }
 
     func run() {
-        server.run()
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.server.run()
+            CFRunLoopStop(CFRunLoopGetMain())
+        }
+
+        RunLoop.main.run()
     }
 }
