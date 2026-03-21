@@ -50,22 +50,37 @@ fi
 
 strip_macos_detritus() {
   local path="$1"
+  local parent_dir=""
 
   if [[ ! -e "${path}" ]]; then
     return
   fi
 
+  if [[ -f "${path}" ]]; then
+    parent_dir="$(dirname "${path}")"
+  fi
+
   if command -v xattr >/dev/null 2>&1; then
     xattr -cr "${path}" >/dev/null 2>&1 || true
+    if [[ -n "${parent_dir}" ]]; then
+      xattr -cr "${parent_dir}" >/dev/null 2>&1 || true
+    fi
   fi
 
   if command -v dot_clean >/dev/null 2>&1; then
     dot_clean -m "${path}" >/dev/null 2>&1 || true
+    if [[ -n "${parent_dir}" ]]; then
+      dot_clean -m "${parent_dir}" >/dev/null 2>&1 || true
+    fi
   fi
 
   find "${path}" -name '._*' -delete >/dev/null 2>&1 || true
   find "${path}" -name '.DS_Store' -delete >/dev/null 2>&1 || true
   find "${path}" -name $'Icon\r' -delete >/dev/null 2>&1 || true
+
+  if [[ -n "${parent_dir}" ]]; then
+    rm -f "${parent_dir}/._$(basename "${path}")" >/dev/null 2>&1 || true
+  fi
 }
 
 copy_clean() {
@@ -140,7 +155,7 @@ manual_codesign_target() {
     return
   fi
 
-  if [[ -d "${target_path}" ]] && command -v ditto >/dev/null 2>&1; then
+  if command -v ditto >/dev/null 2>&1; then
     local normalized_target="${target_path}.normalized"
     rm -rf "${normalized_target}"
     ditto --noextattr --noqtn --norsrc "${target_path}" "${normalized_target}"
