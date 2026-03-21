@@ -33,7 +33,11 @@ class Program
 
         try
         {
-            var builder = Host.CreateApplicationBuilder(args);
+            var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+            {
+                Args = args,
+                ContentRootPath = AppContext.BaseDirectory
+            });
             builder.Logging.ClearProviders();
             builder.Logging.AddProvider(new FileLoggerProvider());
             builder.Services.AddLogging();
@@ -52,6 +56,10 @@ class Program
                 "Product platform endpoints configured. ApiBaseUrl={ApiBaseUrl}; CabinetUrl={CabinetUrl}",
                 productPlatformOptions.ApiBaseUrl,
                 productPlatformOptions.CabinetUrl);
+            logger.LogInformation(
+                "Application paths configured. BaseDirectory={BaseDirectory}; CurrentDirectory={CurrentDirectory}",
+                AppContext.BaseDirectory,
+                Environment.CurrentDirectory);
 
             Services = host.Services;
 
