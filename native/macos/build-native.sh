@@ -264,6 +264,7 @@ else
 fi
 
 manual_codesign_target "${OUTPUT_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS_PATH}"
+manual_codesign_target "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/PlugIns/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS_PATH}"
 
 if [[ -d "${OUTPUT_DIR}/etoVPNMacBridge.app/Contents/Frameworks" ]]; then
   while IFS= read -r framework_path; do
