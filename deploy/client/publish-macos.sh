@@ -80,7 +80,7 @@ fi
 mkdir -p "${APP_MACOS_DIR}" "${APP_RESOURCES_DIR}" "${APP_HELPERS_DIR}" "${APP_PLUGINS_DIR}"
 
 find "${STAGING_DIR}" -mindepth 1 -maxdepth 1 -print0 | while IFS= read -r -d '' entry; do
-  cp -R "${entry}" "${APP_MACOS_DIR}/"
+  copy_clean "${entry}" "${APP_MACOS_DIR}/$(basename "${entry}")"
 done
 
 sed \
@@ -109,6 +109,35 @@ strip_macos_detritus() {
   fi
 
   find "${path}" -name '._*' -delete >/dev/null 2>&1 || true
+}
+
+copy_clean() {
+  local source_path="$1"
+  local destination_path="$2"
+
+  rm -rf "${destination_path}"
+
+  if command -v ditto >/dev/null 2>&1; then
+    ditto --noextattr --noqtn --norsrc "${source_path}" "${destination_path}"
+  else
+    cp -R "${source_path}" "${destination_path}"
+  fi
+
+  strip_macos_detritus "${destination_path}"
+}
+
+normalize_app_bundle() {
+  local normalized_bundle="${PUBLISH_DIR}/.etoVPN.normalized.app"
+
+  rm -rf "${normalized_bundle}"
+
+  if command -v ditto >/dev/null 2>&1; then
+    ditto --noextattr --noqtn --norsrc "${APP_BUNDLE_DIR}" "${normalized_bundle}"
+    rm -rf "${APP_BUNDLE_DIR}"
+    mv "${normalized_bundle}" "${APP_BUNDLE_DIR}"
+  fi
+
+  strip_macos_detritus "${APP_BUNDLE_DIR}"
 }
 
 strip_macos_detritus "${APP_BUNDLE_DIR}"
@@ -163,14 +192,14 @@ if command -v iconutil >/dev/null 2>&1 && command -v sips >/dev/null 2>&1 && [[ 
 fi
 
 if [[ -f "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" ]]; then
-  cp "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" "${APP_HELPERS_DIR}/etoVPNMacBridge"
+  copy_clean "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" "${APP_HELPERS_DIR}/etoVPNMacBridge"
   chmod +x "${APP_HELPERS_DIR}/etoVPNMacBridge"
 else
   echo "warning: native helper was not found at ${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" >&2
 fi
 
 if [[ -d "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" ]]; then
-  cp -R "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex"
+  copy_clean "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex"
 else
   echo "warning: packet tunnel extension was not found at ${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" >&2
 fi
@@ -185,6 +214,7 @@ fi
 
 manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge"
 manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
+normalize_app_bundle
 strip_macos_detritus "${APP_BUNDLE_DIR}"
 manual_codesign_target "${APP_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
 
