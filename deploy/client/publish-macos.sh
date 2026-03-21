@@ -165,6 +165,11 @@ relocate_noncode_macos_files() {
     local relative_target
 
     file_name="$(basename "${file_path}")"
+
+    if [[ "${file_name}" == "appsettings.json" ]]; then
+      continue
+    fi
+
     target_path="${APP_MANAGED_RESOURCES_DIR}/${file_name}"
     relative_target="../Resources/ManagedSupport/${file_name}"
 

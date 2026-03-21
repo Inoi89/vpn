@@ -8,6 +8,7 @@ using VpnClient.Application.Profiles;
 using VpnClient.Application.Updates;
 using VpnClient.Core.Interfaces;
 using VpnClient.Infrastructure.Logging;
+using VpnClient.Infrastructure.Auth;
 using VpnClient.UI.Platform;
 using VpnClient.UI.ViewModels;
 
@@ -43,9 +44,14 @@ class Program
 
             var host = builder.Build();
 
-            host.Services
-                .GetRequiredService<ILogger<Program>>()
-                .LogInformation("Desktop client launch started.");
+            var logger = host.Services.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Desktop client launch started.");
+
+            var productPlatformOptions = host.Services.GetRequiredService<ProductPlatformOptions>();
+            logger.LogInformation(
+                "Product platform endpoints configured. ApiBaseUrl={ApiBaseUrl}; CabinetUrl={CabinetUrl}",
+                productPlatformOptions.ApiBaseUrl,
+                productPlatformOptions.CabinetUrl);
 
             Services = host.Services;
 
