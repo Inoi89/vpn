@@ -146,7 +146,29 @@ sign_app_macos_binaries() {
     manual_codesign_target "${binary_path}"
   done < <(
     find "${APP_MACOS_DIR}" -maxdepth 1 -type f \
-      \( -name "*.dll" -o -name "*.dylib" -o -name "*.so" -o -name "VpnClient.UI" -o -name "createdump" \) \
+      \( -name "*.dylib" -o -name "*.so" -o -name "VpnClient.UI" -o -name "createdump" \) \
+      | sort
+  )
+}
+
+normalize_app_macos_permissions() {
+  if [[ ! -d "${APP_MACOS_DIR}" ]]; then
+    return
+  fi
+
+  while IFS= read -r file_path; do
+    chmod 0644 "${file_path}" >/dev/null 2>&1 || true
+  done < <(
+    find "${APP_MACOS_DIR}" -maxdepth 1 -type f \
+      ! \( -name "*.dylib" -o -name "*.so" -o -name "VpnClient.UI" -o -name "createdump" \) \
+      | sort
+  )
+
+  while IFS= read -r file_path; do
+    chmod 0755 "${file_path}" >/dev/null 2>&1 || true
+  done < <(
+    find "${APP_MACOS_DIR}" -maxdepth 1 -type f \
+      \( -name "*.dylib" -o -name "*.so" -o -name "VpnClient.UI" -o -name "createdump" \) \
       | sort
   )
 }
@@ -306,6 +328,7 @@ if [[ -d "${APP_CONTENTS_DIR}/Frameworks" ]]; then
 fi
 
 normalize_app_bundle
+normalize_app_macos_permissions
 sign_app_macos_binaries
 manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge"
 manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
