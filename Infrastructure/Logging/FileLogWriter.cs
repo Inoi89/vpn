@@ -9,12 +9,24 @@ internal static class FileLogWriter
 
     public static string GetLogDirectoryPath()
     {
-        return Path.Combine(AppContext.BaseDirectory, "logs");
+        return Path.Combine(GetLogRootDirectory(), "logs");
     }
 
     public static string GetLogFilePath()
     {
         return Path.Combine(GetLogDirectoryPath(), "client.log");
+    }
+
+    internal static string GetLogRootDirectory()
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "YourVpnClient");
+        }
+
+        return AppContext.BaseDirectory;
     }
 
     public static void Write(string source, LogLevel level, string message, Exception? exception = null)
