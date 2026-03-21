@@ -11,7 +11,7 @@ enum SocketPathResolver {
             return URL(fileURLWithPath: overridePath, isDirectory: false)
         }
 
-        FileManager.default.temporaryDirectory
+        return FileManager.default.temporaryDirectory
             .appendingPathComponent(RuntimeBridgeConstants.defaultSocketFilename, isDirectory: false)
     }
 }
