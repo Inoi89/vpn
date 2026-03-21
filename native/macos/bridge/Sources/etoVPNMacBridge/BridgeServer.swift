@@ -1,4 +1,5 @@
 import Foundation
+import etoVPNMacShared
 
 final class BridgeServer {
     private let socketPath: URL
@@ -52,7 +53,8 @@ final class BridgeServer {
         }
 
         do {
-            return try BridgeLineProtocol.process(trimmedLine, dispatcher: dispatcher)
+            let request = try RuntimeBridgeWireCodec.decodeRequestLine(trimmedLine)
+            return dispatcher.dispatchLine(request)
         } catch {
             return RuntimeBridgeWireCodec.encodeFailureLine(
                 id: nil,

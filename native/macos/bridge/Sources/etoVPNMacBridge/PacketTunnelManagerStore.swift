@@ -91,7 +91,7 @@ final class PacketTunnelManagerStore {
     }
 
     private func loadManagers() async throws -> [NETunnelProviderManager] {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[NETunnelProviderManager], Error>) in
             NETunnelProviderManager.loadAllFromPreferences { managers, error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -104,7 +104,7 @@ final class PacketTunnelManagerStore {
     }
 
     private func save(_ manager: NETunnelProviderManager) async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             manager.saveToPreferences { error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -117,7 +117,7 @@ final class PacketTunnelManagerStore {
     }
 
     private func load(_ manager: NETunnelProviderManager) async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             manager.loadFromPreferences { error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -143,9 +143,13 @@ final class PacketTunnelManagerStore {
         let encoder = JSONEncoder()
         let payload = try encoder.encode(request)
 
-        let responseData = try await withCheckedThrowingContinuation { continuation in
-            session.sendProviderMessage(payload) { response in
-                continuation.resume(returning: response)
+        let responseData = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data?, Error>) in
+            do {
+                try session.sendProviderMessage(payload) { response in
+                    continuation.resume(returning: response)
+                }
+            } catch {
+                continuation.resume(throwing: error)
             }
         }
 
