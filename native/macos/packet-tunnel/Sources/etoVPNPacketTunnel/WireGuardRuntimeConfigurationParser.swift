@@ -28,12 +28,13 @@ enum WireGuardRuntimeConfigurationParser {
         let values = runtimeConfiguration
             .split(separator: "\n", omittingEmptySubsequences: true)
             .reduce(into: [String: String]()) { dictionary, line in
-                guard let separatorIndex = line.firstIndex(of: "=") else {
+                let parts = line.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+                guard parts.count == 2 else {
                     return
                 }
 
-                let key = String(line[..<separatorIndex])
-                let value = String(line[line.index(after: separatorIndex)...])
+                let key = String(parts[0])
+                let value = String(parts[1])
                 dictionary[key] = value
             }
 
