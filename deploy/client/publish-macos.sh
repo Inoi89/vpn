@@ -12,6 +12,8 @@ BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-com.etovpn.desktop}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BRIDGE_ENTITLEMENTS="${REPO_ROOT}/native/macos/bridge/etoVPNMacBridge.entitlements"
+PACKET_TUNNEL_ENTITLEMENTS="${REPO_ROOT}/native/macos/packet-tunnel/etoVPNPacketTunnel.entitlements"
 PROJECT_PATH="${REPO_ROOT}/UI/VpnClient.UI.csproj"
 PUBLISH_DIR="${REPO_ROOT}/${OUTPUT_ROOT}/${RUNTIME_IDENTIFIER}"
 STAGING_DIR="${PUBLISH_DIR}/.publish"
@@ -88,6 +90,37 @@ if [[ -f "${ICON_SOURCE}" ]]; then
   cp "${ICON_SOURCE}" "${APP_RESOURCES_DIR}/shield.png"
 fi
 
+manual_codesign_target() {
+  local target_path="$1"
+  local entitlements_path="${2:-}"
+
+  if ! command -v codesign >/dev/null 2>&1; then
+    return
+  fi
+
+  if [[ ! -e "${target_path}" ]]; then
+    return
+  fi
+
+  if command -v xattr >/dev/null 2>&1; then
+    xattr -cr "${target_path}" >/dev/null 2>&1 || true
+  fi
+  find "${target_path}" -name '._*' -delete >/dev/null 2>&1 || true
+
+  local args=(
+    --force
+    --sign -
+    --timestamp=none
+    --generate-entitlement-der
+  )
+
+  if [[ -n "${entitlements_path}" && -f "${entitlements_path}" ]]; then
+    args+=(--entitlements "${entitlements_path}")
+  fi
+
+  codesign "${args[@]}" "${target_path}"
+}
+
 if command -v iconutil >/dev/null 2>&1 && command -v sips >/dev/null 2>&1 && [[ -f "${ICON_SOURCE}" ]]; then
   ICONSET_DIR="${PUBLISH_DIR}/.iconset"
   mkdir -p "${ICONSET_DIR}"
@@ -118,6 +151,16 @@ if [[ -d "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" ]]; then
 else
   echo "warning: packet tunnel extension was not found at ${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" >&2
 fi
+
+if [[ -d "${APP_CONTENTS_DIR}/Frameworks" ]]; then
+  while IFS= read -r framework_path; do
+    manual_codesign_target "${framework_path}"
+  done < <(find "${APP_CONTENTS_DIR}/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \))
+fi
+
+manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge"
+manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
+manual_codesign_target "${APP_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
 
 rm -rf "${STAGING_DIR}"
 
