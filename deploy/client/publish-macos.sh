@@ -151,6 +151,21 @@ sign_app_macos_binaries() {
   )
 }
 
+strip_path_node_metadata() {
+  local path="$1"
+
+  if [[ ! -e "${path}" ]]; then
+    return
+  fi
+
+  if command -v xattr >/dev/null 2>&1; then
+    xattr -c "${path}" >/dev/null 2>&1 || true
+  fi
+
+  rm -f "${path}/.DS_Store" >/dev/null 2>&1 || true
+  find "${path}" -maxdepth 1 -name '._*' -delete >/dev/null 2>&1 || true
+}
+
 manual_codesign_target() {
   local target_path="$1"
   local entitlements_path="${2:-}"
@@ -294,7 +309,7 @@ normalize_app_bundle
 sign_app_macos_binaries
 manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge"
 manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
-strip_macos_detritus "${APP_BUNDLE_DIR}"
+strip_path_node_metadata "${APP_BUNDLE_DIR}"
 manual_codesign_target "${APP_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
 
 rm -rf "${STAGING_DIR}"
