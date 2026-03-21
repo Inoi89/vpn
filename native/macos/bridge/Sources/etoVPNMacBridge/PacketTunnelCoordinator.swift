@@ -185,7 +185,7 @@ final class PacketTunnelCoordinator {
         let resolvedMtu = profile.tunnelConfig.mtu ?? profile.mtu
         let resolvedAllowedIps = profile.tunnelConfig.allowedIps.isEmpty ? profile.allowedIps : profile.tunnelConfig.allowedIps
 
-        StatusResponsePayload(
+        return StatusResponsePayload(
             connected: connected,
             state: state,
             profileId: profile.profileId,
