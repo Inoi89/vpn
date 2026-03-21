@@ -3,6 +3,22 @@
 This is the shortest path from the current repo state to a real macOS smoke
 test.
 
+Current checkpoint:
+
+- native helper build works on a real Mac
+- desktop `.app` publish works
+- the app launches
+- auth works
+- managed access issuance works
+- the helper and runtime bridge work
+- `Connect` reaches `NETunnelProviderManager`
+- the current blocker for a real VPN session is Apple signing for
+  `NetworkExtension`, not desktop logic
+
+See also:
+
+- [macos-current-state.md](/c:/Users/rrese/source/repos/vpn/docs/macos-current-state.md)
+
 ## Prerequisites
 
 On the Mac machine, install:
@@ -17,11 +33,24 @@ On the Mac machine, install:
 You will also need an Apple signing context that can build a packet tunnel
 extension.
 
+For a real VPN smoke test, ad-hoc signing is not enough. If you do not have a
+real Apple developer signing context, the expected failure mode is:
+
+`Failed to configure packet tunnel manager: permission denied`
+
 ## Native Runtime Build
 
 From the repo root:
 
 ```bash
+./native/macos/build-native.sh --configuration Release --runtime osx-arm64
+```
+
+If you have a real Apple Developer team and want the packet tunnel to pass the
+`NETunnelProviderManager` permission gate, use a signed build instead:
+
+```bash
+DEVELOPMENT_TEAM=TEAMID CODE_SIGN_STYLE=Automatic ALLOW_PROVISIONING_UPDATES=1 \
 ./native/macos/build-native.sh --configuration Release --runtime osx-arm64
 ```
 
@@ -54,6 +83,14 @@ CONFIGURATION=Release \
 RUNTIME_IDENTIFIER=osx-arm64 \
 VERSION=0.1.9 \
 DEVELOPMENT_TEAM=YOURTEAMID \
+./deploy/client/publish-macos.sh
+```
+
+If the native build was already done with real Apple signing, preserve that
+signature during app publish:
+
+```bash
+DEVELOPMENT_TEAM=TEAMID PRESERVE_NATIVE_SIGNATURES=1 SKIP_NATIVE_BUILD=1 RUNTIME_IDENTIFIER=osx-arm64 \
 ./deploy/client/publish-macos.sh
 ```
 
@@ -94,6 +131,7 @@ SKIP_NATIVE_BUILD=1 ./deploy/client/publish-macos.sh
   ```
 
 - The remaining blocker is no longer engine integration, but running the native
-  Xcode build and smoke-testing it on a real Mac with entitlements/signing.
+  Xcode build with a real Apple signing context and then smoke-testing it on a
+  real Mac.
 - For a non-developer tester handoff, use:
   [macos-tester-handoff.md](/c:/Users/rrese/source/repos/vpn/docs/macos-tester-handoff.md)

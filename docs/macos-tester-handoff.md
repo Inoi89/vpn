@@ -1,5 +1,18 @@
 # macOS Tester Handoff
 
+Current checkpoint:
+
+- the app can now be built and launched on macOS
+- auth works
+- managed access issuance works
+- helper/runtime bridge work
+- the current blocker for real VPN traffic is Apple signing for
+  `NetworkExtension`
+
+See:
+
+- [macos-current-state.md](/c:/Users/rrese/source/repos/vpn/docs/macos-current-state.md)
+
 Эта инструкция не для разработчика. Она для человека, которому нужно один раз
 собрать `etoVPN` на Mac и прогнать первый smoke-тест.
 
