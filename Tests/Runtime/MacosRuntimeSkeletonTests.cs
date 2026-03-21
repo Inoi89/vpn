@@ -34,6 +34,51 @@ public sealed class MacosRuntimeSkeletonTests
     }
 
     [Fact]
+    public void ResolveDefaultHelperExecutablePath_PrefersNestedHelperAppExecutable()
+    {
+        using var sandbox = new TemporaryDirectory();
+        var baseDirectory = Path.Combine(sandbox.Path, "etoVPN.app", "Contents", "MacOS");
+        Directory.CreateDirectory(baseDirectory);
+
+        var helperExecutable = Path.Combine(
+            sandbox.Path,
+            "etoVPN.app",
+            "Contents",
+            "Helpers",
+            "etoVPNMacBridge.app",
+            "Contents",
+            "MacOS",
+            "etoVPNMacBridge");
+        Directory.CreateDirectory(Path.GetDirectoryName(helperExecutable)!);
+        File.WriteAllText(helperExecutable, "helper");
+
+        var resolved = UnixDomainSocketMacosRuntimeBridgeTransport.ResolveDefaultHelperExecutablePath(baseDirectory);
+
+        Assert.Equal(Path.GetFullPath(helperExecutable), resolved);
+    }
+
+    [Fact]
+    public void ResolveDefaultHelperExecutablePath_FallsBackToStandaloneHelperBinary()
+    {
+        using var sandbox = new TemporaryDirectory();
+        var baseDirectory = Path.Combine(sandbox.Path, "etoVPN.app", "Contents", "MacOS");
+        Directory.CreateDirectory(baseDirectory);
+
+        var standaloneHelper = Path.Combine(
+            sandbox.Path,
+            "etoVPN.app",
+            "Contents",
+            "Helpers",
+            "etoVPNMacBridge");
+        Directory.CreateDirectory(Path.GetDirectoryName(standaloneHelper)!);
+        File.WriteAllText(standaloneHelper, "helper");
+
+        var resolved = UnixDomainSocketMacosRuntimeBridgeTransport.ResolveDefaultHelperExecutablePath(baseDirectory);
+
+        Assert.Equal(Path.GetFullPath(standaloneHelper), resolved);
+    }
+
+    [Fact]
     public async Task ConnectAsync_UsesEnvelopeCommands_AndParsesStatusPayload()
     {
         var profile = BuildProfile();
@@ -247,6 +292,29 @@ public sealed class MacosRuntimeSkeletonTests
         private static JsonObject Clone(JsonObject payload)
         {
             return JsonNode.Parse(payload.ToJsonString())!.AsObject();
+        }
+    }
+
+    private sealed class TemporaryDirectory : IDisposable
+    {
+        public TemporaryDirectory()
+        {
+            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "vpn-tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path);
+        }
+
+        public string Path { get; }
+
+        public void Dispose()
+        {
+            try
+            {
+                Directory.Delete(Path, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup.
+            }
         }
     }
 }

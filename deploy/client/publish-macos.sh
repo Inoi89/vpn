@@ -27,6 +27,7 @@ APP_RESOURCES_DIR="${APP_CONTENTS_DIR}/Resources"
 APP_MANAGED_RESOURCES_DIR="${APP_RESOURCES_DIR}/ManagedSupport"
 APP_HELPERS_DIR="${APP_CONTENTS_DIR}/Helpers"
 APP_PLUGINS_DIR="${APP_CONTENTS_DIR}/PlugIns"
+APP_HELPER_BUNDLE_DIR="${APP_HELPERS_DIR}/etoVPNMacBridge.app"
 PUBLISH_PROFILE="${RUNTIME_IDENTIFIER}-selfcontained"
 INFO_PLIST_TEMPLATE="${REPO_ROOT}/deploy/client/macos/Info.plist"
 ICON_SOURCE="${REPO_ROOT}/UI/Assets/shield.png"
@@ -350,11 +351,13 @@ if command -v iconutil >/dev/null 2>&1 && command -v sips >/dev/null 2>&1 && [[ 
   rm -rf "${ICONSET_DIR}"
 fi
 
-if [[ -f "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" ]]; then
+if [[ -d "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge.app" ]]; then
+  copy_clean "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge.app" "${APP_HELPER_BUNDLE_DIR}"
+elif [[ -f "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" ]]; then
   copy_clean "${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" "${APP_HELPERS_DIR}/etoVPNMacBridge"
   chmod +x "${APP_HELPERS_DIR}/etoVPNMacBridge"
 else
-  echo "warning: native helper was not found at ${NATIVE_OUTPUT_DIR}/etoVPNMacBridge" >&2
+  echo "warning: native helper was not found at ${NATIVE_OUTPUT_DIR}/etoVPNMacBridge(.app)" >&2
 fi
 
 if [[ -d "${NATIVE_OUTPUT_DIR}/etoVPNPacketTunnel.appex" ]]; then
@@ -375,7 +378,18 @@ fi
 normalize_app_bundle
 normalize_app_macos_permissions
 sign_app_macos_binaries
-manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge"
+if [[ -d "${APP_HELPER_BUNDLE_DIR}/Contents/Frameworks" ]]; then
+  while IFS= read -r framework_path; do
+    manual_codesign_target "${framework_path}"
+  done < <(find "${APP_HELPER_BUNDLE_DIR}/Contents/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \))
+fi
+
+if [[ -d "${APP_HELPER_BUNDLE_DIR}/Contents/PlugIns/etoVPNPacketTunnel.appex" ]]; then
+  manual_codesign_target "${APP_HELPER_BUNDLE_DIR}/Contents/PlugIns/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
+fi
+
+manual_codesign_target "${APP_HELPER_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
+manual_codesign_target "${APP_HELPERS_DIR}/etoVPNMacBridge" "${BRIDGE_ENTITLEMENTS}"
 manual_codesign_target "${APP_PLUGINS_DIR}/etoVPNPacketTunnel.appex" "${PACKET_TUNNEL_ENTITLEMENTS}"
 strip_path_node_metadata "${APP_BUNDLE_DIR}"
 manual_codesign_target "${APP_BUNDLE_DIR}" "${BRIDGE_ENTITLEMENTS}"
