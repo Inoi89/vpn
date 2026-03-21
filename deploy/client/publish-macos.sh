@@ -48,51 +48,6 @@ if [[ "${DOTNET_BIN}" == "dotnet.exe" ]] && command -v cygpath >/dev/null 2>&1; 
   DOTNET_PUBLISH_DIR="$(cygpath -w "${STAGING_DIR}")"
 fi
 
-if [[ -d "${PUBLISH_DIR}" ]]; then
-  rm -rf "${PUBLISH_DIR}"
-fi
-
-mkdir -p "${STAGING_DIR}"
-
-"${DOTNET_BIN}" publish "${DOTNET_PROJECT_PATH}" \
-  -c "${CONFIGURATION}" \
-  -r "${RUNTIME_IDENTIFIER}" \
-  /p:PublishProfile="${PUBLISH_PROFILE}" \
-  /p:Version="${VERSION}" \
-  -o "${DOTNET_PUBLISH_DIR}"
-
-if [[ "${SKIP_NATIVE_BUILD}" != "1" ]]; then
-  if [[ ! -x "${NATIVE_BUILD_SCRIPT}" ]]; then
-    echo "native build script is missing or not executable: ${NATIVE_BUILD_SCRIPT}" >&2
-    echo "Set SKIP_NATIVE_BUILD=1 to package only the Avalonia desktop publish output." >&2
-    exit 1
-  fi
-
-  "${NATIVE_BUILD_SCRIPT}" \
-    --configuration "${CONFIGURATION}" \
-    --runtime "${RUNTIME_IDENTIFIER}"
-fi
-
-if [[ -z "${NATIVE_OUTPUT_DIR}" ]]; then
-  NATIVE_OUTPUT_DIR="${REPO_ROOT}/artifacts/macos-native/${RUNTIME_IDENTIFIER}"
-fi
-
-mkdir -p "${APP_MACOS_DIR}" "${APP_RESOURCES_DIR}" "${APP_HELPERS_DIR}" "${APP_PLUGINS_DIR}"
-
-find "${STAGING_DIR}" -mindepth 1 -maxdepth 1 -print0 | while IFS= read -r -d '' entry; do
-  copy_clean "${entry}" "${APP_MACOS_DIR}/$(basename "${entry}")"
-done
-
-sed \
-  -e "s|__BUNDLE_IDENTIFIER__|${BUNDLE_IDENTIFIER}|g" \
-  -e "s|__SHORT_VERSION__|${VERSION}|g" \
-  -e "s|__BUNDLE_VERSION__|${VERSION}|g" \
-  "${INFO_PLIST_TEMPLATE}" > "${APP_CONTENTS_DIR}/Info.plist"
-
-if [[ -f "${ICON_SOURCE}" ]]; then
-  cp "${ICON_SOURCE}" "${APP_RESOURCES_DIR}/shield.png"
-fi
-
 strip_macos_detritus() {
   local path="$1"
 
@@ -140,8 +95,6 @@ normalize_app_bundle() {
   strip_macos_detritus "${APP_BUNDLE_DIR}"
 }
 
-strip_macos_detritus "${APP_BUNDLE_DIR}"
-
 manual_codesign_target() {
   local target_path="$1"
   local entitlements_path="${2:-}"
@@ -169,6 +122,53 @@ manual_codesign_target() {
 
   codesign "${args[@]}" "${target_path}"
 }
+
+if [[ -d "${PUBLISH_DIR}" ]]; then
+  rm -rf "${PUBLISH_DIR}"
+fi
+
+mkdir -p "${STAGING_DIR}"
+
+"${DOTNET_BIN}" publish "${DOTNET_PROJECT_PATH}" \
+  -c "${CONFIGURATION}" \
+  -r "${RUNTIME_IDENTIFIER}" \
+  /p:PublishProfile="${PUBLISH_PROFILE}" \
+  /p:Version="${VERSION}" \
+  -o "${DOTNET_PUBLISH_DIR}"
+
+if [[ "${SKIP_NATIVE_BUILD}" != "1" ]]; then
+  if [[ ! -x "${NATIVE_BUILD_SCRIPT}" ]]; then
+    echo "native build script is missing or not executable: ${NATIVE_BUILD_SCRIPT}" >&2
+    echo "Set SKIP_NATIVE_BUILD=1 to package only the Avalonia desktop publish output." >&2
+    exit 1
+  fi
+
+  "${NATIVE_BUILD_SCRIPT}" \
+    --configuration "${CONFIGURATION}" \
+    --runtime "${RUNTIME_IDENTIFIER}"
+fi
+
+if [[ -z "${NATIVE_OUTPUT_DIR}" ]]; then
+  NATIVE_OUTPUT_DIR="${REPO_ROOT}/artifacts/macos-native/${RUNTIME_IDENTIFIER}"
+fi
+
+mkdir -p "${APP_MACOS_DIR}" "${APP_RESOURCES_DIR}" "${APP_HELPERS_DIR}" "${APP_PLUGINS_DIR}"
+
+find "${STAGING_DIR}" -mindepth 1 -maxdepth 1 -print0 | while IFS= read -r -d '' entry; do
+  copy_clean "${entry}" "${APP_MACOS_DIR}/$(basename "${entry}")"
+done
+
+sed \
+  -e "s|__BUNDLE_IDENTIFIER__|${BUNDLE_IDENTIFIER}|g" \
+  -e "s|__SHORT_VERSION__|${VERSION}|g" \
+  -e "s|__BUNDLE_VERSION__|${VERSION}|g" \
+  "${INFO_PLIST_TEMPLATE}" > "${APP_CONTENTS_DIR}/Info.plist"
+
+if [[ -f "${ICON_SOURCE}" ]]; then
+  cp "${ICON_SOURCE}" "${APP_RESOURCES_DIR}/shield.png"
+fi
+
+strip_macos_detritus "${APP_BUNDLE_DIR}"
 
 if command -v iconutil >/dev/null 2>&1 && command -v sips >/dev/null 2>&1 && [[ -f "${ICON_SOURCE}" ]]; then
   ICONSET_DIR="${PUBLISH_DIR}/.iconset"
