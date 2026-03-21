@@ -24,6 +24,7 @@ APP_BUNDLE_DIR="${PUBLISH_DIR}/etoVPN.app"
 APP_CONTENTS_DIR="${APP_BUNDLE_DIR}/Contents"
 APP_MACOS_DIR="${APP_CONTENTS_DIR}/MacOS"
 APP_RESOURCES_DIR="${APP_CONTENTS_DIR}/Resources"
+APP_MANAGED_RESOURCES_DIR="${APP_RESOURCES_DIR}/ManagedSupport"
 APP_HELPERS_DIR="${APP_CONTENTS_DIR}/Helpers"
 APP_PLUGINS_DIR="${APP_CONTENTS_DIR}/PlugIns"
 PUBLISH_PROFILE="${RUNTIME_IDENTIFIER}-selfcontained"
@@ -106,6 +107,20 @@ rewrite_clean_file() {
   strip_macos_detritus "${destination_path}"
 }
 
+is_macho_file() {
+  local file_path="$1"
+
+  if [[ ! -f "${file_path}" ]]; then
+    return 1
+  fi
+
+  if ! command -v file >/dev/null 2>&1; then
+    return 1
+  fi
+
+  file -b "${file_path}" 2>/dev/null | grep -q 'Mach-O'
+}
+
 copy_clean() {
   local source_path="$1"
   local destination_path="$2"
@@ -137,6 +152,34 @@ normalize_app_bundle() {
   strip_macos_detritus "${APP_BUNDLE_DIR}"
 }
 
+relocate_noncode_macos_files() {
+  if [[ ! -d "${APP_MACOS_DIR}" ]]; then
+    return
+  fi
+
+  mkdir -p "${APP_MANAGED_RESOURCES_DIR}"
+
+  while IFS= read -r file_path; do
+    local file_name
+    local target_path
+    local relative_target
+
+    file_name="$(basename "${file_path}")"
+    target_path="${APP_MANAGED_RESOURCES_DIR}/${file_name}"
+    relative_target="../Resources/ManagedSupport/${file_name}"
+
+    copy_clean "${file_path}" "${target_path}"
+    rm -f "${file_path}"
+    ln -s "${relative_target}" "${file_path}"
+  done < <(
+    find "${APP_MACOS_DIR}" -maxdepth 1 -type f | while IFS= read -r candidate; do
+      if ! is_macho_file "${candidate}"; then
+        printf '%s\n' "${candidate}"
+      fi
+    done | sort
+  )
+}
+
 sign_app_macos_binaries() {
   if [[ ! -d "${APP_MACOS_DIR}" ]]; then
     return
@@ -159,7 +202,7 @@ normalize_app_macos_permissions() {
   while IFS= read -r file_path; do
     chmod 0644 "${file_path}" >/dev/null 2>&1 || true
   done < <(
-    find "${APP_MACOS_DIR}" -maxdepth 1 -type f \
+    find "${APP_MANAGED_RESOURCES_DIR}" -maxdepth 1 -type f \
       ! \( -name "*.dylib" -o -name "*.so" -o -name "VpnClient.UI" -o -name "createdump" \) \
       | sort
   )
@@ -267,7 +310,7 @@ if [[ -z "${NATIVE_OUTPUT_DIR}" ]]; then
   NATIVE_OUTPUT_DIR="${REPO_ROOT}/artifacts/macos-native/${RUNTIME_IDENTIFIER}"
 fi
 
-mkdir -p "${APP_MACOS_DIR}" "${APP_RESOURCES_DIR}" "${APP_HELPERS_DIR}" "${APP_PLUGINS_DIR}"
+mkdir -p "${APP_MACOS_DIR}" "${APP_RESOURCES_DIR}" "${APP_MANAGED_RESOURCES_DIR}" "${APP_HELPERS_DIR}" "${APP_PLUGINS_DIR}"
 
 find "${STAGING_DIR}" -mindepth 1 -maxdepth 1 -print0 | while IFS= read -r -d '' entry; do
   copy_clean "${entry}" "${APP_MACOS_DIR}/$(basename "${entry}")"
@@ -320,6 +363,7 @@ else
 fi
 
 strip_macos_detritus "${APP_BUNDLE_DIR}"
+relocate_noncode_macos_files
 
 if [[ -d "${APP_CONTENTS_DIR}/Frameworks" ]]; then
   while IFS= read -r framework_path; do
