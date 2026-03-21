@@ -26,6 +26,14 @@ targets:
     platform: macOS
     sources:
       - path: bridge/Sources/etoVPNMacBridge
+    postBuildScripts:
+      - name: Strip Bundle Metadata
+        basedOnDependencyAnalysis: false
+        script: |
+          if command -v xattr >/dev/null 2>&1; then
+            xattr -cr "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" || true
+            find "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" -name '._*' -delete || true
+          fi
     info:
       path: bridge/Info.plist
     entitlements:
@@ -56,6 +64,14 @@ targets:
       - path: ../../.research/amnezia-client/client/3rd/amneziawg-apple/Sources/WireGuardKitC
       - path: ../../.research/amnezia-client/client/3rd/amneziawg-apple/Sources/Shared/Model/TunnelConfiguration+WgQuickConfig.swift
       - path: ../../.research/amnezia-client/client/3rd/amneziawg-apple/Sources/Shared/Model/String+ArrayConversion.swift
+    postBuildScripts:
+      - name: Strip Bundle Metadata
+        basedOnDependencyAnalysis: false
+        script: |
+          if command -v xattr >/dev/null 2>&1; then
+            xattr -cr "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" || true
+            find "${TARGET_BUILD_DIR}/${WRAPPER_NAME}" -name '._*' -delete || true
+          fi
     info:
       path: packet-tunnel/Info.plist
     entitlements:
